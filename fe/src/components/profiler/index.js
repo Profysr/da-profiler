@@ -1,0 +1,10 @@
+// components/profiler/index.js
+export { ProfilerHeader } from './ProfilerHeader.js'
+export { ProfilerControls } from './ProfilerControls.js'
+export { MetricsGrid } from './MetricsGrid.js'
+export { TabBar, TabPanel } from './TabBar.js'
+export { N1AnalysisTab } from './N1AnalysisTab.js'
+export { QueriesTab } from './QueriesTab.js'
+export { SideEffectsTab } from './SideEffectsTab.js'
+export { ResponseTab } from './ResponseTab.js'
+export { ProfilerPanel } from './ProfilerPanel.js'
