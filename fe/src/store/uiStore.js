@@ -3,9 +3,6 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { STORAGE_KEYS } from '../utils/constants.js'
 
-/**
- * UI store for persisted UI state
- */
 export const useUIStore = create(
   persist(
     (set, get) => ({

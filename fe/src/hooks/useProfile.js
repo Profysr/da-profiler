@@ -2,9 +2,6 @@
 import { useCallback } from 'react'
 import { useProfileStore } from '../store/profileStore.js'
 
-/**
- * Hook for managing profile execution
- */
 export function useProfile() {
   const {
     result,

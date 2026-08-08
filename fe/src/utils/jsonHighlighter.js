@@ -1,8 +1,5 @@
 // utils/jsonHighlighter.js
 
-/**
- * JSON Token types
- */
 const TOKEN_TYPES = {
   KEY: 'key',
   STRING: 'string',
@@ -13,11 +10,6 @@ const TOKEN_TYPES = {
   WHITESPACE: 'whitespace',
 }
 
-/**
- * Tokenize JSON string
- * @param {string} json - JSON string
- * @returns {Array} Array of tokens
- */
 export function tokenizeJSON(json) {
   if (!json) return []
   
@@ -95,16 +87,10 @@ export function tokenizeJSON(json) {
   return tokens
 }
 
-/**
- * Classify a token value
- * @param {string} value - Token value
- * @returns {Array} Array of tokens
- */
 function classifyToken(value) {
   const trimmed = value.trim()
   if (!trimmed) return [{ type: TOKEN_TYPES.WHITESPACE, value }]
   
-  // Check if it's a key (followed by : in context, but we simplify)
   // Numbers
   if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(trimmed)) {
     return [{ type: TOKEN_TYPES.NUMBER, value }]
@@ -130,11 +116,6 @@ function classifyToken(value) {
   return [{ type: TOKEN_TYPES.KEY, value }]
 }
 
-/**
- * Get CSS class for JSON token type
- * @param {string} type - Token type
- * @returns {string} CSS class
- */
 export function getJSONTokenClass(type) {
   const classes = {
     [TOKEN_TYPES.KEY]: 'text-accent-blue',
@@ -148,11 +129,6 @@ export function getJSONTokenClass(type) {
   return classes[type] || ''
 }
 
-/**
- * Highlight JSON and return array of token spans for rendering
- * @param {string} json - JSON string
- * @returns {Array} Array of {className, children} for rendering
- */
 export function highlightJSON(json) {
   const tokens = tokenizeJSON(json)
   return tokens.map((token, index) => ({
@@ -162,12 +138,6 @@ export function highlightJSON(json) {
   }))
 }
 
-/**
- * Format JSON with indentation
- * @param {any} obj - Object to format
- * @param {number} indent - Indentation spaces
- * @returns {string} Formatted JSON string
- */
 export function formatJSON(obj, indent = 2) {
   try {
     return JSON.stringify(obj, null, indent)
@@ -176,11 +146,6 @@ export function formatJSON(obj, indent = 2) {
   }
 }
 
-/**
- * Parse and format JSON with error handling
- * @param {string} jsonStr - JSON string
- * @returns {string} Formatted JSON string or original if invalid
- */
 export function parseAndFormatJSON(jsonStr) {
   try {
     const parsed = JSON.parse(jsonStr)

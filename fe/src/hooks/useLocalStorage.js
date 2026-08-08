@@ -1,12 +1,6 @@
 // hooks/useLocalStorage.js
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 
-/**
- * Hook for syncing state with localStorage
- * @param {string} key - localStorage key
- * @param {any} initialValue - Initial value
- * @returns {[any, Function]} State and setter
- */
 export function useLocalStorage(key, initialValue) {
   // Get value from localStorage or use initial
   const [storedValue, setStoredValue] = useState(() => {
@@ -32,14 +26,7 @@ export function useLocalStorage(key, initialValue) {
   return [storedValue, setValue]
 }
 
-/**
- * Hook for persisting a Zustand store slice to localStorage
- * @param {string} key - localStorage key
- * @param {Function} selector - Zustand selector
- * @returns {any} Selected state
- */
 export function usePersistedStore(key, selector) {
   const [storedValue, setStoredValue] = useLocalStorage(key, null)
-  
   return storedValue
 }

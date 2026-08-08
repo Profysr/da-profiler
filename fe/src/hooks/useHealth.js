@@ -3,9 +3,6 @@ import { useEffect, useCallback } from 'react'
 import { getHealth } from '../api/endpoints.js'
 import { useUIStore } from '../store/uiStore.js'
 
-/**
- * Hook for checking backend health
- */
 export function useHealth() {
   const { setHealthStatus, healthStatus, lastHealthCheck } = useUIStore()
   

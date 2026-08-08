@@ -4,9 +4,6 @@ import { useRoutesStore } from '../store/routesStore.js'
 import { useProfileStore } from '../store/profileStore.js'
 import { useUIStore } from '../store/uiStore.js'
 
-/**
- * Hook for global keyboard shortcuts
- */
 export function useKeyboardShortcuts() {
   const { searchQuery, setSearchQuery, filteredRoutes, selectRoute, selectedRoute } = useRoutesStore()
   const { runProfile, loading: profileLoading } = useProfileStore()

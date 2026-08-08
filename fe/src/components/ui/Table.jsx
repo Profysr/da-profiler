@@ -1,11 +1,6 @@
 // components/ui/Table.jsx
 import { cn } from '../../utils/classNames.js'
 
-/**
- * Table component
- * @param {Object} props - Component props
- * @returns {JSX.Element}
- */
 export function Table({
   columns = [],
   data = [],
@@ -55,11 +50,6 @@ export function Table({
   )
 }
 
-/**
- * Virtualized table row component for react-window
- * @param {Object} props - Component props
- * @returns {JSX.Element}
- */
 export function VirtualizedTableRow({ columns, rowData, rowIndex, striped = true }) {
   return (
     <tr className={cn(striped && rowIndex % 2 === 1 && 'bg-bg-tertiary/30')}>

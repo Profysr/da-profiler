@@ -4,13 +4,6 @@ import { persist } from 'zustand/middleware'
 import { getRoutes } from '../api/endpoints.js'
 import { ROUTE_FILTERS } from '../utils/constants.js'
 
-/**
- * Filter routes based on search query and active filter
- * @param {RouteMetadata[]} routes - All routes
- * @param {string} searchQuery - Search query
- * @param {string} activeFilter - Active filter
- * @returns {RouteMetadata[]} Filtered routes
- */
 function filterRoutes(routes, searchQuery, activeFilter) {
   const query = searchQuery.toLowerCase().trim()
   
@@ -38,9 +31,6 @@ function filterRoutes(routes, searchQuery, activeFilter) {
   })
 }
 
-/**
- * Routes store with persistence
- */
 export const useRoutesStore = create(
   persist(
     (set, get) => ({

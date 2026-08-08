@@ -2,9 +2,6 @@
 import { useEffect, useCallback } from 'react'
 import { useRoutesStore } from '../store/routesStore.js'
 
-/**
- * Hook for managing routes data and selection
- */
 export function useRoutes() {
   const {
     routes,

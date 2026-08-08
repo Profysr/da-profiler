@@ -2,9 +2,6 @@
 import { create } from 'zustand'
 import { profileRoute } from '../api/endpoints.js'
 
-/**
- * Profile store for profiling results
- */
 export const useProfileStore = create((set) => ({
   // State
   result: null,
