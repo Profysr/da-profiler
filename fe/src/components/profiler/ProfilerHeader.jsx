@@ -3,53 +3,40 @@ import { cn } from '../../utils/classNames.js'
 import { MethodBadge } from '../ui/Badge.jsx'
 
 /**
- * Profiler header component showing selected route info
+ * Profiler header component showing selected route info - matches design
  * @param {Object} props - Component props
  * @returns {JSX.Element}
  */
 export function ProfilerHeader({ route }) {
   if (!route) return null
-  
+
   const methods = route.methods || ['GET']
-  
+  const primaryMethod = methods[0]
+
+  const getMethodBadgeClass = (method) => {
+    switch (method) {
+      case 'GET': return 'method-get'
+      case 'POST': return 'method-post'
+      case 'PUT':
+      case 'PATCH': return 'method-put'
+      case 'DELETE': return 'method-delete'
+      default: return 'method-badge badge-gray'
+    }
+  }
+
   return (
-    <div className="p-4 bg-bg-secondary border-b border-border">
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div className="flex-1 min-w-0">
-          <div className="font-mono text-lg font-medium text-text-primary truncate mb-2">
-            {route.path}
-          </div>
-          <div className="flex items-center flex-wrap gap-2">
-            {methods.map((method) => (
-              <MethodBadge key={method} method={method} />
-            ))}
-            {route.view_type && (
-              <span className="px-2 py-0.5 text-xs font-medium bg-bg-tertiary text-text-secondary border border-border rounded">
-                {route.view_type}
-              </span>
-            )}
-            {route.target_model && (
-              <span className="px-2 py-0.5 text-xs font-mono bg-bg-tertiary text-text-secondary border border-border rounded">
-                {route.target_model}
-              </span>
-            )}
-            <span className={cn(
-              'px-2 py-0.5 text-xs font-medium rounded',
-              route.executable 
-                ? 'bg-accent-green/15 text-accent-green' 
-                : 'bg-accent-red/15 text-accent-red'
-            )}>
-              {route.executable ? '✓ Executable' : '✗ Not executable'}
-            </span>
-          </div>
-        </div>
-        
-        {route.reason_unexecutable && !route.executable && (
-          <div className="p-2 bg-accent-red/10 border border-accent-red/20 rounded text-accent-red text-sm max-w-xs">
-            {route.reason_unexecutable}
-          </div>
-        )}
+    <div className="p-4 md:p-lg max-w-container-max mx-auto w-full flex flex-col gap-sm border-b border-outline-variant pb-md flex-shrink-0">
+      <div className="flex items-center gap-3">
+        <span className={cn('text-[14px] font-bold px-2 py-1 rounded', getMethodBadgeClass(primaryMethod))}>
+          {primaryMethod}
+        </span>
+        <h1 className="font-headline-sm md:font-headline-lg text-headline-sm md:text-headline-lg text-on-surface font-code-md tracking-tight break-all">
+          {route.path}
+        </h1>
       </div>
+      <p className="font-body-sm md:font-body-md text-body-sm md:text-body-md text-on-surface-variant">
+        {route.description || 'Profiles the user indexing endpoint, fetching related roles and permissions.'}
+      </p>
     </div>
   )
 }

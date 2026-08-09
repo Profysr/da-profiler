@@ -1,36 +1,26 @@
 // utils/constants.js
 
 /**
- * HTTP Method to color mapping
+ * HTTP Method to CSS class mapping (matching new design tokens)
  */
 export const METHOD_COLORS = {
-  GET: { bg: 'bg-accent-blue/15', text: 'text-accent-blue', border: 'border-accent-blue/30' },
-  POST: { bg: 'bg-accent-green/15', text: 'text-accent-green', border: 'border-accent-green/30' },
-  PUT: { bg: 'bg-accent-orange/15', text: 'text-accent-orange', border: 'border-accent-orange/30' },
-  PATCH: { bg: 'bg-accent-orange/15', text: 'text-accent-orange', border: 'border-accent-orange/30' },
-  DELETE: { bg: 'bg-accent-red/15', text: 'text-accent-red', border: 'border-accent-red/30' },
-  HEAD: { bg: 'bg-bg-tertiary', text: 'text-text-secondary', border: 'border-border' },
-  OPTIONS: { bg: 'bg-bg-tertiary', text: 'text-text-secondary', border: 'border-border' },
+  GET: 'method-get',
+  POST: 'method-post',
+  PUT: 'method-put',
+  PATCH: 'method-put',
+  DELETE: 'method-delete',
+  HEAD: 'method-badge badge-gray',
+  OPTIONS: 'method-badge badge-gray',
 }
 
 /**
- * Status code color mapping
+ * Status code CSS class mapping
  */
 export const STATUS_COLORS = {
-  2: { bg: 'bg-accent-green/15', text: 'text-accent-green', label: 'Success' },
-  3: { bg: 'bg-accent-orange/15', text: 'text-accent-orange', label: 'Redirect' },
-  4: { bg: 'bg-accent-red/15', text: 'text-accent-red', label: 'Client Error' },
-  5: { bg: 'bg-accent-red/30', text: 'text-accent-red', label: 'Server Error' },
-}
-
-/**
- * Status code pill classes
- */
-export const STATUS_PILL_CLASSES = {
-  '2xx': 'status-2xx',
-  '3xx': 'status-3xx',
-  '4xx': 'status-4xx',
-  '5xx': 'status-5xx',
+  2: 'status-2xx',
+  3: 'status-3xx',
+  4: 'status-4xx',
+  5: 'status-5xx',
 }
 
 /**
@@ -78,17 +68,19 @@ export const QUERY_PARAM_LIMITS = {
  * Default route filter options
  */
 export const ROUTE_FILTERS = [
-  { value: 'all', label: 'All', icon: 'List' },
-  { value: 'executable', label: 'Executable', icon: 'Play' },
-  { value: 'params', label: 'Requires Params', icon: 'Key' },
+  { value: 'all', label: 'All' },
+  { value: 'executable', label: 'Executable' },
+  { value: 'params', label: 'Requires Params' },
 ]
 
 /**
  * Profiler tab configuration
  */
 export const PROFILER_TABS = [
-  { id: 'n1', label: 'N+1 Analysis', icon: 'GitMerge' },
-  { id: 'queries', label: 'All Queries', icon: 'Database' },
-  { id: 'sideEffects', label: 'Side Effects', icon: 'AlertTriangle' },
-  { id: 'response', label: 'Response Body', icon: 'FileJson' },
+  { id: 'n1', label: 'N+1 Analysis' },
+  { id: 'queries', label: 'SQL Queries' },
+  { id: 'sideEffects', label: 'Side Effects' },
+  { id: 'response', label: 'Response Body' },
+  { id: 'logs', label: 'Logs' },
+  { id: 'timeline', label: 'Timeline' },
 ]

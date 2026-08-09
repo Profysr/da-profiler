@@ -22,6 +22,7 @@ export function Button({
     secondary: 'btn-secondary',
     ghost: 'btn-ghost',
     danger: 'btn-danger',
+    success: 'btn-success',
   }
   
   const sizes = {

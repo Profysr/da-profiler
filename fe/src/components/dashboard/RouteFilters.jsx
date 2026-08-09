@@ -3,26 +3,23 @@ import { cn } from '../../utils/classNames.js'
 import { ROUTE_FILTERS } from '../../utils/constants.js'
 
 /**
- * Route filter chips component
+ * Route filter chips component matching design
  * @param {Object} props - Component props
  * @returns {JSX.Element}
  */
 export function RouteFilters({ activeFilter, onChange, disabled = false }) {
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Route filters">
+    <div className="flex gap-2 flex-wrap" role="group" aria-label="Route filters">
       {ROUTE_FILTERS.map((filter) => (
         <button
           key={filter.value}
           onClick={() => !disabled && onChange(filter.value)}
           disabled={disabled}
           className={cn(
-            'filter-chip',
-            'px-3 py-1.5 text-xs font-medium rounded-full',
-            'transition-all duration-fast',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
+            'rounded-full px-2 py-0.5 font-label-caps text-label-caps cursor-pointer transition-colors',
             activeFilter === filter.value
-              ? 'bg-accent-blue text-white border-accent-blue'
-              : 'bg-bg-tertiary text-text-secondary border border-border hover:bg-bg-tertiary/80 hover:text-text-primary'
+              ? 'bg-primary/10 text-primary border border-primary/30'
+              : 'bg-surface-variant text-on-surface border border-outline-variant hover:bg-surface-bright'
           )}
           role="radio"
           aria-checked={activeFilter === filter.value}

@@ -2,18 +2,17 @@
 import { useMemo } from 'react'
 import { cn } from '../../utils/classNames.js'
 import { formatDuration } from '../../utils/formatters.js'
-import { Table } from '../ui/Table.jsx'
 import { SqlViewer } from '../ui/SqlViewer.jsx'
 import { EmptyState } from '../dashboard/EmptyState.jsx'
 
 /**
- * Queries tab component with virtualized table
+ * Queries tab component with SQL table matching design
  * @param {Object} props - Component props
  * @returns {JSX.Element}
  */
 export function QueriesTab({ result }) {
   const queries = result?.sql_queries || []
-  
+
   if (!result || queries.length === 0) {
     return (
       <EmptyState
@@ -27,65 +26,46 @@ export function QueriesTab({ result }) {
       />
     )
   }
-  
-  const columns = useMemo(() => [
-    {
-      key: 'seq',
-      header: '#',
-      className: 'w-12 text-text-secondary font-mono',
-      render: (_, index) => index + 1,
-    },
-    {
-      key: 'sql',
-      header: 'SQL',
-      className: 'font-mono text-sm',
-      render: (row) => (
-        <div className="max-h-32 overflow-auto">
-          <SqlViewer sql={row.sql} maxHeight="200px" showLineNumbers={false} copyable={false} />
-        </div>
-      ),
-    },
-    {
-      key: 'time_ms',
-      header: 'Time (ms)',
-      className: 'w-28 font-mono text-right',
-      render: (row) => {
-        const time = row.duration_ms || row.time_ms || 0
-        const timeClass = time > 200 ? 'text-accent-red' : time > 50 ? 'text-accent-orange' : ''
-        return <span className={cn('font-bold', timeClass)}>{formatDuration(time)}</span>
-      },
-    },
-    {
-      key: 'source',
-      header: 'Source',
-      className: 'w-48 font-mono text-xs text-text-secondary truncate',
-      render: (row) => row.source_location || '—',
-    },
-  ], [])
-  
-  const data = useMemo(() => queries.map((q, i) => ({
-    seq: i + 1,
-    sql: q.sql,
-    time_ms: q.duration_ms || q.time_ms || 0,
-    source: q.source_location || '—',
-  })), [queries])
-  
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between text-sm text-text-secondary">
-        <span>{queries.length} query{queries.length !== 1 ? 's' : ''} executed</span>
-        <span className="font-mono">
-          Total: {formatDuration(queries.reduce((sum, q) => sum + (q.duration_ms || q.time_ms || 0), 0))}
-        </span>
-      </div>
-      
-      <Table
-        columns={columns}
-        data={data}
-        keyField="seq"
-        striped
-        hover
-      />
+    <div className="overflow-x-auto w-full">
+      <table className="w-full text-left border-collapse min-w-[600px]">
+        <thead>
+          <tr className="bg-surface-variant/50 border-b border-outline-variant">
+            <th className="px-4 py-3 font-label-caps text-label-caps text-on-surface-variant w-12">#</th>
+            <th className="px-4 py-3 font-label-caps text-label-caps text-on-surface-variant w-24">Time (ms)</th>
+            <th className="px-4 py-3 font-label-caps text-label-caps text-on-surface-variant w-20">Rows</th>
+            <th className="px-4 py-3 font-label-caps text-label-caps text-on-surface-variant">Statement</th>
+          </tr>
+        </thead>
+        <tbody className="font-code-sm text-code-sm">
+          {queries.map((q, index) => {
+            const time = q.duration_ms || q.time_ms || 0
+            const isNPlusOne = q.is_n_plus_one || false
+            const timeClass = time > 200 ? 'text-error' : time > 50 ? 'text-tertiary' : ''
+            const rowClass = cn(
+              'border-b border-outline-variant/30 hover:bg-surface-variant/20 transition-colors',
+              isNPlusOne && 'bg-error-container/5'
+            )
+
+            return (
+              <tr key={index} className={rowClass}>
+                <td className="px-4 py-3 text-on-surface-variant">{index + 1}</td>
+                <td className={cn('px-4 py-3 font-bold', timeClass)}>{formatDuration(time)}</td>
+                <td className="px-4 py-3 text-on-surface">{q.rows_returned || q.rows || 1}</td>
+                <td className="px-4 py-3">
+                  <div className="max-h-32 overflow-auto">
+                    <SqlViewer sql={q.sql} maxHeight="200px" showLineNumbers={false} copyable={false} />
+                  </div>
+                  {isNPlusOne && (
+                    <span className="text-secondary opacity-60 text-[10px] block mt-1">-- N+1 Origin</span>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }

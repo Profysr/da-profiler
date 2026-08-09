@@ -1,66 +1,54 @@
 // components/profiler/MetricsGrid.jsx
 import { cn } from '../../utils/classNames.js'
-import { formatNumber, formatDuration, getStatusColors, getStatusCategory } from '../../utils/formatters.js'
+import { formatNumber, formatDuration } from '../../utils/formatters.js'
 import { motion } from 'framer-motion'
 
 /**
- * Metric card component
+ * Metric card component matching Bento design
  * @param {Object} props - Component props
  * @returns {JSX.Element}
  */
-function MetricCard({ 
-  label, 
-  value, 
-  subLabel, 
-  variant = 'ok', 
-  trend,
+function MetricCard({
+  label,
+  value,
+  subLabel,
+  icon,
+  variant = 'ok',
   className = '',
   delay = 0,
 }) {
-  const variantClasses = {
-    ok: 'border-t-accent-green',
-    warn: 'border-t-accent-orange',
-    danger: 'border-t-accent-red',
-  }
-  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay, ease: 'easeOut' }}
       className={cn(
-        'card p-4 border-t-4',
-        variantClasses[variant],
+        'card p-4 md:p-md flex flex-col justify-center gap-2 relative overflow-hidden group',
         className
       )}
     >
-      <div className="text-xs font-medium text-text-secondary mb-1">{label}</div>
-      <div className="flex items-baseline gap-2">
-        <span className="text-2xl font-bold font-mono text-text-primary">{value}</span>
-        {trend && (
-          <span className={cn(
-            'text-xs font-medium',
-            trend.positive ? 'text-accent-green' : 'text-accent-red'
-          )}>
-            {trend.positive ? '↑' : '↓'} {trend.value}
-          </span>
-        )}
-      </div>
+      <span className="font-label-caps text-label-caps text-on-surface-variant flex items-center gap-1">
+        <span className="material-symbols-outlined text-[14px]">{icon}</span>
+        {label}
+      </span>
+      <div className="font-headline-md text-headline-md text-on-surface">{value}</div>
       {subLabel && (
-        <div className="text-xs text-text-secondary mt-1">{subLabel}</div>
+        <div className="w-full bg-surface rounded-full h-1 mt-1">
+          <div className="bg-tertiary h-1 rounded-full" style={{ width: subLabel }} />
+        </div>
       )}
     </motion.div>
   )
 }
 
 /**
- * Metrics grid component
+ * Metrics grid component - Bento style
  * @param {Object} props - Component props
  * @returns {JSX.Element}
  */
 export function MetricsGrid({ result }) {
   if (!result) return null
-  
+
   const metrics = result.metrics || {}
   const statusCode = result.status_code || 0
   const totalQueries = metrics.total_queries ?? result.total_queries ?? 0
@@ -68,44 +56,83 @@ export function MetricsGrid({ result }) {
   const nPlusOneDetected = metrics.n_plus_one_detected ?? (result.analysis?.length > 0)
   const uniqueFingerprints = metrics.unique_fingerprints ?? 0
   const totalTime = metrics.total_time_ms ?? result.total_duration_ms ?? 0
-  
+
   // Determine status colors
-  const statusColors = getStatusColors(statusCode)
-  const statusCategory = getStatusCategory(statusCode)
-  
+  const statusCategory = statusCode >= 200 && statusCode < 300 ? 'ok' : statusCode >= 400 ? 'danger' : 'warn'
+  const statusLabel = statusCode >= 200 && statusCode < 300 ? 'OK' : statusCode >= 400 ? 'Error' : 'Redirect'
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <MetricCard
-        label="HTTP Status"
-        value={statusCode || '—'}
-        subLabel={`${statusCategory} ${statusCode ? 'OK' : 'No response'}`}
-        variant={statusCode >= 200 && statusCode < 300 ? 'ok' : statusCode >= 400 ? 'danger' : 'warn'}
-        delay={0}
-      />
-      
-      <MetricCard
-        label="Total Queries"
-        value={formatNumber(totalQueries)}
-        subLabel={`${uniqueFingerprints} unique ${uniqueFingerprints !== 1 ? 'shapes' : 'shape'}`}
-        variant={totalQueries > 15 ? 'danger' : totalQueries > 5 ? 'warn' : 'ok'}
-        delay={50}
-      />
-      
-      <MetricCard
-        label="DB Time"
-        value={formatDuration(dbTime)}
-        subLabel={formatDuration(totalTime)}
-        variant={dbTime > 500 ? 'danger' : dbTime > 100 ? 'warn' : 'ok'}
-        delay={100}
-      />
-      
-      <MetricCard
-        label="N+1 Status"
-        value={nPlusOneDetected ? '⚠ Detected' : '✓ Clean'}
-        subLabel={`${result.analysis?.length || 0} issue${result.analysis?.length !== 1 ? 's' : ''} found`}
-        variant={nPlusOneDetected ? 'danger' : 'ok'}
-        delay={150}
-      />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-md mb-6">
+      {/* Metric 1: HTTP Status */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0, ease: 'easeOut' }}
+        className={cn(
+          'card p-4 md:p-md flex flex-col justify-center gap-2 relative overflow-hidden group',
+          statusCode >= 200 && statusCode < 300 ? 'border-t-4 border-[#2e7d32]' : ''
+        )}
+      >
+        <span className="font-label-caps text-label-caps text-on-surface-variant flex items-center gap-1">
+          <span className="material-symbols-outlined text-[14px]">check_circle</span> HTTP Status
+        </span>
+        <div className={cn('font-headline-md text-headline-md', statusCode >= 200 && statusCode < 300 ? 'text-[#a5d6a7]' : 'text-error')}>
+          {statusCode || '—'} {statusLabel}
+        </div>
+      </motion.div>
+
+      {/* Metric 2: Total Queries */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 50, ease: 'easeOut' }}
+        className="card p-4 md:p-md flex flex-col justify-center gap-2 relative overflow-hidden"
+      >
+        <span className="font-label-caps text-label-caps text-on-surface-variant flex items-center gap-1">
+          <span className="material-symbols-outlined text-[14px]">database</span> Total Queries
+        </span>
+        <div className="font-headline-md text-headline-md text-on-surface">{formatNumber(totalQueries)}</div>
+        <div className="absolute bottom-2 right-2 w-12 h-6 border-t-2 border-r-2 border-primary rounded-tr-full opacity-50" />
+      </motion.div>
+
+      {/* Metric 3: DB Time */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 100, ease: 'easeOut' }}
+        className="card p-4 md:p-md flex flex-col justify-center gap-2"
+      >
+        <span className="font-label-caps text-label-caps text-on-surface-variant flex items-center gap-1">
+          <span className="material-symbols-outlined text-[14px]">timer</span> DB Time
+        </span>
+        <div className="font-headline-md text-headline-md text-on-surface">{formatDuration(dbTime)}</div>
+        <div className="w-full bg-surface rounded-full h-1 mt-1">
+          <div className="bg-tertiary h-1 rounded-full" style={{ width: totalTime > 0 ? `${Math.min((dbTime / totalTime) * 100, 100)}%` : '0%' }} />
+        </div>
+      </motion.div>
+
+      {/* Metric 4: N+1 Status */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 150, ease: 'easeOut' }}
+        className={cn(
+          'card p-4 md:p-md flex flex-col justify-center gap-2',
+          nPlusOneDetected ? 'bg-[#3b0a0a] border-error shadow-[0_0_12px_rgba(147,0,10,0.3)]' : ''
+        )}
+      >
+        <span className={cn('font-label-caps text-label-caps flex items-center gap-1', nPlusOneDetected ? 'text-error' : 'text-on-surface-variant')}>
+          <span className="material-symbols-outlined text-[14px]">{nPlusOneDetected ? 'warning' : 'check_circle'}</span> N+1 Status
+        </span>
+        <div className={cn('font-headline-md text-headline-md', nPlusOneDetected ? 'text-on-error-container' : 'text-[#a5d6a7]')}>
+          {nPlusOneDetected ? 'Detected' : 'Clean'}
+        </div>
+        {nPlusOneDetected && (
+          <div className="text-body-sm text-on-error-container/80 mt-1">
+            {result.analysis?.length || 0} issue{result.analysis?.length !== 1 ? 's' : ''} found
+          </div>
+        )}
+      </motion.div>
     </div>
   )
 }

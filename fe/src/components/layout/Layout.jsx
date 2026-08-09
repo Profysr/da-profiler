@@ -5,27 +5,27 @@ import { Sidebar } from './Sidebar.jsx'
 import { useUIStore } from '../../store/uiStore.js'
 
 /**
- * Main layout component
+ * Main layout component matching design
  * @param {Object} props - Component props
  * @returns {JSX.Element}
  */
 export function Layout({ children }) {
   const { sidebarCollapsed } = useUIStore()
-  
+
   return (
-    <div className="min-h-screen bg-bg-primary">
-      <Header 
+    <div className="min-h-screen bg-background">
+      <Header
         onToggleSidebar={() => useUIStore.getState().toggleSidebar()}
         sidebarCollapsed={sidebarCollapsed}
       />
-      
-      <div className="pt-14 min-h-[calc(100vh-3.5rem)]">
+
+      <div className="pt-16 min-h-[calc(100vh-64px)]">
         <Sidebar />
-        
-        <main 
+
+        <main
           className={cn(
-            'transition-all duration-normal min-h-[calc(100vh-3.5rem)]',
-            sidebarCollapsed ? 'ml-16' : 'ml-[320px]'
+            'transition-all duration-normal min-h-[calc(100vh-64px)]',
+            sidebarCollapsed ? 'ml-16' : 'lg:ml-[320px]'
           )}
           style={{ marginLeft: sidebarCollapsed ? '64px' : '320px' }}
         >
