@@ -2,7 +2,7 @@
 import { useEffect, useCallback } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '../../utils/classNames.js'
-import { Button } from './Button.js'
+import { Button } from './Button.jsx'
 
 /**
  * Modal component

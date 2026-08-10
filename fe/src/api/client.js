@@ -1,47 +1,58 @@
 // api/client.js
 import axios from 'axios'
 
-const apiClient = axios.create({
-  baseURL: '/dqs',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 60000, // 60 seconds for profiling requests
-})
+const clientCache = new Map()
 
-function getCsrfToken() {
-  // Try meta tag first
-  const meta = document.querySelector('meta[name="csrf-token"]')
-  if (meta && meta.content) return meta.content
-  
-  // Try cookie
-  const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)
-  return match ? decodeURIComponent(match[1]) : ''
+export function getApiClient(baseUrl) {
+  const cacheKey = baseUrl
+  if (clientCache.has(cacheKey)) {
+    return clientCache.get(cacheKey)
+  }
+
+  const client = axios.create({
+    baseURL: `${baseUrl}/dqs`,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    timeout: 60000,
+    withCredentials: true, // Send cookies for Django session
+  })
+
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]')
+    if (meta && meta.content) return meta.content
+    const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)
+    return match ? decodeURIComponent(match[1]) : ''
+  }
+
+  client.interceptors.request.use((config) => {
+    const token = getCsrfToken()
+    if (token) {
+      config.headers['X-CSRFToken'] = token
+    }
+    return config
+  })
+
+  client.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      const message = error.response?.data?.error 
+        || error.message 
+        || 'An unexpected error occurred'
+      const status = error.response?.status || 0
+      
+      const normalizedError = new Error(message)
+      normalizedError.status = status
+      normalizedError.data = error.response?.data
+      
+      return Promise.reject(normalizedError)
+    }
+  )
+
+  clientCache.set(cacheKey, client)
+  return client
 }
 
-apiClient.interceptors.request.use((config) => {
-  const token = getCsrfToken()
-  if (token) {
-    config.headers['X-CSRFToken'] = token
-  }
-  return config
-})
-
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const message = error.response?.data?.error 
-      || error.message 
-      || 'An unexpected error occurred'
-    const status = error.response?.status || 0
-    
-    // Create normalized error
-    const normalizedError = new Error(message)
-    normalizedError.status = status
-    normalizedError.data = error.response?.data
-    
-    return Promise.reject(normalizedError)
-  }
-)
-
-export default apiClient
+export function clearClientCache() {
+  clientCache.clear()
+}

@@ -1,8 +1,11 @@
 {
-  "name": "fe",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@da-profiler/dashboard",
+  "version": "0.1.0",
   "type": "module",
+  "bin": {
+    "daprofiler-dashboard": "./bin/dashboard.js",
+    "da-profiler-dashboard": "./bin/dashboard.js"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -15,6 +18,7 @@
     "framer-motion": "^13.0.0",
     "highlight.js": "^11.11.1",
     "lucide-react": "^1.30.0",
+    "open": "^10.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-virtualized-auto-sizer": "^2.0.3",

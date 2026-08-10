@@ -1,6 +1,7 @@
 import { GlobalSearch } from '../ui/GlobalSearch';
 import { Zap, PanelLeft, PanelLeftClose, Bell, HelpCircle, User, Activity } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore.js';
+import { ProjectSelector } from '../ProjectSelector.jsx';
 
 export default function TopNavBar({ onToggleSidebar, sidebarCollapsed }) {
   const healthStatus = useUIStore((state) => state.healthStatus);
@@ -32,6 +33,9 @@ export default function TopNavBar({ onToggleSidebar, sidebarCollapsed }) {
       </div>
 
       <div className="flex items-center gap-3 md:gap-4" data-label="navbar-right">
+        {/* Project Selector */}
+        <ProjectSelector />
+
         {/* Backend Connection Status Pill */}
         <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-container border border-outline-variant text-[11px] font-medium" data-label="navbar-health-indicator">
           <Activity className="w-3.5 h-3.5 text-primary animate-pulse" />
@@ -42,13 +46,6 @@ export default function TopNavBar({ onToggleSidebar, sidebarCollapsed }) {
         </div>
 
         <div className="flex items-center gap-1 text-on-surface-variant" data-label="navbar-icon-buttons">
-          {/* <button className="p-2 hover:text-on-surface hover:bg-surface-variant rounded-md transition-colors relative" aria-label="Notifications" data-label="navbar-notifications-btn">
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
-          </button>
-          <button className="p-2 hover:text-on-surface hover:bg-surface-variant rounded-md transition-colors hidden sm:block" aria-label="Help" data-label="navbar-help-btn">
-            <HelpCircle className="w-4 h-4" />
-          </button> */}
           <button className="p-2 hover:text-on-surface hover:bg-surface-variant rounded-md transition-colors" aria-label="Account" data-label="navbar-account-btn">
             <User className="w-4 h-4" />
           </button>

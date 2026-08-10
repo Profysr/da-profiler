@@ -1,5 +1,7 @@
 // utils/constants.js
 
+import { Globe, Cpu, Zap, Bell, Play, FileText } from 'lucide-react'
+
 /**
  * HTTP Method to CSS class mapping (matching new design tokens)
  */
@@ -65,12 +67,64 @@ export const QUERY_PARAM_LIMITS = {
 }
 
 /**
+ * Target kind configuration with icons and styling
+ */
+export const TARGET_KINDS = {
+  view: {
+    icon: Globe,
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-400/10',
+    borderColor: 'border-blue-400/20',
+    label: 'HTTP Views',
+    shortLabel: 'Views',
+    triggerable: true,
+    description: 'Django REST Framework API endpoints',
+  },
+  task: {
+    icon: Cpu,
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-400/10',
+    borderColor: 'border-purple-400/20',
+    label: 'Celery Tasks',
+    shortLabel: 'Tasks',
+    triggerable: false,
+    description: 'Background Celery tasks (static analysis only)',
+  },
+  consumer: {
+    icon: Zap,
+    color: 'text-orange-400',
+    bgColor: 'bg-orange-400/10',
+    borderColor: 'border-orange-400/20',
+    label: 'WebSocket Consumers',
+    shortLabel: 'Consumers',
+    triggerable: false,
+    description: 'Django Channels WebSocket consumers (static analysis only)',
+  },
+  signal: {
+    icon: Bell,
+    color: 'text-green-400',
+    bgColor: 'bg-green-400/10',
+    borderColor: 'border-green-400/20',
+    label: 'Django Signals',
+    shortLabel: 'Signals',
+    triggerable: false,
+    description: 'Model signal receivers (static analysis only)',
+  },
+}
+
+export const TARGET_KIND_ORDER = ['view', 'task', 'consumer', 'signal']
+
+/**
  * Default route filter options
  */
 export const ROUTE_FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'executable', label: 'Executable' },
   { value: 'params', label: 'Requires Params' },
+  { value: 'kind:view', label: 'Views Only' },
+  { value: 'kind:task', label: 'Tasks Only' },
+  { value: 'kind:consumer', label: 'Consumers Only' },
+  { value: 'kind:signal', label: 'Signals Only' },
 ]
 
 /**

@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react';
 import TopNavBar from './TopNavBar.jsx';
 import SideNavBar from './SideNavBar.jsx';
+import { ConnectionManager } from '../ConnectionManager.jsx';
 import { useUIStore } from '../../store/uiStore.js';
+import { useConnectionsStore } from '../../store/connectionsStore.js';
 
 /**
  * Main layout component matching design
@@ -9,6 +12,16 @@ import { useUIStore } from '../../store/uiStore.js';
  */
 export function Layout({ children, "data-label": testId = "app-layout" }) {
   const { sidebarCollapsed, sidebarWidth } = useUIStore();
+  const { connections } = useConnectionsStore();
+  const [showConnections, setShowConnections] = useState(false);
+
+  useEffect(() => {
+    function handleOpenConnections() {
+      setShowConnections(true);
+    }
+    window.addEventListener('dqs:open-connections', handleOpenConnections);
+    return () => window.removeEventListener('dqs:open-connections', handleOpenConnections);
+  }, []);
 
   return (
     <div className="bg-background text-on-surface h-screen w-screen overflow-hidden flex flex-col font-body-md" data-label={testId} data-sidebar-collapsed={sidebarCollapsed}>
@@ -28,6 +41,8 @@ export function Layout({ children, "data-label": testId = "app-layout" }) {
           {children}
         </main>
       </div>
+
+      <ConnectionManager isOpen={showConnections} onClose={() => setShowConnections(false)} />
     </div>
   );
 }

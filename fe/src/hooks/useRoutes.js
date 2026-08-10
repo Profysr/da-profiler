@@ -1,34 +1,40 @@
 // hooks/useRoutes.js
 import { useEffect, useCallback } from 'react'
 import { useRoutesStore } from '../store/routesStore.js'
+import { useConnectionsStore } from '../store/connectionsStore.js'
 
 export function useRoutes() {
   const {
-    routes,
-    filteredRoutes,
-    selectedRoute,
+    targets,
+    filteredTargets,
+    selectedTarget,
     searchQuery,
     activeFilter,
     loading,
     error,
-    count,
-    fetchRoutes,
-    selectRoute,
+    counts,
+    total,
+    fetchTargets,
+    selectTarget,
     setSearchQuery,
     setActiveFilter,
     clearSelection,
     clearError,
   } = useRoutesStore()
   
-  // Fetch routes on mount
+  const { activeConnectionId } = useConnectionsStore()
+  
+  // Fetch targets when active connection changes
   useEffect(() => {
-    fetchRoutes()
-  }, [fetchRoutes])
+    if (activeConnectionId) {
+      fetchTargets()
+    }
+  }, [activeConnectionId, fetchTargets])
   
   // Memoized actions
-  const handleSelectRoute = useCallback((route) => {
-    selectRoute(route)
-  }, [selectRoute])
+  const handleSelectTarget = useCallback((target) => {
+    selectTarget(target)
+  }, [selectTarget])
   
   const handleSearch = useCallback((query) => {
     setSearchQuery(query)
@@ -48,18 +54,19 @@ export function useRoutes() {
   
   return {
     // Data
-    routes,
-    filteredRoutes,
-    selectedRoute,
+    targets,
+    filteredTargets,
+    selectedTarget,
     searchQuery,
     activeFilter,
     loading,
     error,
-    count,
+    counts,
+    total,
     
     // Actions
-    fetchRoutes,
-    selectRoute: handleSelectRoute,
+    fetchTargets,
+    selectTarget: handleSelectTarget,
     setSearchQuery: handleSearch,
     setActiveFilter: handleFilterChange,
     clearSelection: handleClearSelection,

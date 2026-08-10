@@ -1,17 +1,33 @@
 // api/endpoints.js
-import apiClient from './client.js'
+import { getApiClient } from './client.js'
 
-export async function getRoutes() {
-  const response = await apiClient.get('/')
+export async function getHealth(baseUrl) {
+  const client = getApiClient(baseUrl)
+  const response = await client.get('/health/')
   return response.data
 }
 
-export async function profileRoute(payload) {
-  const response = await apiClient.post('/profile/', payload)
+export async function getTargets(baseUrl) {
+  const client = getApiClient(baseUrl)
+  const response = await client.get('/targets/')
   return response.data
 }
 
-export async function getHealth() {
-  const response = await apiClient.get('/health/')
+export async function profileTarget(baseUrl, payload) {
+  const client = getApiClient(baseUrl)
+  const response = await client.post('/profile/', payload)
+  return response.data
+}
+
+// Legacy support for old API
+export async function getRoutes(baseUrl) {
+  const client = getApiClient(baseUrl)
+  const response = await client.get('/')
+  return response.data
+}
+
+export async function profileRoute(baseUrl, payload) {
+  const client = getApiClient(baseUrl)
+  const response = await client.post('/profile/', payload)
   return response.data
 }
