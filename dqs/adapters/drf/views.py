@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from django.conf import settings
@@ -8,8 +9,12 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from dqs.adapters.drf.execution.discovery import DjangoTargetDiscovery, serialize_target
 from dqs.adapters.drf.execution.runner import DjangoSandboxRunner
 from dqs.adapters.drf.routing.introspector import DjangoIntrospector
+
+
+logger = logging.getLogger("dqs")
 
 
 # ---------------------------------------------------------------------------
@@ -87,8 +92,39 @@ class DQSDashboardView(APIView):
         })
 
 
+class DQSTargetsView(APIView):
+    """API endpoint to list all discoverable targets including views, tasks, consumers, signals (GET /dqs/targets/)."""
+    authentication_classes = []
+    permission_classes = []
+
+    @require_debug
+    def get(self, request: Request) -> Response:
+        try:
+            introspector = DjangoIntrospector()
+            routes = introspector.list_all_routes()
+            discovery = DjangoTargetDiscovery(introspector_routes=routes)
+            targets = discovery.discover_all()
+        except ImproperlyConfigured as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as exc:
+            logger.exception("Target discovery failed")
+            return Response({"error": f"Target discovery failed: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        targets_data = [serialize_target(t) for t in targets]
+        
+        # Count by kind
+        from collections import Counter
+        counts = Counter(t.kind for t in targets)
+
+        return Response({
+            "targets": targets_data,
+            "counts": dict(counts),
+            "total": len(targets_data),
+        })
+
+
 class DQSProfileView(APIView):
-    """API endpoint to profile a specific route (POST /dqs/profile/)."""
+    """API endpoint to profile a specific target (POST /dqs/profile/)."""
     authentication_classes = []
     permission_classes = []
 
@@ -97,9 +133,20 @@ class DQSProfileView(APIView):
         # DRF parses JSON automatically
         body = request.data
 
-        route = body.get("route")
+        target_id = body.get("target_id")
+        kind = body.get("kind", "view")
+        
+        if not target_id:
+            return Response({"error": "'target_id' is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # For non-view kinds, return static analysis only (not triggerable)
+        if kind in ("task", "consumer", "signal"):
+            return self._get_static_analysis(target_id, kind)
+
+        # Existing view profiling logic
+        route = body.get("route") or target_id.replace("view:", "", 1)
         if not route:
-            return Response({"error": "'route' is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "'route' is required for view kind."}, status=status.HTTP_400_BAD_REQUEST)
 
         method = str(body.get("method", "GET")).upper()
         seed_count = max(0, int(body.get("seed_count") or 0))
@@ -128,6 +175,41 @@ class DQSProfileView(APIView):
         # Serialize ExecutionResult
         result_dict = result.__dict__.copy()
         return Response(result_dict)
+
+    def _get_static_analysis(self, target_id: str, kind: str) -> Response:
+        """Return static analysis findings for non-view targets."""
+        try:
+            introspector = DjangoIntrospector()
+            routes = introspector.list_all_routes()
+            discovery = DjangoTargetDiscovery(introspector_routes=routes)
+            targets = discovery.discover_all()
+        except Exception as exc:
+            logger.exception("Target discovery failed")
+            return Response({"error": f"Target discovery failed: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        target = next((t for t in targets if t.id == target_id and t.kind == kind), None)
+        if not target:
+            return Response({"error": f"Target not found: {target_id}"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Return static findings in a format compatible with the profiler UI
+        serialized = serialize_target(target)
+        return Response({
+            "target": serialized,
+            "static_findings": target.static_findings,
+            "metrics": {
+                "total_queries": 0,
+                "db_time_ms": 0,
+                "total_time_ms": 0,
+                "unique_fingerprints": 0,
+                "n_plus_one_detected": False,
+            },
+            "queries": [],
+            "analysis": target.static_findings,
+            "side_effect_warnings": [],
+            "response_body": None,
+            "status_code": 0,
+            "message": f"Static analysis for {kind} (not executable via HTTP)",
+        })
 
 
 class DQSHealthView(APIView):

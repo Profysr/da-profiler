@@ -15,6 +15,35 @@ from dqs.core.targets import Target
 
 logger = logging.getLogger("dqs")
 
+
+def serialize_target(target: Target) -> dict[str, Any]:
+    """Serialize a Target dataclass to a JSON-compatible dict."""
+    data = {
+        "id": target.id,
+        "kind": target.kind,
+        "triggerable": target.triggerable,
+        "trigger_spec": target.trigger_spec,
+        "static_findings": target.static_findings,
+    }
+    
+    # Add kind-specific display fields
+    if target.kind == "view":
+        spec = target.trigger_spec or {}
+        data["name"] = spec.get("view_name", target.id.split(":")[-1])
+        data["methods"] = spec.get("methods", [])
+        data["path"] = spec.get("path", "")
+    elif target.kind == "task":
+        spec = target.trigger_spec or {}
+        data["name"] = spec.get("task_name", target.id.split(":")[-1])
+    elif target.kind == "consumer":
+        spec = target.trigger_spec or {}
+        data["name"] = spec.get("consumer", target.id.split(":")[-1])
+    elif target.kind == "signal":
+        spec = target.trigger_spec or {}
+        data["name"] = f"{spec.get('signal', '')}:{spec.get('receiver', '')}"
+    
+    return data
+
 """
 In a Django application, code is triggered in three main ways:
 
