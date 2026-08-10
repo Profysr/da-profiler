@@ -69,9 +69,41 @@ DATABASE_ROUTERS = [
 
 ---
 
-## 🧪 Step 3: Run Your First Isolated Profile
+## 🌐 Step 3: Start the Visual Dashboard (Optional but Recommended)
 
-You can run Da Profiler directly from Python code or a management script:
+The **React-based dashboard** runs as a separate process — no installation in your Django project needed!
+
+```bash
+# Terminal 1: Start your Django project
+python manage.py runserver 8000
+
+# Terminal 2: Start the dashboard (anywhere, no install!)
+npx @da-profiler/dashboard
+# Opens http://localhost:5173 automatically
+```
+
+**In the browser (http://localhost:5173):**
+1. Click **"Add Project"** → Name: "My App", URL: `http://localhost:8000`
+2. Click **"Test Connection"** → Should show ✓ Connected
+3. Click **"Connect"** → Sidebar loads all targets grouped by kind:
+   - 🌐 **HTTP Views** (executable — full profiling)
+   - ⚡ **Celery Tasks** (static analysis only)
+   - 🔌 **WebSocket Consumers** (static analysis only)
+   - 🔔 **Django Signals** (future)
+4. Click any **View** → Click **"Profile Route"** → See queries, N+1 analysis, metrics
+5. Click a **Task/Consumer** → See static findings (ORM in loops, blocking calls)
+
+> **Why separate dashboard?**
+> - ✅ Optional — skip if you only need programmatic API
+> - ✅ One dashboard serves multiple Django projects
+> - ✅ Runs on different port — zero interference with your app
+> - ✅ Stops cleanly with Ctrl+C — Django keeps running
+
+---
+
+## 🧪 Step 4: Programmatic API (Alternative to Dashboard)
+
+You can also run Da Profiler directly from Python code:
 
 ```python
 from dqs.adapters.drf.execution.runner import DjangoSandboxRunner
@@ -102,7 +134,7 @@ for n1 in result.analysis:
 
 ## 🎯 What Happens Under the Hood?
 
-When you run `execute_isolated()`:
+When you run `execute_isolated()` (via dashboard or API):
 1. **Magic Savepoint**: Django opens a `transaction.atomic()` savepoint.
 2. **Query Interception**: Every SQL query is recorded along with the exact file name and line number in your code.
 3. **Automatic Rollback**: The savepoint is rolled back immediately when execution finishes. **Zero database clutter!**
@@ -112,4 +144,5 @@ When you run `execute_isolated()`:
 ## ⏩ Next Steps
 
 - Want to understand how Da Profiler works under the hood? Check out [How It Works (ELI5)](./how-it-works.md).
+- Need to publish or test packages locally? See [Publishing & Local Testing Guide](./publishing-guide.md).
 - Interested in contributing? Read [Developer Onboarding](./developer-onboarding.md).

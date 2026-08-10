@@ -6,6 +6,10 @@
     "daprofiler-dashboard": "./bin/dashboard.js",
     "da-profiler-dashboard": "./bin/dashboard.js"
   },
+  "files": [
+    "dist",
+    "bin"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -23,7 +27,9 @@
     "react-dom": "^19.2.8",
     "react-virtualized-auto-sizer": "^2.0.3",
     "react-window": "^2.3.0",
+    "sirv": "^3.0.2",
     "tailwind-merge": "^3.6.0",
+    "uuid": "^14.0.1",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

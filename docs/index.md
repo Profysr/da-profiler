@@ -43,6 +43,7 @@ Da Profiler has progressed through key development milestones:
 Whether you're a developer integrating Da Profiler or an open-source contributor looking to hack on the codebase, check out these guides:
 
 - 🚀 [**Quickstart Guide**](./quickstart.md): Get up and running in 5 minutes.
+- 📦 [**Publishing & Local Testing Guide**](./publishing-guide.md): Complete guide for publishing both packages to PyPI/npm and testing locally.
 - 💡 [**How It Works (ELI5)**](./how-it-works.md): Simple explanations of Sandboxing, AST Fingerprinting, and Interceptors.
 - 🛠️ [**Developer Onboarding & File Reference Guide**](./developer-onboarding.md): Complete file-by-file reference walkthrough of every module in the repository.
 - ❓ [**Frequently Asked Questions (FAQ)**](./faq.md): Common questions, comparisons with Silk/Debug Toolbar, and safety guarantees.

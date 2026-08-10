@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react'
 import { useConnectionsStore } from '../store/connectionsStore.js'
 import { getHealth } from '../api/endpoints.js'
-import { X, CheckCircle, AlertCircle, Loader2, Plus, Trash2, Edit2, Wifi, WifiOff } from 'lucide-react'
+import { X, CheckCircle, AlertCircle, Loader2, Plus, Trash2, Edit2, Wifi, WifiOff, Play } from 'lucide-react'
 import { Modal } from './ui/Modal.jsx'
 import { Input } from './ui/Input.jsx'
 import { Button } from './ui/Button.jsx'

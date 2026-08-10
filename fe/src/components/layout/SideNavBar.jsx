@@ -218,91 +218,90 @@ export default function SideNavBar() {
                 const kindConfig = TARGET_KINDS[kind];
                 const targets = targetsByKind[kind] || [];
                 const count = targets.length;
-              const isCollapsed = collapsedKinds[kind];
-              
-              if (count === 0 && activeFilter !== `kind:${kind}` && activeFilter !== 'all') {
-                return null;
-              }
+                const isCollapsed = collapsedKinds[kind];
+                
+                if (count === 0 && activeFilter !== `kind:${kind}` && activeFilter !== 'all') {
+                  return null;
+                }
 
-              const Icon = KIND_ICONS[kind] || Globe;
+                const Icon = KIND_ICONS[kind] || Globe;
 
-              return (
-                <div key={kind} className="flex flex-col gap-1" data-kind={kind}>
-                  <button
-                    onClick={() => toggleKindCollapsed(kind)}
-                    className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-on-surface-variant hover:text-on-surface rounded transition-colors"
-                    aria-expanded={!isCollapsed}
-                  >
-                    <Icon className={`w-3.5 h-3.5 ${kindConfig.color}`} />
-                    <span className="flex-1 truncate">{kindConfig.label}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${kindConfig.bgColor} ${kindConfig.borderColor} ${kindConfig.color}`}>
-                      {count}
-                    </span>
-                    {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                  </button>
+                return (
+                  <div key={kind} className="flex flex-col gap-1" data-kind={kind}>
+                    <button
+                      onClick={() => toggleKindCollapsed(kind)}
+                      className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-on-surface-variant hover:text-on-surface rounded transition-colors"
+                      aria-expanded={!isCollapsed}
+                    >
+                      <Icon className={`w-3.5 h-3.5 ${kindConfig.color}`} />
+                      <span className="flex-1 truncate">{kindConfig.label}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${kindConfig.bgColor} ${kindConfig.borderColor} ${kindConfig.color}`}>
+                        {count}
+                      </span>
+                      {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
 
-                  {!isCollapsed && count > 0 && (
-                    <div className="flex flex-col gap-1 pl-6 border-l border-outline-variant/50 ml-3">
-                      {targets.map(target => {
-                        const isActive = selectedTarget?.id === target.id;
-                        
-                        // Extract display properties based on kind
-                        let method = '';
-                        let path = target.trigger_spec?.path || '';
-                        let hasN1 = false;
-                        let lastRun = '';
-                        let time = '';
-                        let paramsCount = 0;
+                    {!isCollapsed && count > 0 && (
+                      <div className="flex flex-col gap-1 pl-6 border-l border-outline-variant/50 ml-3">
+                        {targets.map(target => {
+                          const isActive = selectedTarget?.id === target.id;
+                          
+                          // Extract display properties based on kind
+                          let method = '';
+                          let path = target.trigger_spec?.path || '';
+                          let hasN1 = false;
+                          let lastRun = '';
+                          let time = '';
+                          let paramsCount = 0;
 
-                        if (target.kind === 'view') {
-                          method = target.trigger_spec?.methods?.[0] || 'GET';
-                          path = target.trigger_spec?.path || '';
-                          paramsCount = target.trigger_spec?.path_params?.length || 0;
-                          hasN1 = target.static_findings?.some(f => f.type === 'N_PLUS_ONE') || false;
-                        } else if (target.kind === 'task') {
-                          method = 'TASK';
-                          path = target.trigger_spec?.task_name || target.name;
-                        } else if (target.kind === 'consumer') {
-                          method = 'WS';
-                          path = target.trigger_spec?.consumer || target.name;
-                        } else if (target.kind === 'signal') {
-                          method = 'SIGNAL';
-                          path = `${target.trigger_spec?.signal}:${target.trigger_spec?.receiver}` || target.name;
-                        }
+                          if (target.kind === 'view') {
+                            method = target.trigger_spec?.methods?.[0] || 'GET';
+                            path = target.trigger_spec?.path || '';
+                            paramsCount = target.trigger_spec?.path_params?.length || 0;
+                            hasN1 = target.static_findings?.some(f => f.type === 'N_PLUS_ONE') || false;
+                          } else if (target.kind === 'task') {
+                            method = 'TASK';
+                            path = target.trigger_spec?.task_name || target.name;
+                          } else if (target.kind === 'consumer') {
+                            method = 'WS';
+                            path = target.trigger_spec?.consumer || target.name;
+                          } else if (target.kind === 'signal') {
+                            method = 'SIGNAL';
+                            path = `${target.trigger_spec?.signal}:${target.trigger_spec?.receiver}` || target.name;
+                          }
 
-                        return (
-                          <RouteCard
-                            key={target.id}
-                            method={method}
-                            path={path}
-                            lastRun={lastRun}
-                            time={time}
-                            params={paramsCount}
-                            hasN1={hasN1}
-                            isActive={isActive}
-                            kind={target.kind}
-                            triggerable={target.triggerable}
-                            onClick={() => handleTargetClick(target)}
-                            data-label={`target-card-${target.id}`}
-                            data-target-id={target.id}
-                            data-target-kind={target.kind}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
+                          return (
+                            <RouteCard
+                              key={target.id}
+                              method={method}
+                              path={path}
+                              lastRun={lastRun}
+                              time={time}
+                              params={paramsCount}
+                              hasN1={hasN1}
+                              isActive={isActive}
+                              kind={target.kind}
+                              triggerable={target.triggerable}
+                              onClick={() => handleTargetClick(target)}
+                              data-label={`target-card-${target.id}`}
+                              data-target-id={target.id}
+                              data-target-kind={target.kind}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
 
-                  {!isCollapsed && count === 0 && (
-                    <div className="px-2 py-3 text-center text-on-surface-variant/60 text-xs pl-6 border-l border-outline-variant/50 ml-3">
-                      No {kindConfig.shortLabel.toLowerCase()} found
-                    </div>
-                  )}
-</div>
-                  )}
-                </div>
-              );
-            })}
-          </>
+                    {!isCollapsed && count === 0 && (
+                      <div className="px-2 py-3 text-center text-on-surface-variant/60 text-xs pl-6 border-l border-outline-variant/50 ml-3">
+                        No {kindConfig.shortLabel.toLowerCase()} found
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
 
         {/* Footer */}

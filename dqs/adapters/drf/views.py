@@ -18,6 +18,57 @@ logger = logging.getLogger("dqs")
 
 
 # ---------------------------------------------------------------------------
+# CORS Support for Dashboard Frontend
+# ---------------------------------------------------------------------------
+def add_cors_headers(response: Response, request: Request) -> Response:
+    """Add CORS headers to allow dashboard frontend access."""
+    origin = request.headers.get("Origin")
+    allowed_origins = getattr(settings, "DQS_ALLOWED_ORIGINS", [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ])
+    
+    # Allow any origin in DEBUG mode for development convenience
+    if getattr(settings, "DEBUG", False):
+        if origin:
+            response["Access-Control-Allow-Origin"] = origin
+            response["Access-Control-Allow-Credentials"] = "true"
+            response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            response["Access-Control-Allow-Headers"] = "Content-Type, X-CSRFToken, Authorization"
+            response["Vary"] = "Origin"
+    elif origin in allowed_origins:
+        response["Access-Control-Allow-Origin"] = origin
+        response["Access-Control-Allow-Credentials"] = "true"
+        response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type, X-CSRFToken, Authorization"
+        response["Vary"] = "Origin"
+    
+    return response
+
+
+class CORSEnabledAPIView(APIView):
+    """Base API view with CORS support for dashboard."""
+    
+    def options(self, request: Request, *args, **kwargs) -> Response:
+        """Handle preflight OPTIONS requests."""
+        response = Response()
+        return add_cors_headers(response, request)
+    
+    def initial(self, request: Request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        # Add CORS headers to all responses
+        if hasattr(self, '_cors_response'):
+            return
+        self._cors_response = True
+        
+    def finalize_response(self, request: Request, response: Response, *args, **kwargs) -> Response:
+        response = super().finalize_response(request, response, *args, **kwargs)
+        return add_cors_headers(response, request)
+
+
+# ---------------------------------------------------------------------------
 # Helpers & Security Guardrails
 # ---------------------------------------------------------------------------
 def require_debug(view_func):
@@ -71,7 +122,7 @@ def _serialize_route(route) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # API Views
 # ---------------------------------------------------------------------------
-class DQSDashboardView(APIView):
+class DQSDashboardView(CORSEnabledAPIView):
     """API endpoint to list all discoverable routes (GET /dqs/)."""
     authentication_classes = []
     permission_classes = []
@@ -92,7 +143,7 @@ class DQSDashboardView(APIView):
         })
 
 
-class DQSTargetsView(APIView):
+class DQSTargetsView(CORSEnabledAPIView):
     """API endpoint to list all discoverable targets including views, tasks, consumers, signals (GET /dqs/targets/)."""
     authentication_classes = []
     permission_classes = []
@@ -123,7 +174,7 @@ class DQSTargetsView(APIView):
         })
 
 
-class DQSProfileView(APIView):
+class DQSProfileView(CORSEnabledAPIView):
     """API endpoint to profile a specific target (POST /dqs/profile/)."""
     authentication_classes = []
     permission_classes = []
@@ -212,7 +263,7 @@ class DQSProfileView(APIView):
         })
 
 
-class DQSHealthView(APIView):
+class DQSHealthView(CORSEnabledAPIView):
     """Health check endpoint (GET /dqs/health/)."""
     authentication_classes = []
     permission_classes = []
