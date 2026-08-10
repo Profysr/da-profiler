@@ -1,5 +1,6 @@
 // components/dashboard/EmptyState.jsx
 import { cn } from '../../utils/classNames.js'
+import { Play, AlertCircle } from 'lucide-react'
 
 /**
  * Empty state component matching design
@@ -21,7 +22,7 @@ export function EmptyState({
         </div>
       )}
       <h3 className="font-headline-sm text-headline-sm text-on-surface mb-1">{title}</h3>
-      <p className="font-body-sm text-body-sm text-on-surface-variant mb-4 max-w-xs">{description}</p>
+      <p className="font-body-sm text-body-sm text-on-surface-variant mb-4 max-w-sm w-full">{description}</p>
       {action && (
         <button
           onClick={action.onClick}
@@ -43,11 +44,11 @@ export function EmptyState({
 export function ProfilerEmptyState({ className = '' }) {
   return (
     <div className={cn('flex flex-col items-center justify-center h-full p-8 text-center', className)}>
-      <div className="mb-4 p-3 bg-surface-variant rounded-full text-primary">
-        <span className="material-symbols-outlined h-8 w-8" aria-hidden="true">play_arrow</span>
+      <div className="mb-4 p-4 bg-surface-variant/80 border border-outline-variant rounded-full text-primary shadow-glow-primary">
+        <Play className="w-8 h-8 fill-primary" />
       </div>
-      <h3 className="font-headline-sm text-headline-sm text-on-surface mb-1">Ready to Profile</h3>
-      <p className="font-body-sm text-body-sm text-on-surface-variant mb-4 max-w-xs">
+      <h3 className="font-headline-sm text-headline-sm text-on-surface mb-1 font-semibold">Ready to Profile</h3>
+      <p className="font-body-sm text-body-sm text-on-surface-variant mb-4 max-w-xs w-full">
         Select a route from the sidebar, configure parameters, and click Profile Route
       </p>
     </div>
@@ -67,13 +68,13 @@ export function ErrorState({
 }) {
   return (
     <div className={cn('flex flex-col items-center justify-center h-full p-8 text-center', className)}>
-      <div className="mb-4 p-3 bg-error-container/10 rounded-full text-error">
-        <span className="material-symbols-outlined h-8 w-8" aria-hidden="true">error</span>
+      <div className="mb-4 p-4 bg-error-container/20 border border-error/30 rounded-full text-error shadow-glow-error">
+        <AlertCircle className="w-8 h-8 text-error" />
       </div>
-      <h3 className="font-headline-sm text-headline-sm text-on-surface mb-1">{title}</h3>
+      <h3 className="font-headline-sm text-headline-sm text-on-surface mb-1 font-semibold">{title}</h3>
       {message && <p className="font-body-sm text-body-sm text-on-surface-variant mb-4 max-w-xs">{message}</p>}
       {onRetry && (
-        <button onClick={onRetry} className="btn-primary font-label-caps text-label-caps text-body-sm">
+        <button onClick={onRetry} className="btn-primary font-label-caps text-label-caps text-body-sm px-4 py-2 rounded-md">
           Try Again
         </button>
       )}

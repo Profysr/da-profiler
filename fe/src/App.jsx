@@ -15,7 +15,7 @@ function App() {
   // Initialize hooks
   const routes = useRoutes()
   const profile = useProfile()
-  const health = useHealth()
+  // const health = useHealth()
   useKeyboardShortcuts()
   
   // Apply theme on mount

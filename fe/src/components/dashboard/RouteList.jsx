@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { List } from 'react-window'
 import { AutoSizer } from 'react-virtualized-auto-sizer'
 import { cn } from '../../utils/classNames.js'
-import { MethodBadge } from '../ui/Badge.jsx'
+import { Gauge } from 'lucide-react'
 
 const ITEM_HEIGHT = 96
 
@@ -16,7 +16,6 @@ function RouteItem({ route, isSelected, isExecutable, onClick, index }) {
   const methods = route.methods || ['GET']
   const primaryMethod = methods[0]
 
-  // Determine method badge style based on HTTP method
   const getMethodBadgeClass = (method) => {
     switch (method) {
       case 'GET': return 'method-get'
@@ -29,7 +28,7 @@ function RouteItem({ route, isSelected, isExecutable, onClick, index }) {
   }
 
   const baseClasses = cn(
-    'p-3 rounded border transition-colors cursor-pointer group',
+    'p-3 rounded-lg border transition-colors cursor-pointer group',
     'relative overflow-hidden',
     isSelected ? 'card-active' : 'bg-surface border-outline-variant hover:bg-surface-container-high',
     !isExecutable && 'opacity-50'
@@ -52,14 +51,14 @@ function RouteItem({ route, isSelected, isExecutable, onClick, index }) {
       title={!isExecutable ? route.reason_unexecutable || 'Not executable' : undefined}
     >
       {isSelected && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l" />
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-lg" />
       )}
 
       <div className="flex items-center gap-2 mb-2 pl-2">
-        <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded', getMethodBadgeClass(primaryMethod))}>
+        <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider', getMethodBadgeClass(primaryMethod))}>
           {primaryMethod}
         </span>
-        <span className={cn('font-code-sm text-code-sm truncate', isSelected ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface transition-colors')}>
+        <span className={cn('font-code-sm text-code-sm truncate', isSelected ? 'text-primary font-semibold' : 'text-on-surface-variant group-hover:text-on-surface transition-colors')}>
           {route.path}
         </span>
       </div>
@@ -67,7 +66,7 @@ function RouteItem({ route, isSelected, isExecutable, onClick, index }) {
       <div className="flex justify-between items-center pl-2 text-on-surface-variant font-body-sm text-[10px]">
         <span>Last run: {route.last_run || '2m ago'}</span>
         <span className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-[12px]">speed</span> {route.duration_ms || '45ms'}
+          <Gauge className="w-3 h-3 text-on-surface-variant" /> {route.duration_ms || '45ms'}
         </span>
       </div>
 

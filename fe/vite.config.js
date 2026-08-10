@@ -6,12 +6,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    proxy: {
-      '/dqs': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-    },
+    // proxy: {
+    //   '/dqs': {
+    //     target: 'http://localhost:8000',
+    //     changeOrigin: true,
+    //   },
+    // },
   },
   build: {
     outDir: 'dist',

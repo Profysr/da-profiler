@@ -1,5 +1,6 @@
 // components/dashboard/RouteSearch.jsx
 import { cn } from '../../utils/classNames.js'
+import { Search, X } from 'lucide-react'
 
 /**
  * Route search input component matching design
@@ -14,8 +15,8 @@ export function RouteSearch({ value, onChange, disabled = false, placeholder = '
   }
 
   return (
-    <div className="flex items-center bg-surface border border-outline-variant rounded px-3 py-2 focus-within:ring-1 focus-within:ring-primary shadow-sm">
-      <span className="material-symbols-outlined text-on-surface-variant text-[18px] mr-2">search</span>
+    <div className="flex items-center bg-surface border border-outline-variant rounded-md px-3 py-2 focus-within:ring-1 focus-within:ring-primary shadow-sm">
+      <Search className="w-4 h-4 text-on-surface-variant mr-2 flex-shrink-0" />
       <input
         id="route-search-input"
         type="search"
@@ -30,10 +31,10 @@ export function RouteSearch({ value, onChange, disabled = false, placeholder = '
       {value && (
         <button
           onClick={handleClear}
-          className="p-1 hover:text-on-surface transition-colors text-on-surface-variant"
+          className="p-1 hover:text-on-surface transition-colors text-on-surface-variant rounded hover:bg-surface-variant"
           aria-label="Clear search"
         >
-          <span className="material-symbols-outlined text-[18px]">close</span>
+          <X className="w-4 h-4" />
         </button>
       )}
     </div>

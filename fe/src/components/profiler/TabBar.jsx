@@ -2,14 +2,16 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '../../utils/classNames.js'
 import { PROFILER_TABS } from '../../utils/constants.js'
+import { Bug, Database, AlertTriangle, FileCode, List, Activity, Circle } from 'lucide-react'
 
 const TAB_ICONS = {
-  n1: 'bug_report',
-  queries: 'data_object',
-  sideEffects: 'warning',
-  response: 'raw_on',
-  logs: 'list_alt',
-  timeline: 'timeline',
+  n1: Bug,
+  summary: Bug,
+  queries: Database,
+  sideEffects: AlertTriangle,
+  response: FileCode,
+  logs: List,
+  timeline: Activity,
 }
 
 /**
@@ -24,9 +26,9 @@ export function TabBar({ activeTab, onChange, className = '' }) {
       <div className="flex border-b border-outline-variant bg-surface-container-low px-2 md:px-sm overflow-x-auto hide-scrollbar" role="tablist">
         {PROFILER_TABS.map((tab) => {
           const isActive = activeTab === tab.id
-          const icon = TAB_ICONS[tab.id] || 'circle'
+          const IconComponent = TAB_ICONS[tab.id] || Circle
 
-          if (tab.id === 'n1') {
+          if (tab.id === 'n1' || tab.id === 'summary') {
             return (
               <button
                 key={tab.id}
@@ -36,37 +38,14 @@ export function TabBar({ activeTab, onChange, className = '' }) {
                 aria-controls={`panel-${tab.id}`}
                 id={`tab-${tab.id}`}
                 className={cn(
-                  'tab-btn px-3 md:px-4 py-3 border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors',
+                  'tab-btn px-3 md:px-4 py-3 border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors text-xs font-semibold',
                   isActive
                     ? 'border-error text-error bg-error-container/10'
                     : 'border-transparent text-on-surface-variant hover:text-on-surface'
                 )}
               >
-                <span className="material-symbols-outlined text-[16px]">{icon}</span>
+                <IconComponent className="w-4 h-4" />
                 {tab.label}
-              </button>
-            )
-          }
-
-          if (tab.id === 'queries') {
-            const count = 0 // This would come from result
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onChange(tab.id)}
-                role="tab"
-                aria-selected={isActive}
-                aria-controls={`panel-${tab.id}`}
-                id={`tab-${tab.id}`}
-                className={cn(
-                  'tab-btn px-3 md:px-4 py-3 border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors',
-                  isActive
-                    ? 'border-primary text-primary bg-primary/10'
-                    : 'border-transparent text-on-surface-variant hover:text-on-surface'
-                )}
-              >
-                <span className="material-symbols-outlined text-[16px]">{icon}</span>
-                {tab.label} {count > 0 && `(${count})`}
               </button>
             )
           }
@@ -80,13 +59,13 @@ export function TabBar({ activeTab, onChange, className = '' }) {
               aria-controls={`panel-${tab.id}`}
               id={`tab-${tab.id}`}
               className={cn(
-                'tab-btn px-3 md:px-4 py-3 border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors',
+                'tab-btn px-3 md:px-4 py-3 border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors text-xs font-semibold',
                 isActive
                   ? 'border-primary text-primary bg-primary/10'
                   : 'border-transparent text-on-surface-variant hover:text-on-surface'
               )}
             >
-              <span className="material-symbols-outlined text-[16px]">{icon}</span>
+              <IconComponent className="w-4 h-4" />
               {tab.label}
             </button>
           )

@@ -1,1 +1,0 @@
-export { SqlHighlighter, InlineSql } from '../components/ui/SqlHighlighter.jsx'

@@ -1,87 +1,32 @@
-// components/profiler/ResponseTab.jsx
-import { FileJson, Eye, EyeOff, Copy } from 'lucide-react'
-import { useState, useCallback } from 'react'
-import { cn } from '../../utils/classNames.js'
-import { JsonViewer } from '../ui/JsonViewer.jsx'
-import { formatJSON, parseAndFormatJSON } from '../../utils/jsonHighlighter.js'
-import { EmptyState } from '../dashboard/EmptyState.jsx'
+import { JsonViewer } from '../ui/JsonViewer.jsx';
+import { EmptyState } from '../dashboard/EmptyState.jsx';
 
-/**
- * Response tab component
- * @param {Object} props - Component props
- * @returns {JSX.Element}
- */
-export function ResponseTab({ result }) {
-  const [viewMode, setViewMode] = useState('formatted') // 'formatted' | 'raw'
-  const responseBody = result?.response_body
-  
+export function ResponseTab({ result, "data-label": testId = "response-tab" }) {
+  const responseBody = result?.response_body;
+
   if (!result || responseBody === null || responseBody === undefined) {
     return (
       <EmptyState
         title="No Response Body"
         description="The endpoint returned no parseable response body."
         icon={() => (
-          <FileJson className="h-8 w-8 text-text-secondary" aria-hidden="true" />
+          <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+          </svg>
         )}
+        data-label={`${testId}-empty-state`}
       />
-    )
+    );
   }
-  
-  const formattedJson = formatJSON(responseBody)
-  const rawJson = typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody)
-  
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeString(formattedJson)
-    } catch (error) {
-      console.error('Failed to copy:', error)
-    }
-  }, [formattedJson])
-  
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-text-secondary">
-            Response Body ({viewMode === 'formatted' ? 'Formatted' : 'Raw'})
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewMode(viewMode === 'formatted' ? 'raw' : 'formatted')}
-            className={cn(
-              'px-2 py-1 text-xs rounded border transition-colors',
-              viewMode === 'formatted'
-                ? 'bg-bg-tertiary text-text-primary border-border'
-                : 'bg-bg-secondary text-text-secondary border-border hover:bg-bg-tertiary'
-            )}
-            aria-label={viewMode === 'formatted' ? 'Show raw JSON' : 'Show formatted JSON'}
-          >
-            {viewMode === 'formatted' ? 'Raw' : 'Formatted'}
-          </button>
-          <button
-            onClick={handleCopy}
-            className="p-1.5 rounded hover:bg-bg-tertiary text-text-secondary hover:text-text-primary transition-colors"
-            aria-label="Copy response"
-          >
-            <Copy className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
+    <div className="p-4 md:p-md bg-surface flex-1 flex flex-col gap-4 overflow-y-auto" data-label={testId} data-has-response={!!responseBody}>
+      <div className="flex items-center justify-between" data-label={`${testId}-header`}>
+        <span className="font-label-caps text-label-caps text-on-surface-variant" data-label={`${testId}-title`}>
+          Response Payload (JSON)
+        </span>
       </div>
-      
-      <div className="relative">
-        {viewMode === 'formatted' ? (
-          <JsonViewer data={responseBody} maxHeight="500px" copyable={false} />
-        ) : (
-          <div className="relative">
-            <pre className="p-4 bg-bg-secondary border border-border rounded-lg overflow-auto max-h-[500px] font-mono text-sm">
-              <code className="whitespace-pre-wrap break-all text-text-primary">
-                {rawJson}
-              </code>
-            </pre>
-          </div>
-        )}
-      </div>
+      <JsonViewer data={responseBody} maxHeight="500px" copyable={true} data-label={`${testId}-json-viewer`} />
     </div>
-  )
+  );
 }

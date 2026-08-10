@@ -1,39 +1,33 @@
-// components/layout/Layout.jsx
-import { cn } from '../../utils/classNames.js'
-import { Header } from './Header.jsx'
-import { Sidebar } from './Sidebar.jsx'
-import { useUIStore } from '../../store/uiStore.js'
+import TopNavBar from './TopNavBar.jsx';
+import SideNavBar from './SideNavBar.jsx';
+import { useUIStore } from '../../store/uiStore.js';
 
 /**
  * Main layout component matching design
  * @param {Object} props - Component props
  * @returns {JSX.Element}
  */
-export function Layout({ children }) {
-  const { sidebarCollapsed } = useUIStore()
+export function Layout({ children, "data-label": testId = "app-layout" }) {
+  const { sidebarCollapsed, sidebarWidth } = useUIStore();
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header
+    <div className="bg-background text-on-surface h-screen w-screen overflow-hidden flex flex-col font-body-md" data-label={testId} data-sidebar-collapsed={sidebarCollapsed}>
+      <TopNavBar
         onToggleSidebar={() => useUIStore.getState().toggleSidebar()}
         sidebarCollapsed={sidebarCollapsed}
+        data-label={`${testId}-top-navbar`}
       />
 
-      <div className="pt-16 min-h-[calc(100vh-64px)]">
-        <Sidebar />
-
+      <div className="flex flex-1 pt-16 h-[calc(100vh-64px)] w-full overflow-hidden" data-label={`${testId}-content-area`}>
+        <SideNavBar data-label={`${testId}-side-navbar`} />
         <main
-          className={cn(
-            'transition-all duration-normal min-h-[calc(100vh-64px)]',
-            sidebarCollapsed ? 'ml-16' : 'lg:ml-[320px]'
-          )}
-          style={{ marginLeft: sidebarCollapsed ? '64px' : '320px' }}
+          className="flex-1 flex flex-col h-full overflow-hidden bg-background transition-all duration-150"
+          style={{ marginLeft: sidebarCollapsed ? '64px' : `${sidebarWidth}px` }}
+          data-label={`${testId}-main-content`}
         >
-          <div className="h-full">
-            {children}
-          </div>
+          {children}
         </main>
       </div>
     </div>
-  )
+  );
 }
