@@ -10,11 +10,11 @@ export function QueriesTab({ result, "data-label": testId = "queries-tab" }) {
       <EmptyState
         title="No Queries Captured"
         description="No database queries were executed during this run."
-        icon={() => (
+        icon={
           <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
           </svg>
-        )}
+        }
         data-label={`${testId}-empty-state`}
       />
     );

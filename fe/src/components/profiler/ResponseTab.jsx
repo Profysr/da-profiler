@@ -9,11 +9,11 @@ export function ResponseTab({ result, "data-label": testId = "response-tab" }) {
       <EmptyState
         title="No Response Body"
         description="The endpoint returned no parseable response body."
-        icon={() => (
+        icon={
           <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
           </svg>
-        )}
+        }
         data-label={`${testId}-empty-state`}
       />
     );

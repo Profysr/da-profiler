@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoutesStore } from '../../store/routesStore.js';
 import { useProfile } from '../../hooks/useProfile.js';
@@ -12,26 +12,27 @@ import { SideEffectsTab } from './SideEffectsTab.jsx';
 import { ResponseTab } from './ResponseTab.jsx';
 import { ProfilerEmptyState } from '../dashboard/EmptyState.jsx';
 import { ErrorState } from '../dashboard/EmptyState.jsx';
+import { Bug, Database, AlertTriangle, FileCode, List, Activity } from 'lucide-react';
 
 const PROFILER_TABS = [
-  { id: 'summary', label: 'Summary', icon: 'bug_report', variant: 'error' },
-  { id: 'queries', label: 'SQL Queries', icon: 'data_object', variant: 'default' },
-  { id: 'sideEffects', label: 'Side Effects', icon: 'warning', variant: 'default' },
-  { id: 'response', label: 'Raw Response', icon: 'raw_on', variant: 'default' },
-  { id: 'logs', label: 'Logs', icon: 'list_alt', variant: 'default' },
-  { id: 'timeline', label: 'Timeline', icon: 'timeline', variant: 'default' },
+  { id: 'summary', label: 'Summary', icon: Bug, variant: 'error' },
+  { id: 'queries', label: 'SQL Queries', icon: Database, variant: 'default' },
+  { id: 'sideEffects', label: 'Side Effects', icon: AlertTriangle, variant: 'default' },
+  { id: 'response', label: 'Raw Response', icon: FileCode, variant: 'default' },
+  { id: 'logs', label: 'Logs', icon: List, variant: 'default' },
+  { id: 'timeline', label: 'Timeline', icon: Activity, variant: 'default' },
 ];
 
 /**
- * Profiler panel component - main content area
- * @param {Object} props - Component props
- * @returns {JSX.Element}
+ * Profiler panel component - main content area (Postman-style)
  */
 export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
   const { selectedRoute } = useRoutesStore();
   const { result, loading, error, runProfile } = useProfile();
   const [activeTab, setActiveTab] = useState('summary');
+  const controlsRef = useRef(null);
 
+  // onRun receives the built payload from ProfilerControls
   const handleRunProfile = useCallback((payload) => {
     if (!selectedRoute) return;
     runProfile({
@@ -41,6 +42,13 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
       relationships: null,
     });
   }, [selectedRoute, runProfile]);
+
+  // Called by the Execute button in the header — delegates to the controls ref
+  const handleHeaderExecute = useCallback(() => {
+    if (controlsRef.current) {
+      controlsRef.current.run();
+    }
+  }, []);
 
   if (!selectedRoute) {
     return (
@@ -55,23 +63,29 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
     );
   }
 
-  // Prepare tab content
   const tabContent = {
     summary: <SummaryPanel result={result} data-label={`${testId}-summary-panel`} />,
     queries: <QueriesTab result={result} data-label={`${testId}-queries-tab`} />,
     sideEffects: <SideEffectsTab result={result} data-label={`${testId}-side-effects-tab`} />,
     response: <ResponseTab result={result} data-label={`${testId}-response-tab`} />,
-    logs: <div className="text-on-surface" data-label={`${testId}-logs-tab`}>Logs Panel - TODO</div>,
-    timeline: <div className="text-on-surface" data-label={`${testId}-timeline-tab`}>Timeline Panel - TODO</div>,
+    logs: <div className="text-on-surface p-4" data-label={`${testId}-logs-tab`}>Logs Panel — coming soon</div>,
+    timeline: <div className="text-on-surface p-4" data-label={`${testId}-timeline-tab`}>Timeline Panel — coming soon</div>,
   };
 
   return (
-    <div className="h-full flex flex-col" data-label={testId} data-has-route={!!selectedRoute} data-active-tab={activeTab} data-loading={loading} data-has-error={!!error}>
-      {/* Profiler Header */}
-      <ProfilerHeader route={selectedRoute} data-label={`${testId}-header`} />
+    <div className="h-full flex flex-col overflow-hidden" data-label={testId}>
 
-      {/* Controls */}
+      {/* Header: method badge + path + Execute button */}
+      <ProfilerHeader
+        route={selectedRoute}
+        onRun={handleHeaderExecute}
+        loading={loading}
+        data-label={`${testId}-header`}
+      />
+
+      {/* Controls: Path Params / Query Params tables */}
       <ProfilerControls
+        ref={controlsRef}
         route={selectedRoute}
         onRun={handleRunProfile}
         loading={loading}
@@ -93,23 +107,22 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
               <ErrorState
                 title={error}
                 message="The profiling request failed. Check the backend logs for details."
-                onRetry={() => handleRunProfile({ method: 'GET', seed_count: 5, path_params: {}, query_params: {} })}
+                onRetry={() => controlsRef.current?.run()}
               />
             </motion.div>
           ) : (
             <>
-              {/* Metrics Grid */}
               <motion.div
                 key="metrics"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
+                className="p-4"
                 data-label={`${testId}-metrics-wrapper`}
               >
                 <MetricsGrid result={result} data-label={`${testId}-metrics-grid`} />
               </motion.div>
 
-              {/* Tab Bar */}
               <motion.div
                 key="tabs"
                 initial={{ opacity: 0 }}
@@ -120,7 +133,6 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
                 <TabBar tabs={PROFILER_TABS} activeTabId={activeTab} onTabChange={setActiveTab} data-label={`${testId}-tab-bar`} />
               </motion.div>
 
-              {/* Tab Panels */}
               <TabPanel isActive={true} children={tabContent[activeTab]} data-label={`${testId}-tab-panel`} />
             </>
           )}

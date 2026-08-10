@@ -16,9 +16,7 @@ export function SideEffectsTab({ result }) {
       <EmptyState
         title="No Side Effect Warnings"
         description="No blocking calls or external I/O patterns detected."
-        icon={() => (
-          <Shield className="h-8 w-8 text-accent-green" aria-hidden="true" />
-        )}
+        icon={<Shield className="h-8 w-8 text-success" aria-hidden="true" />}
       />
     )
   }
