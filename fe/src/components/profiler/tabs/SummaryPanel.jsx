@@ -129,6 +129,15 @@ export default function SummaryPanel({
   }
 
   // Step 3: Handle the state where one OR multiple issues are found
+  // sample data
+  //   {
+  //     "fingerprint": "SELECT * FROM benchmark_book",
+  //     "count": 10,
+  //     "src_loc": "views.py:42",
+  //     "target_table": "benchmark_book",
+  //     "suggestion": "Use .select_related('author') to fetch author data in a single query.",
+  //     "sample_queries": ["SELECT * FROM benchmark_book"],
+  // }
   return (
     <div
       className="p-4 md:p-md bg-surface flex-1 flex flex-col gap-4 md:gap-md overflow-y-auto"
@@ -157,7 +166,7 @@ export default function SummaryPanel({
             title={`Redundant Query Loop Detected`}
             loopLocation={issue?.src_loc || "Unknown Location"}
             queryCount={issue?.count || 10}
-            targetTable={issue?.table || "'unknown'"}
+            targetTable={issue?.target_model || "'unknown'"}
             traces={traces}
             data-label={`${testId}-n1-alert-${index}`}
           />

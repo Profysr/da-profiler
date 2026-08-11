@@ -107,7 +107,8 @@ class QueryAnalysisEngine:
         response_body: Any,
         seeded_records_info: list[dict[str, Any]],
         side_effect_warnings: list[str],
-        relationships: dict[str, str] | dict[str, dict[str, str]] | None = None
+        relationships: dict[str, str] | dict[str, dict[str, str]] | None = None,
+        target_model: str | None = None,
     ) -> ExecutionResult:
         """Formats raw intercepted queries and calculates N+1 performance metrics."""
         formatted_queries = [
@@ -120,13 +121,18 @@ class QueryAnalysisEngine:
             for q in queries_captured
         ]
 
-        n_plus_one_groups = detect_n_plus_one(formatted_queries, threshold=3, relationships=relationships)
-        
+        n_plus_one_groups = detect_n_plus_one(
+            formatted_queries,
+            threshold=3,
+            relationships=relationships,
+            target_model=target_model,
+        )
         analysis_payload = [
             {
                 "fingerprint": group["fingerprint"],
                 "count": group["count"],
                 "src_loc": group.get("src_loc"),
+                "target_model": group.get("target_model") or target_model,
                 "suggestion": group.get("suggestion"),
                 "sample_queries": group.get("sample_queries", []),
             }

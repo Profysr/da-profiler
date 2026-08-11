@@ -151,6 +151,7 @@ class TargetExecutor:
             response_body=result,
             seeded_records_info=[],
             side_effect_warnings=[],
+            target_model=sender_model_path,
         )
 
     def trigger_task(self, target: Target, *task_args, **task_kwargs) -> ExecutionResult:
@@ -183,6 +184,7 @@ class TargetExecutor:
             response_body=result,
             seeded_records_info=[],
             side_effect_warnings=[],
+            target_model=task_name,
         )
 
 
@@ -548,6 +550,7 @@ class DjangoSandboxRunner:
 
             # Step 07.8 - Format and return execution results
             with ProcessLogger.timed_step("query_analysis", "Analyzing captured queries for N+1 patterns"):
+                effective_target_model = target_model or getattr(route_meta, "target_model", None)
                 result = QueryAnalysisEngine.build_result(
                     route=resolved_path,
                     status_code=status_code,
@@ -558,6 +561,7 @@ class DjangoSandboxRunner:
                     seeded_records_info=seeded_records_info,
                     side_effect_warnings=side_effect_warnings,
                     relationships=relationships,
+                    target_model=effective_target_model,
                 )
 
             total_time = (time.perf_counter() - overall_start) * 1000

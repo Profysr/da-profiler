@@ -81,6 +81,7 @@ def suggest_fix(
     fp: str,
     relationships: dict[str, dict[str, str]] | None = None,
     src_loc: str | None = None,
+    target_model: str | None = None,
 ) -> str:
     """Generates a plain-English Django ORM optimization recommendation.
 
@@ -89,42 +90,15 @@ def suggest_fix(
       metadata.
     :param src_loc: File and line number where the query originated
       (e.g., 'views.py:42').
+    :param target_model: Model or task name passed down from execution context.
     """
-    target_table = None
-    try:
-        parsed = sqlglot.parse_one(fp)
-        tables = [
-            table.name for table in parsed.find_all(exp.Table) if table.name
-        ]
-        if tables:
-            target_table = tables[0]
-    except Exception:
-        logger.debug("Could not suggest fix for query %s", fp)
-
     loc_prefix = f" at `{src_loc}`" if src_loc else ""
 
-    # Match against known introspection metadata if provided
-    if relationships and target_table and target_table in relationships:
-        rel_info = relationships[target_table]
-        field_name = rel_info.get("field", target_table)
-        rel_type = rel_info.get("type", "select_related")
-
-        if rel_type == "prefetch_related":
-            return (
-                f"Potential N+1 detected on table '{target_table}'{loc_prefix}. "
-                f"Fix by appending `.prefetch_related('{field_name}')` to your base queryset."
-            )
+    if target_model:
         return (
-            f"Potential N+1 detected on table '{target_table}'{loc_prefix}. "
-            f"Fix by appending `.select_related('{field_name}')` to your base queryset."
-        )
-
-    # Fallback when relationship metadata is not mapped
-    if target_table:
-        return (
-            f"Potential N+1 query detected on table '{target_table}'{loc_prefix}. "
-            f"Use `.select_related('{target_table}')` for Foreign Keys / One-to-One, "
-            f"or `.prefetch_related('{target_table}')` for Many-to-Many / Reverse FKs."
+            f"Potential N+1 query detected on model '{target_model}'{loc_prefix}. "
+            f"Use `.select_related('{target_model}')` for Foreign Keys / One-to-One, "
+            f"or `.prefetch_related('{target_model}')` for Many-to-Many / Reverse FKs."
         )
 
     return f"Potential N+1 query detected{loc_prefix}. Consider optimizing your queryset using `.select_related()` or `.prefetch_related()`."
@@ -134,6 +108,7 @@ def detect_n_plus_one(
     queries: list[dict[str, Any]],
     threshold: int = 3,
     relationships: dict[str, str] | dict[str, dict[str, str]] | None = None,
+    target_model: str | None = None,
 ) -> list[dict[str, Any]]:
     """Groups captured query logs by fingerprint and flags threshold breaches."""
     groups = defaultdict(list)
@@ -152,8 +127,9 @@ def detect_n_plus_one(
                 "fingerprint": fp,
                 "count": len(group),
                 "src_loc": source_loc,
+                "target_model": target_model,
                 "suggestion": suggest_fix(
-                    fp, relationships, src_loc=source_loc
+                    fp, relationships, src_loc=source_loc, target_model=target_model
                 ),
                 "sample_queries": [q["sql"] for q in group[:2]],
             })

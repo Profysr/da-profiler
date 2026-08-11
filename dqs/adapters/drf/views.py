@@ -16,6 +16,132 @@ from dqs.adapters.drf.routing.introspector import DjangoIntrospector
 
 logger = logging.getLogger("dqs")
 
+"""
+Viewed views.py:1-284
+Searched for "class ExecutionResult"
+Viewed types.py:1-51
+Viewed discovery.py:1-60
+
+Here is a breakdown of the response output structures returned to the frontend by each view in [views.py](file:///c:/Users/mprof/OneDrive/Desktop/da-profiler/dqs/adapters/drf/views.py).
+
+---
+
+### 1. `DQSDashboardView` (`GET /dqs/`)
+Lists all discoverable Django URL routes and their metadata.
+
+```json
+{
+  "routes": [...],
+  "count": 10
+}
+```
+
+#### Fields:
+* **`routes`**: Array of route objects containing serialized route metadata (`path`, `methods`, `view_name`, `view_type`, `is_drf`, `executable`, `path_params`, `target_model`, `reason_unexecutable`, `lookup_map`).
+* **`count`**: Total integer count of discoverable routes found in the Django project.
+
+---
+
+### 2. `DQSTargetsView` (`GET /dqs/targets/`)
+Lists all profiled targets across the application (HTTP views, Celery tasks, WebSocket consumers, and Django signals).
+
+```json
+{
+  "targets": [...],
+  "counts": {"view": 5, "task": 2, "consumer": 1, "signal": 2},
+  "total": 10
+}
+```
+
+#### Fields:
+* **`targets`**: Array of target objects containing metadata (`id`, `kind`, `name`, `triggerable`, `trigger_spec`, `static_findings`, `path`, `methods`).
+* **`counts`**: Dictionary showing the breakdown count of targets grouped by kind (`view`, `task`, `consumer`, `signal`).
+* **`total`**: Total integer count of all discovered targets.
+
+---
+
+### 3. `DQSProfileView` (`POST /dqs/profile/`)
+Executes sandbox profiling on a target and returns the performance analysis, queries, and execution metrics.
+
+#### A. When profiling HTTP Views (Dynamic Execution Result - [`ExecutionResult`](file:///c:/Users/mprof/OneDrive/Desktop/da-profiler/dqs/adapters/drf/types.py#L32-L46)):
+```json
+{
+  "route": "/api/books/bad/",
+  "status_code": 200,
+  "metrics": {...},
+  "queries": [...],
+  "analysis": [...],
+  "error": null,
+  "side_effect_warnings": [...],
+  "response_body": {...},
+  "seeded_records": [...],
+  "request_spec": {...},
+  "process_log": [...],
+  "process_log_summary": "..."
+}
+```
+
+* **`route`**: The endpoint path or route name that was profiled.
+* **`status_code`**: HTTP status code returned by the profiled endpoint view during sandbox execution.
+* **`metrics`**: Object containing overall execution metrics (`total_queries`, `db_time_ms`, `total_time_ms`, `unique_fingerprints`, `n_plus_one_detected`).
+* **`queries`**: Array of captured SQL queries executed during the request, including duration and caller trace.
+* **`analysis`**: Array of detected performance issues (e.g. N+1 query patterns, redundant query loops, missing indexes).
+* **`error`**: Error message string if sandbox execution failed, or `null` if successful.
+* **`side_effect_warnings`**: Array of warning strings for detected unintended side-effects (e.g., unexpected DB mutations during GET).
+* **`response_body`**: The JSON payload returned by the target view.
+* **`seeded_records`**: Array of mock records created in the shadow database during setup.
+* **`request_spec`**: Object detailing the request payload and headers used for the execution.
+* **`process_log`**: Step-by-step logs recorded during sandbox creation and execution.
+* **`process_log_summary`**: High-level text summary of the execution process log.
+
+#### B. When profiling Non-View Targets (Celery tasks, Consumers, Signals - Static Analysis):
+```json
+{
+  "target": {...},
+  "static_findings": [...],
+  "metrics": {"total_queries": 0, "db_time_ms": 0, "total_time_ms": 0, "unique_fingerprints": 0, "n_plus_one_detected": false},
+  "queries": [],
+  "analysis": [...],
+  "side_effect_warnings": [],
+  "response_body": null,
+  "status_code": 0,
+  "message": "Static analysis for task (not executable via HTTP)"
+}
+```
+
+* **`target`**: Serialized target dictionary containing code structure and location information.
+* **`static_findings`**: Array of issues detected via static AST code inspection.
+* **`metrics`**: Empty default metrics payload since non-view targets are not executed dynamically over HTTP.
+* **`queries`**: Empty array for query logs.
+* **`analysis`**: Duplicated static findings array formatted for compatibility with the UI.
+* **`side_effect_warnings`**: Empty array of side-effect warnings.
+* **`response_body`**: `null` since no HTTP response body exists for static analysis targets.
+* **`status_code`**: Default `0` status code for non-HTTP targets.
+* **`message`**: Status message explaining that static analysis was performed instead of dynamic execution.
+
+---
+
+### 4. `DQSHealthView` (`GET /dqs/health/`)
+Health check endpoint providing status of DQS configuration and database shadow routing.
+
+```json
+{
+  "status": "ok",
+  "debug": true,
+  "shadow_db_configured": true,
+  "router_configured": true,
+  "shadow_db_alias": "dqs_shadow"
+}
+```
+
+#### Fields:
+* **`status`**: String indicator of service health status (e.g. `"ok"`).
+* **`debug`**: Boolean indicating whether Django's `DEBUG` mode is active.
+* **`shadow_db_configured`**: Boolean indicating if the isolated shadow database alias is configured in Django settings.
+* **`router_configured`**: Boolean indicating if the `DQSRouter` database router is registered in Django settings.
+* **`shadow_db_alias`**: Name string of the shadow database alias configured in Django (`"dqs_shadow"`).
+"""
+
 
 # ---------------------------------------------------------------------------
 # CORS Support for Dashboard Frontend
