@@ -13,7 +13,7 @@ function PaneResizer({ onResize }) {
   return (
     <div
       onMouseDown={onResize}
-      className="h-1 bg-outline-variant cursor-row-resize hover:bg-primary transition-colors shrink-0 z-20"
+      className="h-1.5 bg-outline-variant cursor-row-resize hover:bg-primary transition-colors shrink-0 z-20"
       role="separator"
       aria-orientation="horizontal"
     />
@@ -27,19 +27,23 @@ export function Workbench({
   const { profileTarget, runProfile, loading: profiling, result: profileResult } = useProfileStore()
   const { activeConnectionId } = useConnectionsStore()
 
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('workspaces')
   const [activeSidebarNav, setActiveSidebarNav] = useState('collections')
   const [method, setMethod] = useState('GET')
-  const [path, setPath] = useState('/api/v1/books/')
-  
-  // Request Tab state
-  const [requestTab, setRequestTab] = useState('params')
-  const [params, setParams] = useState([
+  const [basePathPattern, setBasePathPattern] = useState('/api/v1/books/')
+  const [computedUrl, setComputedUrl] = useState('/api/v1/books/')
+  const [sidebarWidth, setSidebarWidth] = useState(280)
+
+  // Separate Path Params & Query Params state
+  const [requestTab, setRequestTab] = useState('queryParams')
+  const [pathParams, setPathParams] = useState([
+    { enabled: true, key: 'id', value: '1', description: 'Resource ID' },
+  ])
+  const [queryParams, setQueryParams] = useState([
     { enabled: true, key: 'page', value: '1', description: 'Page number' },
     { enabled: true, key: 'page_size', value: '10', description: 'Page size' },
   ])
   const [headers, setHeaders] = useState([
-    { enabled: true, key: 'Accept', value: 'application/json', description: 'Accept payload format' },
+    { enabled: true, key: 'Accept', value: 'application/json', description: 'Accept format' },
     { enabled: true, key: 'Content-Type', value: 'application/json', description: 'Content format' },
   ])
   const [bodyType, setBodyType] = useState('json')
@@ -60,35 +64,46 @@ export function Workbench({
     fetchTargets()
   }, [fetchTargets, activeConnectionId])
 
-  // Sync selected target into URL bar & method
+  // Sync selected target into URL bar pattern
   useEffect(() => {
     if (selectedTarget) {
       const methods = selectedTarget.trigger_spec?.methods || ['GET']
       setMethod(methods[0] || 'GET')
-      setPath(selectedTarget.trigger_spec?.path || selectedTarget.name || '/api/v1/books/')
+      const targetPath = selectedTarget.trigger_spec?.path || selectedTarget.name || '/api/v1/books/'
+      setBasePathPattern(targetPath)
     }
   }, [selectedTarget])
 
-  // Dynamic Query String sync with URL Path
-  const updatePathWithParams = (newParams) => {
-    setParams(newParams)
-    const basePath = path.split('?')[0]
-    const activeQueryParams = newParams.filter((p) => p.enabled && p.key.trim() !== '')
-    if (activeQueryParams.length === 0) {
-      setPath(basePath)
-    } else {
-      const queryString = activeQueryParams
-        .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
+  // Dynamic URL construction: pathParams + queryParams -> computed static URL
+  useEffect(() => {
+    let rawPath = basePathPattern.split('?')[0]
+
+    // Substitute path params (e.g. :id or {id})
+    pathParams.forEach((p) => {
+      if (p.enabled && p.key.trim() !== '') {
+        const paramKey = p.key.trim()
+        rawPath = rawPath.replace(`:${paramKey}`, encodeURIComponent(p.value))
+        rawPath = rawPath.replace(`{${paramKey}}`, encodeURIComponent(p.value))
+      }
+    })
+
+    // Append active query parameters
+    const activeQueries = queryParams.filter((q) => q.enabled && q.key.trim() !== '')
+    if (activeQueries.length > 0) {
+      const queryString = activeQueries
+        .map((q) => `${encodeURIComponent(q.key)}=${encodeURIComponent(q.value)}`)
         .join('&')
-      setPath(`${basePath}?${queryString}`)
+      setComputedUrl(`${rawPath}?${queryString}`)
+    } else {
+      setComputedUrl(rawPath)
     }
-  }
+  }, [basePathPattern, pathParams, queryParams])
 
   const handleSend = async () => {
     if (selectedTarget) {
-      profileTarget(selectedTarget, { method, path, params, headers, bodyContent })
+      profileTarget(selectedTarget, { method, path: computedUrl, params: queryParams, headers, bodyContent })
     } else {
-      runProfile(path, method, { params, headers, bodyContent })
+      runProfile(computedUrl, method, { params: queryParams, headers, bodyContent })
     }
   }
 
@@ -109,8 +124,6 @@ export function Workbench({
 
     const onMouseUp = () => {
       isResizingRef.current = false
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
     }
@@ -124,23 +137,21 @@ export function Workbench({
 
   return (
     <div
-      className="bg-background text-on-background h-screen w-screen overflow-hidden flex flex-col font-body-md text-body-md"
+      className="bg-background text-on-background h-screen w-screen overflow-hidden flex flex-col font-sans text-xs"
       data-label={testId}
     >
-      {/* Active Single Header */}
-      <Header
-        activeTabId={activeWorkspaceTab}
-        onTabChange={setActiveWorkspaceTab}
-        data-label={`${testId}-header`}
-      />
+      {/* Clean Header */}
+      <Header data-label={`${testId}-header`} />
 
       <div className="flex flex-1 overflow-hidden" data-label={`${testId}-body`}>
-        {/* Active Single Sidebar */}
+        {/* Resizable Sidebar */}
         <Sidebar
           activeNavId={activeSidebarNav}
           onNavSelect={setActiveSidebarNav}
           selectedTarget={selectedTarget}
           onSelectTarget={selectTarget}
+          width={sidebarWidth}
+          onWidthChange={setSidebarWidth}
           data-label={`${testId}-sidebar`}
         />
 
@@ -148,16 +159,15 @@ export function Workbench({
           className="flex-1 flex flex-col bg-background h-full overflow-hidden relative"
           data-label={`${testId}-main`}
         >
-          {/* Postman URL Bar section */}
+          {/* Static Readonly URL Bar */}
           <div
-            className="bg-surface p-container-padding border-b border-outline-variant shrink-0 z-10 relative"
+            className="bg-surface-container p-3 border-b border-outline-variant shrink-0 z-10 relative"
             data-label={`${testId}-url-section`}
           >
             <UrlBar
               method={method}
               onMethodChange={setMethod}
-              path={path}
-              onPathChange={setPath}
+              path={computedUrl}
               onSend={handleSend}
               loading={profiling}
               data-label={`${testId}-url-bar`}
@@ -168,15 +178,17 @@ export function Workbench({
           <div className="flex flex-col flex-1 overflow-hidden relative" data-label={`${testId}-panes`}>
             <div
               ref={topRef}
-              className={`flex flex-col border-b border-outline-variant bg-background overflow-hidden ${topClass}`}
+              className={`flex flex-col border-b border-outline-variant bg-surface-container-low overflow-hidden ${topClass}`}
               style={topStyle}
               data-label={`${testId}-request`}
             >
               <RequestWorkbench
                 activeTabId={requestTab}
                 onTabChange={setRequestTab}
-                params={params}
-                onParamsChange={updatePathWithParams}
+                pathParams={pathParams}
+                onPathParamsChange={setPathParams}
+                queryParams={queryParams}
+                onQueryParamsChange={setQueryParams}
                 headers={headers}
                 onHeadersChange={setHeaders}
                 bodyType={bodyType}
@@ -190,7 +202,7 @@ export function Workbench({
             <PaneResizer onResize={handleResizeMouseDown} />
 
             <div
-              className={`flex flex-col bg-background overflow-hidden relative ${
+              className={`flex flex-col bg-surface-container-low overflow-hidden relative ${
                 topHeight !== null ? 'flex-1' : 'flex-1 h-1/2'
               }`}
               data-label={`${testId}-response`}
@@ -201,9 +213,9 @@ export function Workbench({
                 profileResult={profileResult}
                 loading={profiling}
                 metrics={{
-                  status: profileResult ? '200 OK' : '200 OK',
-                  time: profileResult ? '14.2 ms' : '14.2 ms',
-                  size: profileResult ? '1.2 KB' : '1.2 KB',
+                  status: '200 OK',
+                  time: '14.2 ms',
+                  size: '1.2 KB',
                 }}
                 data-label={`${testId}-response-pane`}
               />

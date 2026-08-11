@@ -1,12 +1,12 @@
 // src/components/UrlBar.jsx
 import { MethodSelector } from './MethodSelector.jsx'
 import { useConnectionsStore } from '../store/connectionsStore.js'
+import { Icon } from './Icon.jsx'
 
 export function UrlBar({
   method = 'GET',
   onMethodChange,
   path = '/api/v1/books/',
-  onPathChange,
   onSend,
   loading = false,
   "data-label": testId = 'url-bar',
@@ -15,58 +15,55 @@ export function UrlBar({
   const activeConnection = getActiveConnection()
   const baseUrl = activeConnection?.baseUrl || 'http://127.0.0.1:8000'
 
-  const handleKeyDown = (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault()
-      onSend?.()
-    }
-  }
-
   return (
-    <div className="flex items-center gap-2" data-label={testId}>
+    <div className="flex items-center gap-3" data-label={testId}>
       <MethodSelector
         value={method}
         onChange={onMethodChange}
         data-label={`${testId}-method`}
       />
 
+      {/* Static / Readonly URL Display Bar */}
       <div
-        className="flex-1 relative flex items-center bg-surface border border-outline-variant rounded focus-within:border-primary transition-colors h-10 overflow-hidden shadow-inner"
+        className="flex-1 relative flex items-center bg-surface-container-lowest border border-dialog-border rounded-lg h-10 overflow-hidden shadow-inner select-none"
         data-label={`${testId}-field-wrapper`}
       >
         <span
-          className="pl-3 font-mono text-xs text-on-surface-variant/80 border-r border-outline-variant pr-2.5 select-none bg-surface-container-low shrink-0 h-full flex items-center"
-          title="Active Django Server Base URL"
+          className="pl-3.5 font-mono text-xs text-primary/90 border-r border-outline-variant pr-3 select-none bg-surface-container-low shrink-0 h-full flex items-center font-bold"
+          title="Active Server Base URL"
         >
           {baseUrl}
         </span>
         <input
           type="text"
           value={path}
-          onChange={(e) => onPathChange?.(e.target.value)}
-          onKeyDown={handleKeyDown}
+          readOnly
+          tabIndex={-1}
           placeholder="/api/v1/resource/"
-          className="w-full bg-transparent border-none text-on-surface font-mono text-xs px-3 py-2 focus:outline-none placeholder:text-surface-variant"
-          aria-label="Request path"
+          className="w-full bg-transparent border-none text-on-surface font-mono text-xs px-3.5 py-2 focus:outline-none cursor-default font-semibold select-all"
+          aria-label="Request URL path (Read-only)"
         />
+        <span className="pr-3 text-[10px] font-mono text-on-surface-variant/60 uppercase tracking-wider shrink-0 select-none">
+          Read-only URL
+        </span>
       </div>
 
       <button
         type="button"
         onClick={onSend}
         disabled={loading}
-        className="bg-primary text-on-primary h-10 px-6 rounded font-label-caps text-xs font-bold hover:opacity-90 transition-all flex items-center gap-2 shrink-0 disabled:opacity-60 shadow-md active:scale-95"
+        className="bg-primary text-white h-10 px-6 rounded-lg font-bold text-xs hover:opacity-90 transition-all flex items-center gap-2 shrink-0 disabled:opacity-60 shadow-[0_0_15px_rgba(255,108,55,0.3)] active:scale-95 cursor-pointer"
         title="Send Request (Ctrl + Enter)"
       >
         {loading ? (
           <>
-            <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+            <Icon name="progress_activity" size={14} spin />
             <span>Sending...</span>
           </>
         ) : (
           <>
             <span>Send</span>
-            <span className="material-symbols-outlined text-[16px]">send</span>
+            <Icon name="send" size={14} />
           </>
         )}
       </button>

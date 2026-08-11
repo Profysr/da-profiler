@@ -1,4 +1,4 @@
-// components/ProjectConnections.jsx
+// components/ConnectionManager.jsx
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useConnectionsStore } from "../store/connectionsStore.js";
 import {
@@ -6,7 +6,6 @@ import {
   Wifi,
   WifiOff,
   Plus,
-  Settings,
   X,
   CheckCircle,
   AlertCircle,
@@ -52,7 +51,7 @@ export function ProjectSelector() {
       <Button
         variant="outline"
         size="sm"
-        className="gap-2 bg-surface-container border-outline-variant hover:border-primary/50 text-on-surface transition-all shadow-sm flex"
+        className="gap-2 bg-surface-container-high border-dialog-border hover:border-primary/50 text-on-surface transition-all shadow-sm flex"
         onClick={() =>
           window.dispatchEvent(new CustomEvent("dqs:open-connections"))
         }
@@ -69,34 +68,31 @@ export function ProjectSelector() {
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="flex items-center justify-between gap-3 px-3 py-1.5 rounded bg-surface-container border border-outline-variant hover:border-primary/50 hover:bg-surface-container-high transition-all shadow-sm group w-48 sm:w-60 text-left outline-none focus:ring-2 focus:ring-primary/30"
+        className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg bg-surface-container-high border border-dialog-border hover:border-primary/50 transition-all group w-full text-left outline-none"
       >
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <div className="relative flex items-center justify-center">
             <span
               className={`w-2 h-2 rounded-full transition-all ${activeConnection?.connected ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" : "bg-zinc-500"}`}
             />
-            {activeConnection?.connected && (
-              <span className="absolute w-3 h-3 rounded-full bg-emerald-400/30 animate-ping" />
-            )}
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-[10px] uppercase font-label-caps tracking-widest text-on-surface-variant/70 leading-none mb-0.5">
-              Project
+            <span className="text-[9px] uppercase font-mono text-on-surface-variant/70 leading-none mb-0.5">
+              WORKSPACE
             </span>
-            <span className="truncate font-medium text-xs text-on-surface group-hover:text-primary transition-colors">
+            <span className="truncate font-semibold text-xs text-on-surface group-hover:text-primary transition-colors">
               {activeConnection?.name || "Select Project"}
             </span>
           </div>
         </div>
         <ChevronDown
-          className={`w-4 h-4 text-on-surface-variant transition-transform duration-200 ${isOpen ? "rotate-180 text-primary" : ""}`}
+          className={`w-3.5 h-3.5 text-on-surface-variant transition-transform duration-200 ${isOpen ? "rotate-180 text-primary" : ""}`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-surface-container border border-outline-variant rounded shadow-2xl py-2 z-50 animate-in fade-in-0 zoom-in-95 duration-150 backdrop-blur-xl">
-          <div className="px-3 py-1.5 text-[10px] font-label-caps uppercase tracking-wider text-on-surface-variant/60 border-b border-outline-variant/50 mb-1">
+        <div className="absolute left-0 top-full mt-2 w-72 bg-dialog border border-dialog-border rounded-xl shadow-2xl py-2 z-50">
+          <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant/60 border-b border-outline-variant mb-1">
             Switch Workspace
           </div>
           <div className="max-h-60 overflow-y-auto px-1 space-y-0.5">
@@ -108,14 +104,14 @@ export function ProjectSelector() {
                   onClick={() => handleSelect(conn.id)}
                   className={`w-full px-2.5 py-2 text-left flex items-center gap-2.5 rounded transition-all ${isActive
                       ? "bg-primary/15 text-primary font-medium"
-                      : "hover:bg-surface-variant/50 text-on-surface"
+                      : "hover:bg-surface-container-highest text-on-surface"
                     }`}
                 >
                   <span
                     className={`w-2 h-2 rounded-full shrink-0 ${conn.connected ? "bg-emerald-400" : "bg-zinc-500"}`}
                   />
                   <div className="flex flex-col flex-1 min-w-0">
-                    <span className="truncate text-xs font-medium leading-tight">
+                    <span className="truncate text-xs font-semibold leading-tight">
                       {conn.name}
                     </span>
                     <span className="text-[10px] text-on-surface-variant font-mono truncate">
@@ -123,26 +119,13 @@ export function ProjectSelector() {
                     </span>
                   </div>
                   {isActive && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-semibold tracking-wider">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold">
                       ACTIVE
                     </span>
                   )}
                 </button>
               );
             })}
-          </div>
-          <div className="p-1 mt-1 border-t border-outline-variant/50">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsOpen(false);
-                window.dispatchEvent(new CustomEvent("dqs:open-connections"));
-              }}
-              className="w-full px-3 py-2 text-left flex items-center gap-2 text-xs font-medium text-primary hover:bg-primary/10 rounded transition-colors"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Manage Connections</span>
-            </button>
           </div>
         </div>
       )}
@@ -159,7 +142,6 @@ export function ConnectionManager({ isOpen, onClose }) {
     updateConnection,
     setActiveConnection,
     testConnection,
-    testResult,
     clearTestResult,
   } = useConnectionsStore();
 
@@ -172,17 +154,14 @@ export function ConnectionManager({ isOpen, onClose }) {
   const [validationError, setValidationError] = useState(null);
   const [checkingId, setCheckingId] = useState(null);
 
-  // Pre-flight check & add connection atomically
   const handleAdd = useCallback(
     async (e) => {
       e.preventDefault();
       if (!newName.trim() || !newUrl.trim()) return;
 
-      // Normalise the URL the same way the store does
       const trimmedName = newName.trim();
       const normalizedUrl = newUrl.trim().replace(/\/$/, '');
 
-      // Duplicate guard — block same name OR same URL
       const duplicate = connections.find(
         (c) =>
           c.name.toLowerCase() === trimmedName.toLowerCase() ||
@@ -191,7 +170,7 @@ export function ConnectionManager({ isOpen, onClose }) {
       if (duplicate) {
         setValidationError(
           duplicate.name.toLowerCase() === trimmedName.toLowerCase()
-            ? `A project named "${duplicate.name}" already exists. Choose a different name.`
+            ? `A project named "${duplicate.name}" already exists.`
             : `The URL "${normalizedUrl}" is already used by "${duplicate.name}".`,
         );
         return;
@@ -201,9 +180,7 @@ export function ConnectionManager({ isOpen, onClose }) {
       setValidationError(null);
 
       try {
-        // Test health BEFORE saving to avoid creating broken phantom endpoints
         const result = await testConnection(normalizedUrl);
-
         if (result.success) {
           const id = addConnection(trimmedName, normalizedUrl);
           updateConnection(id, { connected: true });
@@ -212,13 +189,12 @@ export function ConnectionManager({ isOpen, onClose }) {
           clearTestResult();
         } else {
           setValidationError(
-            result.error ||
-            "Failed to establish connection. Ensure DEBUG=True and router is configured.",
+            result.error || "Failed to connect to Django server.",
           );
         }
       } catch (err) {
         setValidationError(
-          err.message || "Network Error: Could not reach the Django server.",
+          err.message || "Network Error: Could not reach server.",
         );
       } finally {
         setIsVerifying(false);
@@ -254,11 +230,7 @@ export function ConnectionManager({ isOpen, onClose }) {
 
   const handleDelete = useCallback(
     (id) => {
-      if (
-        window.confirm(
-          "Are you sure you want to remove this project connection?",
-        )
-      ) {
+      if (window.confirm("Remove this backend connection?")) {
         removeConnection(id);
       }
     },
@@ -296,50 +268,49 @@ export function ConnectionManager({ isOpen, onClose }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Project Connections"
+      title="Manage Backend Connections"
       size="lg"
     >
-      <div className="space-y-6">
-        {/* Add New Connection Form */}
+      <div className="space-y-6 bg-dialog">
         <form
           onSubmit={handleAdd}
-          className="p-5 bg-surface-container border border-outline-variant rounded-xl space-y-4 shadow-sm relative overflow-hidden"
+          className="p-5 bg-surface-container-high border border-dialog-border rounded-xl space-y-4 shadow-md relative overflow-hidden"
         >
           <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
           <div className="flex items-center gap-2">
             <Server className="w-4 h-4 text-primary" />
-            <h4 className="font-semibold text-sm text-on-surface">
-              Add New Django Workspace
+            <h4 className="font-bold text-xs text-on-surface">
+              Register New Django Backend Connection
             </h4>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-label-caps uppercase tracking-wider text-on-surface-variant mb-1.5">
+              <label className="block text-[10px] font-mono uppercase text-on-surface-variant mb-1">
                 Project Name
               </label>
               <Input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="e.g. Core API Service"
-                className="w-full bg-surface"
+                className="w-full bg-surface-container-lowest border-dialog-border text-xs text-on-surface"
               />
             </div>
             <div>
-              <label className="block text-xs font-label-caps uppercase tracking-wider text-on-surface-variant mb-1.5">
+              <label className="block text-[10px] font-mono uppercase text-on-surface-variant mb-1">
                 Django Server URL
               </label>
               <Input
                 value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
                 placeholder="http://127.0.0.1:8000"
-                className="w-full bg-surface font-mono text-xs"
+                className="w-full bg-surface-container-lowest border-dialog-border font-mono text-xs text-on-surface"
               />
             </div>
           </div>
 
           {validationError && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 animate-in fade-in-50">
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{validationError}</span>
             </div>
@@ -349,65 +320,37 @@ export function ConnectionManager({ isOpen, onClose }) {
             <Button
               type="submit"
               disabled={isVerifying}
-              className="gap-2 bg-primary text-on-primary hover:opacity-90 shadow-sm transition-all flex items-center justify-center rounded"
+              className="gap-2 bg-primary text-white hover:opacity-90 transition-all text-xs font-semibold rounded px-4 py-2"
             >
               {isVerifying ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Verifying Health...</span>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Testing Connection...</span>
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4" />
-                  <span>Test & Add Connection</span>
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Test & Save Connection</span>
                 </>
               )}
             </Button>
           </div>
         </form>
 
-        {/* Global Test Result Toast if applicable */}
-        {/* {testResult && !validationError && (
-          <div
-            className={`p-3 rounded-xl border flex items-center gap-3 ${testResult.success ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-red-500/10 border-red-500/30 text-red-400"}`}
-          >
-            {testResult.success ? (
-              <CheckCircle className="w-5 h-5 shrink-0" />
-            ) : (
-              <AlertCircle className="w-5 h-5 shrink-0" />
-            )}
-            <span className="flex-1 text-xs font-medium">
-              {testResult.success
-                ? "Connection verified & healthy!"
-                : `Verification failed: ${testResult.error}`}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearTestResult}
-              icon={<X className="w-4 h-4" />}
-            />
-          </div>
-        )} */}
-
-        {/* Connections List */}
         <div className="space-y-3">
-          <div className="text-xs font-label-caps uppercase tracking-wider text-on-surface-variant">
-            Configured Projects ({connections.length})
+          <div className="text-[10px] font-mono uppercase text-on-surface-variant">
+            Registered Backend Projects ({connections.length})
           </div>
 
           {connections.length === 0 ? (
-            <div className="text-center py-12 border border-dashed border-outline-variant rounded bg-surface-container/50 text-on-surface-variant">
-              <WifiOff className="w-10 h-10 mx-auto mb-3 opacity-40 text-primary" />
-              <p className="text-sm font-medium text-on-surface">
-                No project connections configured
-              </p>
-              <p className="text-xs mt-1 text-on-surface-variant/70">
-                Add a running Django server instance above to start profiling.
+            <div className="text-center py-10 border border-dashed border-dialog-border rounded-xl bg-surface-container-high text-on-surface-variant">
+              <WifiOff className="w-8 h-8 mx-auto mb-2 opacity-40 text-primary" />
+              <p className="text-xs font-medium text-on-surface">
+                No active connections configured
               </p>
             </div>
           ) : (
-            <div className="space-y-2.5 max-h-85 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {connections.map((conn) => {
                 const isActive = conn.id === activeConnectionId;
                 const isEditing = editingId === conn.id;
@@ -416,13 +359,13 @@ export function ConnectionManager({ isOpen, onClose }) {
                 return (
                   <div
                     key={conn.id}
-                    className={`flex items-center gap-3 px-3 py-2 rounded border transition-all ${isActive
-                        ? "bg-primary/10 border-primary/40 shadow-sm"
-                        : "bg-surface-container border-outline-variant hover:border-outline"
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all ${isActive
+                        ? "bg-primary/10 border-primary/40"
+                        : "bg-surface-container-high border-dialog-border hover:border-outline"
                       }`}
                   >
                     <div
-                      className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${conn.connected
+                      className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${conn.connected
                           ? "bg-emerald-500/20 text-emerald-400"
                           : "bg-surface-variant text-on-surface-variant"
                         }`}
@@ -440,29 +383,27 @@ export function ConnectionManager({ isOpen, onClose }) {
                           <Input
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
-                            placeholder="Project Name"
-                            className="text-xs font-medium"
+                            className="text-xs font-medium bg-surface-container-lowest"
                           />
                           <Input
                             value={editUrl}
                             onChange={(e) => setEditUrl(e.target.value)}
-                            placeholder="http://localhost:8000"
-                            className="text-xs font-mono"
+                            className="text-xs font-mono bg-surface-container-lowest"
                           />
                         </div>
                       ) : (
                         <div className="flex flex-col min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-on-surface truncate">
+                            <span className="font-bold text-xs text-on-surface truncate">
                               {conn.name}
                             </span>
                             {isActive && (
-                              <span className="text-[8px] px-1.5 py-px bg-primary/20 text-primary font-bold tracking-wide">
+                              <span className="text-[8px] px-1.5 py-0.5 bg-primary/20 text-primary font-bold rounded">
                                 ACTIVE
                               </span>
                             )}
                           </div>
-                          <span className="text-[11px] text-on-surface-variant font-mono truncate mt-0.5">
+                          <span className="text-[10px] text-on-surface-variant font-mono truncate mt-0.5">
                             {conn.baseUrl}
                           </span>
                         </div>
@@ -471,83 +412,50 @@ export function ConnectionManager({ isOpen, onClose }) {
 
                     <div className="flex items-center gap-1">
                       {isEditing ? (
-                        [
-                          {
-                            key: "save",
-                            title: "Save",
-                            ariaLabel: "Save",
-                            onClick: () => handleSaveEdit(conn.id),
-                            icon: <CheckCircle className="w-4 h-4 text-emerald-400" />,
-                          },
-                          {
-                            key: "cancel",
-                            title: "Cancel",
-                            ariaLabel: "Cancel",
-                            onClick: handleCancelEdit,
-                            icon: <X className="w-4 h-4 text-on-surface-variant" />,
-                          },
-                        ].map((btn) => (
+                        <>
                           <Button
-                            key={btn.key}
                             variant="ghost"
                             size="sm"
-                            onClick={btn.onClick}
-                            icon={btn.icon}
-                            title={btn.title}
-                            aria-label={btn.ariaLabel}
+                            onClick={() => handleSaveEdit(conn.id)}
+                            icon={<CheckCircle className="w-4 h-4 text-emerald-400" />}
                           />
-                        ))
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCancelEdit}
+                            icon={<X className="w-4 h-4 text-on-surface-variant" />}
+                          />
+                        </>
                       ) : (
-                        [
-                          {
-                            key: "health-check",
-                            title: "Check Health Status",
-                            ariaLabel: "Check health status",
-                            onClick: () => handleTestExisting(conn),
-                            disabled: isChecking,
-                            icon: isChecking ? (
-                              <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                            ) : (
-                              <CheckCircle className="w-4 h-4 text-on-surface-variant hover:text-emerald-400" />
-                            ),
-                          },
-                          {
-                            key: "edit",
-                            title: "Edit connection",
-                            ariaLabel: "Edit connection",
-                            onClick: () => handleEditClick(conn),
-                            icon: <Edit2 className="w-4 h-4 text-on-surface-variant hover:text-primary" />,
-                          },
-                          !isActive && {
-                            key: "connect",
-                            title: "Set as active workspace",
-                            ariaLabel: "Connect",
-                            onClick: () => handleConnect(conn.id),
-                            icon: <Play className="w-4 h-4 text-on-surface-variant hover:text-primary" />,
-                          },
-                          {
-                            key: "delete",
-                            title: "Remove project",
-                            ariaLabel: "Remove",
-                            onClick: () => handleDelete(conn.id),
-                            icon: <Trash2 className="w-4 h-4" />,
-                            className: "text-on-surface-variant hover:text-red-400 hover:bg-red-500/10",
-                          },
-                        ]
-                          .filter(Boolean)
-                          .map((btn) => (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleTestExisting(conn)}
+                            disabled={isChecking}
+                            icon={isChecking ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <CheckCircle className="w-4 h-4 text-on-surface-variant hover:text-emerald-400" />}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditClick(conn)}
+                            icon={<Edit2 className="w-4 h-4 text-on-surface-variant hover:text-primary" />}
+                          />
+                          {!isActive && (
                             <Button
-                              key={btn.key}
                               variant="ghost"
                               size="sm"
-                              onClick={btn.onClick}
-                              disabled={btn.disabled}
-                              icon={btn.icon}
-                              title={btn.title}
-                              aria-label={btn.ariaLabel}
-                              className={btn.className}
+                              onClick={() => handleConnect(conn.id)}
+                              icon={<Play className="w-4 h-4 text-on-surface-variant hover:text-primary" />}
                             />
-                          ))
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(conn.id)}
+                            icon={<Trash2 className="w-4 h-4 text-on-surface-variant hover:text-red-400" />}
+                          />
+                        </>
                       )}
                     </div>
                   </div>

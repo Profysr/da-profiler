@@ -1,12 +1,10 @@
 // src/components/Header.jsx
-import { useConnectionsStore } from '../store/connectionsStore.js'
-import { ProjectSelector, ConnectionManager } from './ConnectionManager.jsx'
 import { useState } from 'react'
-import { WORKSPACE_TABS, HEADER_ICON_BUTTONS } from '../utils/workbenchData.js'
+import { ConnectionManager } from './ConnectionManager.jsx'
+import { HEADER_ICON_BUTTONS } from '../utils/workbenchData.js'
+import { Icon } from './Icon.jsx'
 
 export function Header({
-  activeTabId = 'workspaces',
-  onTabChange,
   userAvatarUrl,
   "data-label": testId = 'global-header',
 }) {
@@ -15,55 +13,26 @@ export function Header({
   return (
     <>
       <header
-        className="bg-surface border-b border-outline-variant flex justify-between items-center w-full px-container-padding h-header-height shrink-0 z-50 select-none"
+        className="bg-surface-container border-b border-outline-variant flex justify-between items-center w-full px-4 h-12 shrink-0 z-50 select-none shadow-md"
         data-label={testId}
       >
-        <div className="flex items-center gap-4" data-label={`${testId}-left`}>
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[22px]">api</span>
-            <span className="font-headline-sm text-headline-sm font-bold text-primary tracking-tight">
-              Postman <span className="text-on-surface-variant font-normal text-xs uppercase tracking-wider ml-1">API Profiler</span>
-            </span>
+        <div className="flex items-center gap-2.5" data-label={`${testId}-left`}>
+          <div className="w-7 h-7 rounded bg-primary/20 text-primary flex items-center justify-center font-bold shadow-[0_0_12px_rgba(255,108,55,0.3)]">
+            <Icon name="api" size={14} />
           </div>
-
-          <div className="h-4 w-px bg-outline-variant mx-1" />
-
-          {/* Project / Connection selector inside Header */}
-          <ProjectSelector />
-
-          <nav className="flex gap-1 h-full ml-2" data-label={`${testId}-nav`} role="tablist">
-            {WORKSPACE_TABS.map((tab) => {
-              const isActive = activeTabId === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => onTabChange?.(tab.id)}
-                  className={[
-                    'flex items-center gap-1.5 h-full px-3 transition-colors text-xs font-medium border-b-2',
-                    isActive
-                      ? 'text-primary border-primary font-semibold bg-surface-container-high/40'
-                      : 'text-on-surface-variant border-transparent hover:text-on-surface hover:bg-surface-container-high/20',
-                  ].join(' ')}
-                  role="tab"
-                  aria-selected={isActive}
-                >
-                  <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </button>
-              )
-            })}
-          </nav>
+          <span className="font-bold text-sm text-on-surface tracking-tight">
+            Postman <span className="text-primary font-mono text-xs uppercase ml-0.5">Profiler</span>
+          </span>
         </div>
 
         <div className="flex items-center gap-2" data-label={`${testId}-right`}>
           <button
             type="button"
             onClick={() => setIsConnManagerOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded border border-outline-variant bg-surface-container hover:border-primary/50 text-on-surface transition-all"
-            title="Manage Connections"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded bg-surface-container-highest border border-dialog-border hover:border-primary/60 text-on-surface transition-all shadow-sm active:scale-95"
+            title="Manage Backend Connections"
           >
-            <span className="material-symbols-outlined text-[16px] text-primary">settings_ethernet</span>
+            <Icon name="settings_ethernet" size={16} className="text-primary" />
             <span>Connections</span>
           </button>
 
@@ -75,19 +44,19 @@ export function Header({
                 title={btn.title}
                 className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded transition-colors"
               >
-                <span className="material-symbols-outlined text-[18px]">{btn.icon}</span>
+                <Icon name={btn.icon} size={14} />
               </button>
             ))}
           </div>
 
           <div
-            className="w-7 h-7 rounded-full overflow-hidden border border-outline-variant shrink-0 bg-surface-container-high ml-1 flex items-center justify-center cursor-pointer"
+            className="w-7 h-7 rounded-full overflow-hidden border border-dialog-border shrink-0 bg-surface-container-highest ml-1 flex items-center justify-center cursor-pointer hover:border-primary transition-colors"
             title="User Profile"
           >
             {userAvatarUrl ? (
               <img alt="User profile" className="w-full h-full object-cover" src={userAvatarUrl} />
             ) : (
-              <span className="material-symbols-outlined text-[16px] text-on-surface-variant">person</span>
+              <Icon name="person" size={14} className="text-on-surface-variant" />
             )}
           </div>
         </div>

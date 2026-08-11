@@ -4,10 +4,12 @@ import { KeyValueEditor } from './KeyValueEditor.jsx'
 import { DjangoRibbon } from './DjangoRibbon.jsx'
 
 export function RequestWorkbench({
-  activeTabId = 'params',
+  activeTabId = 'queryParams',
   onTabChange,
-  params = [],
-  onParamsChange,
+  pathParams = [],
+  onPathParamsChange,
+  queryParams = [],
+  onQueryParamsChange,
   headers = [],
   onHeadersChange,
   bodyType = 'json',
@@ -17,7 +19,8 @@ export function RequestWorkbench({
   "data-label": testId = 'request-workbench',
 }) {
   const requestTabs = [
-    { id: 'params', label: 'Params', count: params.filter((p) => p.enabled && p.key).length },
+    { id: 'pathParams', label: 'Path Params', count: pathParams.filter((p) => p.enabled && p.key).length },
+    { id: 'queryParams', label: 'Query Params', count: queryParams.filter((q) => q.enabled && q.key).length },
     { id: 'headers', label: 'Headers', count: headers.filter((h) => h.enabled && h.key).length },
     { id: 'body', label: 'Body' },
     { id: 'auth', label: 'Auth & Context' },
@@ -25,10 +28,10 @@ export function RequestWorkbench({
 
   return (
     <section
-      className="flex-1 flex flex-col bg-background overflow-hidden"
+      className="flex-1 flex flex-col bg-surface-container-low overflow-hidden"
       data-label={testId}
     >
-      <div className="flex items-center justify-between border-b border-outline-variant bg-surface/40">
+      <div className="flex items-center justify-between border-b border-outline-variant bg-surface-container">
         <PaneTabs
           tabs={requestTabs}
           activeId={activeTabId}
@@ -41,15 +44,30 @@ export function RequestWorkbench({
       </div>
 
       <div className="flex-1 p-4 overflow-y-auto" data-label={`${testId}-content`}>
-        {activeTabId === 'params' && (
+        {activeTabId === 'pathParams' && (
           <div className="space-y-3">
             <div className="text-xs text-on-surface-variant font-medium">
-              Query Parameters
+              URL Path Variables / Parameters (e.g. <code className="text-primary font-mono">:id</code> or <code className="text-primary font-mono">&#123;book_id&#125;</code>)
             </div>
             <KeyValueEditor
-              pairs={params}
-              onChange={onParamsChange}
-              keyPlaceholder="Parameter"
+              pairs={pathParams}
+              onChange={onPathParamsChange}
+              keyPlaceholder="Path Variable (e.g. book_id)"
+              valuePlaceholder="Value (e.g. 42)"
+              descriptionPlaceholder="Description"
+            />
+          </div>
+        )}
+
+        {activeTabId === 'queryParams' && (
+          <div className="space-y-3">
+            <div className="text-xs text-on-surface-variant font-medium">
+              URL Query String Parameters (e.g. <code className="text-primary font-mono">?page=1&size=10</code>)
+            </div>
+            <KeyValueEditor
+              pairs={queryParams}
+              onChange={onQueryParamsChange}
+              keyPlaceholder="Parameter Key"
               valuePlaceholder="Value"
               descriptionPlaceholder="Description"
             />
@@ -64,8 +82,8 @@ export function RequestWorkbench({
             <KeyValueEditor
               pairs={headers}
               onChange={onHeadersChange}
-              keyPlaceholder="Header"
-              valuePlaceholder="Value"
+              keyPlaceholder="Header Name"
+              valuePlaceholder="Header Value"
               descriptionPlaceholder="Description"
             />
           </div>
@@ -84,13 +102,13 @@ export function RequestWorkbench({
                     onChange={(e) => onBodyTypeChange?.(e.target.value)}
                     className="accent-primary"
                   />
-                  <span className="uppercase font-mono text-[11px]">{type}</span>
+                  <span className="uppercase font-mono text-[11px] font-semibold">{type}</span>
                 </label>
               ))}
             </div>
 
             {bodyType === 'json' && (
-              <div className="flex-1 border border-outline-variant rounded bg-surface p-2 font-mono text-xs">
+              <div className="flex-1 border border-dialog-border rounded-lg bg-surface-container-lowest p-3 font-mono text-xs shadow-inner">
                 <textarea
                   value={bodyContent}
                   onChange={(e) => onBodyContentChange?.(e.target.value)}
@@ -102,7 +120,7 @@ export function RequestWorkbench({
 
             {bodyType === 'none' && (
               <div className="py-8 text-center text-xs text-on-surface-variant">
-                This request does not have a body
+                This request does not send a body payload
               </div>
             )}
           </div>
@@ -110,9 +128,9 @@ export function RequestWorkbench({
 
         {activeTabId === 'auth' && (
           <div className="space-y-4 max-w-lg">
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-on-surface">Authorization Type</label>
-              <select className="w-full bg-surface border border-outline-variant rounded p-2 text-xs text-on-surface">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-on-surface">Authorization Type</label>
+              <select className="w-full bg-surface-container-lowest border border-dialog-border rounded-lg p-2.5 text-xs text-on-surface focus:outline-none focus:border-primary">
                 <option value="none">No Auth</option>
                 <option value="bearer">Bearer Token</option>
                 <option value="basic">Basic Auth</option>

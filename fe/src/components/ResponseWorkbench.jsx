@@ -3,6 +3,7 @@ import { PaneTabs } from './PaneTabs.jsx'
 import { ResponseMetrics } from './ResponseMetrics.jsx'
 import { PROFILER_TABS } from '../utils/constants.js'
 import { CopyButton } from './ui/CopyButton.jsx'
+import { Icon } from './Icon.jsx'
 
 export function ResponseWorkbench({
   activeTabId = 'response',
@@ -57,8 +58,8 @@ export function ResponseWorkbench({
       >
         {loading ? (
           <div className="flex items-center justify-center h-full gap-2 text-on-surface-variant">
-            <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
-            <span>Executing target & profiling execution...</span>
+            <Icon name="progress_activity" size={20} className="animate-spin" />
+            <span>Executing target &amp; profiling execution...</span>
           </div>
         ) : (
           <>
@@ -108,7 +109,7 @@ export function ResponseWorkbench({
             {activeTabId === 'queries' && (
               <div className="space-y-3">
                 <div className="p-2 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">warning</span>
+                  <Icon name="warning" size={14} className="text-amber-400" />
                   <span>Detected N+1 Query: Author fetched 4 times in loop</span>
                 </div>
                 <div className="space-y-2">

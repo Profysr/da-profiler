@@ -1,4 +1,6 @@
 // src/components/PaneTabs.jsx
+import { Icon } from './Icon.jsx'
+
 export function PaneTabs({
   tabs = [],
   activeId,
@@ -6,7 +8,7 @@ export function PaneTabs({
   testId = 'pane-tabs',
 }) {
   return (
-    <div className="flex items-center gap-1 border-b border-outline-variant bg-surface-container-low px-2 pt-1 overflow-x-auto no-scrollbar" data-label={testId}>
+    <div className="flex items-center gap-1 border-b border-outline-variant bg-surface-container px-2 pt-1 overflow-x-auto no-scrollbar" data-label={testId}>
       {tabs.map((tab) => {
         const isActive = activeId === tab.id
         return (
@@ -22,10 +24,10 @@ export function PaneTabs({
             role="tab"
             aria-selected={isActive}
           >
-            {tab.icon && <span className="material-symbols-outlined text-[14px]">{tab.icon}</span>}
+            {tab.icon && <Icon name={tab.icon} size={12} />}
             <span>{tab.label}</span>
             {tab.count !== undefined && tab.count > 0 && (
-              <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-primary/20 text-primary font-mono">
+              <span className="ml-1 text-[10px] px-1.5 rounded-full bg-primary/20 text-primary font-mono">
                 {tab.count}
               </span>
             )}

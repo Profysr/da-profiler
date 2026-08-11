@@ -1,5 +1,6 @@
 // src/components/MethodSelector.jsx
 import { HTTP_METHODS } from '../utils/workbenchData.js'
+import { Icon } from './Icon.jsx'
 
 function getMethodBadgeClass(method) {
   switch (method) {
@@ -44,9 +45,7 @@ export function MethodSelector({
           </option>
         ))}
       </select>
-      <span className="material-symbols-outlined text-[18px] opacity-70 pr-2 pointer-events-none">
-        arrow_drop_down
-      </span>
+      <Icon name="arrow_drop_down" size={14} className="opacity-70 pr-2 pointer-events-none" />
     </div>
   )
 }

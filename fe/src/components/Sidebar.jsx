@@ -1,18 +1,18 @@
 // src/components/Sidebar.jsx
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useConnectionsStore } from '../store/connectionsStore.js'
 import { useRoutesStore } from '../store/routesStore.js'
 import { TARGET_KINDS, TARGET_KIND_ORDER } from '../utils/constants.js'
-import { ConnectionManager } from './ConnectionManager.jsx'
+import { ProjectSelector, ConnectionManager } from './ConnectionManager.jsx'
+import { Icon } from './Icon.jsx'
 
 export function Sidebar({
-  activeNavId = 'collections',
-  onNavSelect,
   onSelectTarget,
   selectedTarget,
+  width = 280,
+  onWidthChange,
   "data-label": testId = 'sidebar-navigator',
 }) {
-  const { connections, getActiveConnection } = useConnectionsStore()
   const { filteredTargets, searchQuery, setSearchQuery, activeFilter, setActiveFilter, loading } = useRoutesStore()
   const [isConnManagerOpen, setIsConnManagerOpen] = useState(false)
   const [expandedFolders, setExpandedFolders] = useState({
@@ -22,13 +22,41 @@ export function Sidebar({
     signal: false,
   })
 
-  const activeConnection = getActiveConnection()
+  const isResizingRef = useRef(false)
+  const startXRef = useRef(0)
+  const startWidthRef = useRef(280)
 
   const toggleFolder = (kind) => {
     setExpandedFolders((prev) => ({ ...prev, [kind]: !prev[kind] }))
   }
 
-  // Group targets by kind
+  const handleResizeMouseDown = useCallback((e) => {
+    e.preventDefault()
+    isResizingRef.current = true
+    startXRef.current = e.clientX
+    startWidthRef.current = width
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+
+    const onMouseMove = (e) => {
+      if (!isResizingRef.current) return
+      const delta = e.clientX - startXRef.current
+      const newWidth = Math.max(220, Math.min(480, startWidthRef.current + delta))
+      onWidthChange?.(newWidth)
+    }
+
+    const onMouseUp = () => {
+      isResizingRef.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }, [width, onWidthChange])
+
   const groupedTargets = TARGET_KIND_ORDER.reduce((acc, kind) => {
     acc[kind] = filteredTargets.filter((t) => (t.kind || 'view') === kind)
     return acc
@@ -37,62 +65,50 @@ export function Sidebar({
   return (
     <>
       <aside
-        className="flex flex-col h-full z-40 bg-surface-container-low border-r border-outline-variant shrink-0 select-none"
-        style={{ width: 'var(--spacing-sidebar-width, 280px)' }}
+        className="flex flex-col h-full z-40 bg-surface-container-low border-r-2 border-primary/40 shrink-0 select-none relative shadow-xl"
+        style={{ width: `${width}px` }}
         data-label={testId}
         aria-label="Sidebar navigation"
       >
-        {/* Connection / Collection Info Banner */}
-        <div className="p-3 border-b border-outline-variant flex items-center justify-between bg-surface/50">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded bg-primary/15 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-              <span className="material-symbols-outlined text-[16px]">folder_special</span>
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-label-caps uppercase text-on-surface-variant/70 tracking-wider">
-                Active Collection
-              </span>
-              <span className="font-semibold text-xs text-on-surface truncate">
-                {activeConnection?.name || 'No Connection'}
-              </span>
-            </div>
+        {/* Workspace / Project Selector Header */}
+        <div className="p-3 border-b border-outline-variant flex items-center justify-between bg-surface-container">
+          <div className="flex-1 min-w-0">
+            <ProjectSelector />
           </div>
-          <button
+          {/* <button
             type="button"
             onClick={() => setIsConnManagerOpen(true)}
-            className="p-1 rounded hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors shrink-0"
-            title="Configure Connections / Collections"
+            className="p-1.5 rounded-lg bg-surface-container-highest hover:bg-surface-variant border border-dialog-border text-on-surface-variant hover:text-primary transition-all shrink-0 ml-2"
+            title="Manage Backend Connections"
           >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-          </button>
+            <Icon name="add" size={14} />
+          </button> */}
         </div>
 
         {/* Search Bar */}
-        <div className="p-2 border-b border-outline-variant">
+        <div className="p-3 border-b border-outline-variant bg-surface-container-low space-y-2.5">
           <div className="relative w-full">
-            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant pointer-events-none">
-              search
-            </span>
+            <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search endpoints, routes..."
-              className="w-full bg-background border border-outline-variant rounded py-1 pl-8 pr-7 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary transition-colors"
+              className="w-full bg-surface-container-high border border-dialog-border rounded-lg py-2 pl-9 pr-8 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary transition-colors shadow-inner"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface text-xs"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface text-xs"
               >
-                <span className="material-symbols-outlined text-[14px]">close</span>
+                <Icon name="close" size={12} />
               </button>
             )}
           </div>
 
           {/* Quick Filter Chips */}
-          <div className="flex items-center gap-1 mt-2 overflow-x-auto no-scrollbar pb-0.5">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
             {[
               { id: 'all', label: 'All' },
               { id: 'executable', label: 'Triggerable' },
@@ -103,10 +119,10 @@ export function Sidebar({
                 key={f.id}
                 type="button"
                 onClick={() => setActiveFilter(f.id)}
-                className={`text-[10px] px-2 py-0.5 rounded-full transition-colors font-medium whitespace-nowrap ${
+                className={`text-[10px] px-2.5 py-1 rounded-md transition-colors font-medium whitespace-nowrap ${
                   activeFilter === f.id
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface-container-highest text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-primary text-white font-bold shadow-sm'
+                    : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface border border-outline-variant'
                 }`}
               >
                 {f.label}
@@ -116,10 +132,10 @@ export function Sidebar({
         </div>
 
         {/* Target Collections Tree */}
-        <nav className="flex-1 overflow-y-auto p-2 space-y-3">
+        <nav className="flex-1 overflow-y-auto p-3 space-y-3">
           {loading ? (
             <div className="p-4 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+              <Icon name="progress_activity" size={14} spin />
               <span>Loading targets...</span>
             </div>
           ) : filteredTargets.length === 0 ? (
@@ -135,27 +151,23 @@ export function Sidebar({
 
               return (
                 <div key={kind} className="space-y-1">
-                  {/* Folder Header */}
                   <button
                     type="button"
                     onClick={() => toggleFolder(kind)}
-                    className="w-full flex items-center justify-between px-2 py-1 rounded hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors text-xs font-semibold"
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors text-xs font-semibold"
                   >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="material-symbols-outlined text-[14px]">
-                        {isExpanded ? 'expand_more' : 'chevron_right'}
-                      </span>
-                      <span className="material-symbols-outlined text-[16px] text-primary">folder</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Icon name={isExpanded ? 'expand_more' : 'chevron_right'} size={14} />
+                      <Icon name="folder" size={14} className="text-primary" />
                       <span className="truncate">{meta.label}</span>
                     </div>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant font-mono">
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-container-highest text-on-surface-variant font-mono">
                       {targets.length}
                     </span>
                   </button>
 
-                  {/* Folder Items */}
                   {isExpanded && (
-                    <div className="pl-4 space-y-0.5 border-l border-outline-variant/60 ml-2.5">
+                    <div className="pl-4 space-y-1 border-l border-outline-variant ml-3">
                       {targets.map((target) => {
                         const isSelected = selectedTarget?.id === target.id
                         const methods = target.trigger_spec?.methods || ['GET']
@@ -167,14 +179,14 @@ export function Sidebar({
                             key={target.id}
                             type="button"
                             onClick={() => onSelectTarget?.(target)}
-                            className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-left transition-colors text-xs gap-2 group ${
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-all text-xs gap-2 group ${
                               isSelected
-                                ? 'bg-primary/15 text-primary font-medium border-l-2 border-primary'
-                                : 'hover:bg-surface-container-highest text-on-surface'
+                                ? 'bg-primary/20 text-primary font-bold border-l-2 border-primary shadow-sm'
+                                : 'hover:bg-surface-container-high text-on-surface/90'
                             }`}
                           >
                             <span
-                              className={`text-[9px] font-mono font-bold px-1 rounded uppercase shrink-0 ${
+                              className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase shrink-0 ${
                                 primaryMethod === 'GET'
                                   ? 'bg-emerald-500/20 text-emerald-400'
                                   : primaryMethod === 'POST'
@@ -189,7 +201,7 @@ export function Sidebar({
                               {primaryMethod}
                             </span>
 
-                            <span className="truncate font-mono text-[11px] flex-1 text-on-surface/90 group-hover:text-on-surface">
+                            <span className="truncate font-mono text-[11px] flex-1 text-on-surface/90">
                               {path}
                             </span>
                           </button>
@@ -204,17 +216,24 @@ export function Sidebar({
         </nav>
 
         {/* Footer */}
-        <div className="p-3 border-t border-outline-variant flex items-center justify-between text-xs text-on-surface-variant bg-surface/30">
+        <div className="p-3 border-t border-outline-variant flex items-center justify-between text-xs text-on-surface-variant bg-surface-container">
           <button
             type="button"
             onClick={() => setIsConnManagerOpen(true)}
-            className="flex items-center gap-1 hover:text-primary transition-colors text-[11px]"
+            className="flex items-center gap-1 hover:text-primary transition-colors text-[11px] font-semibold"
           >
-            <span className="material-symbols-outlined text-[14px]">add_link</span>
-            <span>Register Connection</span>
+            <Icon name="add_link" size={14} />
+            <span>Manage Connections</span>
           </button>
           <span className="text-[10px] font-mono text-on-surface-variant/60">v1.0.0</span>
         </div>
+
+        {/* Resizer Handle */}
+        <div
+          onMouseDown={handleResizeMouseDown}
+          className="absolute right-0 top-0 w-1.5 h-full cursor-col-resize hover:bg-primary transition-colors z-50"
+          title="Drag to resize sidebar"
+        />
       </aside>
 
       <ConnectionManager
