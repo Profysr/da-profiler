@@ -397,6 +397,7 @@ class DjangoSandboxRunner:
             # First, introspect the route to get path_params and view_callable
             with ProcessLogger.timed_step("route_introspection", f"Introspecting route {url_name_or_path}"):
                 from dqs.adapters.drf.routing.introspector import DjangoIntrospector
+                
                 introspector = DjangoIntrospector()
                 routes = introspector.list_all_routes()
                 matched_route = None

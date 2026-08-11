@@ -11,8 +11,7 @@ and view lookup mappings (lookup_field / lookup_url_kwarg).
 import inspect
 import logging
 import re
-from typing import Any
-
+from typing import Any, Optional
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import URLPattern, URLResolver, get_resolver
@@ -20,6 +19,8 @@ from django.urls.resolvers import RegexPattern, RoutePattern
 
 from dqs.adapters.drf.routing.converters import PathConverterResolver
 from dqs.adapters.drf.types import PathParam, RouteMetadata
+from django.apps import apps
+from django.db import models
 
 try:
     from rest_framework.views import APIView
@@ -100,58 +101,153 @@ class DjangoIntrospector:
     # =========================================================================
     # Step 05 - Multi-Strategy Model Discovery Engine
     # =========================================================================
-    def _extract_model_from_class(self, view_class: type) -> str | None:
+    def extract_model_from_view(
+        view_class: type, pattern: Optional[URLPattern] = None
+    ) -> Optional[str]:
+        """Attempts to determine target Django Model using a 5-tier extraction fallback chain.
+
+        Execution precedence:
+        1. Static attributes (`queryset.model` or `model`)
+        2. Serializer metadata (`serializer_class.Meta.model` or dynamic `get_serializer_class`)
+        3. Safe runtime execution (`get_queryset()` with mock request and path parameters)
+        4. Type annotations on `get_queryset()`
+        5. Django App Registry & URL parameter pattern matching
         """
-        Step 05.1 - Attempts to determine target Django Model from view attributes:
-        1. Class static `queryset` attribute
-        2. Class static `model` attribute
-        3. Class static `serializer_class.Meta.model` attribute
-        4. Dynamic `get_serializer_class()` class reference
-        5. `get_queryset()` signature return annotations
-        """
+        if not isinstance(view_class, type):
+            return None
+
+        def _format_model_label(model_cls: type) -> Optional[str]:
+            if (
+                isinstance(model_cls, type)
+                and issubclass(model_cls, models.Model)
+                and hasattr(model_cls, "_meta")
+            ):
+                return f"{model_cls._meta.app_label}.{model_cls._meta.object_name}"
+            return None
+
+        # =========================================================================
+        # Strategy 1: Static Class Attributes
+        # =========================================================================
         try:
-            # Strategy 1: Direct queryset attribute
             queryset = getattr(view_class, "queryset", None)
             if queryset is not None and hasattr(queryset, "model"):
-                model = queryset.model
-                return f"{model._meta.app_label}.{model._meta.object_name}"
+                label = _format_model_label(queryset.model)
+                if label:
+                    return label
 
-            # Strategy 2: Direct model attribute
             model = getattr(view_class, "model", None)
-            if model and hasattr(model, "_meta"):
-                return f"{model._meta.app_label}.{model._meta.object_name}"
+            label = _format_model_label(model)
+            if label:
+                return label
+        except Exception as e:
+            logger.debug("Strategy 1 failed for %s: %s", view_class, e)
 
-            # Strategy 3: Serializer Class Meta.model reference
+        # =========================================================================
+        # Strategy 2: Serializer Class Meta Model Reference
+        # =========================================================================
+        try:
             serializer_cls = getattr(view_class, "serializer_class", None)
 
-            # Strategy 4: Dynamic get_serializer_class lookup if static attribute missing
             if not serializer_cls and hasattr(view_class, "get_serializer_class"):
                 try:
                     serializer_cls = view_class.get_serializer_class(None)
                 except Exception:
-                    logger.debug("Could not inspect serializer class for %s", view_class)
+                    pass
 
             if serializer_cls and hasattr(serializer_cls, "Meta"):
                 meta_model = getattr(serializer_cls.Meta, "model", None)
-                if meta_model and hasattr(meta_model, "_meta"):
-                    return f"{meta_model._meta.app_label}.{meta_model._meta.object_name}"
-
-            # Strategy 5: Return annotation inspection on get_queryset
-            if hasattr(view_class, "get_queryset"):
-                try:
-                    sig = inspect.signature(view_class.get_queryset)
-                    return_type = sig.return_annotation
-                    if return_type and hasattr(return_type, "model"):
-                        m = return_type.model
-                        return f"{m._meta.app_label}.{m._meta.object_name}"
-                except (ValueError, TypeError):
-                    pass
-
+                label = _format_model_label(meta_model)
+                if label:
+                    return label
         except Exception as e:
-            logger.debug("Model extraction failed for %s: %s", view_class, e)
+            logger.debug("Strategy 2 failed for %s: %s", view_class, e)
+
+        # =========================================================================
+        # Strategy 3: Dynamic get_queryset Execution with Mock Request & Arguments
+        # =========================================================================
+        if hasattr(view_class, "get_queryset"):
+            try:
+                from rest_framework.test import APIRequestFactory
+
+                view_instance = view_class()
+                view_instance.request = APIRequestFactory().get("/")
+                view_instance.format_kwarg = None
+
+                # Extract actual URL path parameters from the pattern if present
+                extracted_kwargs = {}
+                if pattern:
+                    pattern_obj = getattr(pattern, "pattern", None)
+                    if pattern_obj and hasattr(pattern_obj, "converters"):
+                        # Populate dummy values (e.g. 1) for each path parameter in the route
+                        for param_name in pattern_obj.converters.keys():
+                            extracted_kwargs[param_name] = 1
+
+                # Populate positional args and URL keyword arguments on the view instance
+                view_instance.args = ()
+                view_instance.kwargs = extracted_kwargs
+
+                # Execute get_queryset inside isolated try block
+                qs = view_instance.get_queryset()
+                if hasattr(qs, "model"):
+                    label = _format_model_label(qs.model)
+                    if label:
+                        return label
+            except Exception as e:
+                logger.debug(
+                    "Strategy 3 (get_queryset dynamic execution) failed for %s: %s",
+                    view_class,
+                    e,
+                )
+
+        # =========================================================================
+        # Strategy 4: Type Annotations on get_queryset
+        # =========================================================================
+        if hasattr(view_class, "get_queryset"):
+            try:
+                get_qs_fn = getattr(view_class, "get_queryset")
+                sig = inspect.signature(get_qs_fn)
+                return_type = sig.return_annotation
+
+                if return_type is not inspect.Signature.empty:
+                    if hasattr(return_type, "model"):
+                        label = _format_model_label(return_type.model)
+                        if label:
+                            return label
+
+                    args = getattr(return_type, "__args__", None)
+                    if args:
+                        for arg in args:
+                            label = _format_model_label(arg)
+                            if label:
+                                return label
+            except (ValueError, TypeError, Exception) as e:
+                logger.debug("Strategy 4 failed for %s: %s", view_class, e)
+
+        # =========================================================================
+        # Strategy 5: Django App Registry & URL Parameter Heuristics
+        # =========================================================================
+        if pattern:
+            try:
+                pattern_name = getattr(pattern, "name", "") or ""
+                pattern_str = str(getattr(pattern, "pattern", ""))
+
+                for registered_model in apps.get_models():
+                    model_name = registered_model._meta.model_name
+
+                    if pattern_name and model_name in pattern_name.lower().replace(
+                        "_", "-"
+                    ).split("-"):
+                        return _format_model_label(registered_model)
+
+                    if (
+                        f"{model_name}_id" in pattern_str
+                        or f"{model_name}_pk" in pattern_str
+                    ):
+                        return _format_model_label(registered_model)
+            except Exception as e:
+                logger.debug("Strategy 5 failed for %s: %s", view_class, e)
 
         return None
-
     # =========================================================================
     # Step 06 - View Lookup Field Mapping Extraction
     # =========================================================================
