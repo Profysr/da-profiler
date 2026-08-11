@@ -48,6 +48,14 @@ export function Workbench({
   ])
   const [bodyType, setBodyType] = useState('json')
   const [bodyContent, setBodyContent] = useState('{\n  "title": "New Book",\n  "author_id": 1\n}')
+  const [formData, setFormData] = useState([
+    { enabled: true, key: 'title', value: 'New Book', type: 'text', description: 'Book title' },
+    { enabled: true, key: 'author_id', value: '1', type: 'text', description: 'Author foreign key' },
+    { enabled: false, key: 'cover_image', value: '', type: 'file', file: null, description: 'Cover image upload' },
+  ])
+  const [urlencodedData, setUrlencodedData] = useState([
+    { enabled: true, key: 'format', value: 'json', description: 'Response format' },
+  ])
 
   // Response Tab state
   const [responseTab, setResponseTab] = useState('response')
@@ -195,6 +203,10 @@ export function Workbench({
                 onBodyTypeChange={setBodyType}
                 bodyContent={bodyContent}
                 onBodyContentChange={setBodyContent}
+                formData={formData}
+                onFormDataChange={setFormData}
+                urlencodedData={urlencodedData}
+                onUrlencodedDataChange={setUrlencodedData}
                 data-label={`${testId}-request-pane`}
               />
             </div>
