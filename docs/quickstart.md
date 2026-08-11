@@ -143,6 +143,6 @@ When you run `execute_isolated()` (via dashboard or API):
 
 ## ⏩ Next Steps
 
-- Want to understand how Da Profiler works under the hood? Check out [How It Works (ELI5)](./how-it-works.md).
-- Need to publish or test packages locally? See [Publishing & Local Testing Guide](./publishing-guide.md).
-- Interested in contributing? Read [Developer Onboarding](./developer-onboarding.md).
+- Want to understand how Da Profiler works under the hood? Check out [How It Works (ELI5)](./How%20it%20work.md).
+- Need to publish or test packages locally? See [Test and Publish Guide](./Test%20and%20Publish%20Guide.md).
+- Interested in contributing? Read [Developer Onboarding](./Developer%20Onboarding.md).

@@ -146,5 +146,5 @@ After profiling, you get a structured `ExecutionResult` with:
 ## 📚 Want to learn more?
 
 - Read the full technical architecture in [Architecture Blueprint](../architecture.md).
-- Learn how to contribute in [Developer Onboarding](./developer-onboarding.md).
-- See the [Quickstart Guide](./quickstart.md) to run your first profile in 5 minutes!
+- Learn how to contribute in [Developer Onboarding](./Developer%20Onboarding.md).
+- See the [Quickstart Guide](./Quickstart.md) to run your first profile in 5 minutes!

@@ -361,10 +361,10 @@ pytest -m django
 - 🤝 [`CONTRIBUTING.md`](./CONTRIBUTING.md) — Contribution guidelines, dev setup, and commit standards.
 - 🔒 [`SECURITY.md`](./SECURITY.md) — Security policy and vulnerability reporting.
 - 📜 [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — Community guidelines.
-- 🚀 [`docs/quickstart.md`](./docs/quickstart.md) — 5-minute getting started guide.
-- 💡 [`docs/how-it-works.md`](./docs/how-it-works.md) — ELI5 explanations of core concepts.
-- 🧪 [`docs/how-to-test.md`](./docs/how-to-test.md) — Integration, profiling & testing guide.
-- 🛠️ [`docs/developer-onboarding.md`](./docs/developer-onboarding.md) — File-by-file codebase reference.
+- 🚀 [`docs/Quickstart.md`](./docs/Quickstart.md) — 5-minute getting started guide.
+- 💡 [`docs/How it work.md`](./docs/How%20it%20work.md) — ELI5 explanations of core concepts.
+- 🧪 [`docs/Test and Publish Guide.md`](./docs/Test%20and%20Publish%20Guide.md) — Integration, profiling & testing guide.
+- 🛠️ [`docs/Developer Onboarding.md`](./docs/Developer%20Onboarding.md) — File-by-file codebase reference.
 
 ---
 
