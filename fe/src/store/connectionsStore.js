@@ -2,7 +2,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { v4 as uuidv4 } from 'uuid'
-import { getHealth } from '../api/endpoints.js'
+import { getHealth, getTargets } from '../api/endpoints.js'
 
 function generateId() {
   return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substr(2)
@@ -98,7 +98,6 @@ export const useConnectionsStore = create(
         if (!conn) return { targets: [], counts: {}, total: 0 }
         
         try {
-          const { getTargets } = await import('../api/endpoints.js')
           const data = await getTargets(conn.baseUrl)
           return data
         } catch (error) {

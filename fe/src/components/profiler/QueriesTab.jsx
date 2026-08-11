@@ -3,7 +3,7 @@ import { SqlHighlighter } from '../ui/SqlHighlighter.jsx';
 import { EmptyState } from '../dashboard/EmptyState.jsx';
 
 export function QueriesTab({ result, "data-label": testId = "queries-tab" }) {
-  const queries = result?.sql_queries || [];
+  const queries = result?.queries || [];
 
   if (!result || queries.length === 0) {
     return (

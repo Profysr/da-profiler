@@ -12,18 +12,24 @@ export const ProfilerControls = forwardRef(function ProfilerControls({
   onRun,
   loading = false,
   disabled = false,
+  selectedMethod,
   "data-label": testId = "profiler-controls"
 }, ref) {
-  const [method, setMethod] = useState(route?.method || 'GET');
+  const [method, setMethod] = useState(selectedMethod || route?.method || 'GET');
   const [seedCount, setSeedCount] = useState(5);
   // Path params: [{id, key, value}] — starts from route definition, user can add more
   const [pathParamRows, setPathParamRows] = useState([]);
   const [queryParams, setQueryParams] = useState([{ id: 1, key: '', value: '' }]);
   const [activeTab, setActiveTab] = useState('path');
 
+  // Sync internal method when parent-controlled selectedMethod changes (header pill switch)
+  useEffect(() => {
+    if (selectedMethod) setMethod(selectedMethod);
+  }, [selectedMethod]);
+
   useEffect(() => {
     if (route) {
-      if (route.method) setMethod(route.method);
+      if (!selectedMethod && route.method) setMethod(route.method);
       // Seed path param rows from route definition
       const seeded = (route.path_params || []).map((p) => ({
         id: p.name,
@@ -32,7 +38,7 @@ export const ProfilerControls = forwardRef(function ProfilerControls({
       }));
       setPathParamRows(seeded.length > 0 ? seeded : []);
     }
-  }, [route]);
+  }, [route]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePathParamChange = useCallback((id, field, value) => {
     setPathParamRows((prev) => prev.map((p) => p.id === id ? { ...p, [field]: value } : p));

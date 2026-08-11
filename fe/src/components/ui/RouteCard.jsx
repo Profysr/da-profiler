@@ -1,9 +1,9 @@
-import { AlertTriangle, Gauge, Lock, Database, Cpu, Zap, Bell, Globe } from 'lucide-react';
+import { AlertTriangle, Gauge, Lock, Globe } from 'lucide-react';
 import { TARGET_KINDS } from '../../utils/constants.js';
 
 const KIND_ICONS = {
   view: Globe,
-  task: Cpu,
+  task: Cpu, // Assuming you import Cpu, Zap, Bell, etc. at the top
   consumer: Zap,
   signal: Bell,
 };
@@ -19,11 +19,11 @@ const methodStyles = {
 };
 
 export function RouteCard({ 
-  method, 
+  methods = [], 
+  method, // Legacy fallback
   path, 
   lastRun, 
   time, 
-  params, 
   hasN1, 
   isActive, 
   kind = 'view',
@@ -40,6 +40,9 @@ export function RouteCard({
   const inactiveWrapperStyles = "border-outline-variant bg-surface hover:bg-surface-container-high";
   const disabledStyles = "opacity-50 cursor-not-allowed";
 
+  // Handle both array of methods (new format) and single method (legacy fallback)
+  const displayMethods = methods.length > 0 ? methods : (method ? [method] : ['GET']);
+
   return (
     <div
       onClick={onClick}
@@ -50,37 +53,46 @@ export function RouteCard({
       data-active={isActive}
       data-has-n1={hasN1}
       data-triggerable={triggerable}
+      aria-label={`Select target: ${displayMethods.join(', ')} ${path}`}
+      title={`View details for ${path}`}
     >
       {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-lg" data-label="active-indicator" />}
 
       <div className={`flex items-center gap-2 mb-2 ${isActive ? 'pl-2' : ''}`}>
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${methodStyles[method] || methodStyles.GET}`} data-label="method-badge">
-          {method}
-        </span>
-        <KindIcon className={`w-3.5 h-3.5 ${kindConfig.color} flex-shrink-0`} aria-hidden="true" />
+        <div className="flex gap-1 flex-wrap">
+          {displayMethods.map((m, idx) => (
+            <span 
+              key={idx}
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${methodStyles[m] || methodStyles.GET}`} 
+              data-label="method-badge"
+            >
+              {m}
+            </span>
+          ))}
+        </div>
+        <KindIcon className={`w-3.5 h-3.5 ${kindConfig.color} shrink-0`} aria-hidden="true" />
         <span className={`font-code-sm text-code-sm truncate transition-colors ${isActive ? 'text-primary font-semibold' : 'text-on-surface-variant group-hover:text-on-surface'}`} data-label="target-path">
           {path}
         </span>
       </div>
 
       <div className={`flex justify-between items-center ${isActive ? 'pl-2' : 'text-on-surface-variant font-body-sm text-[10px]'}`}>
-        {isActive ? (
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-variant text-on-surface-variant border border-outline-variant" data-label="params-count">
-            {params} params
-          </span>
-        ) : (
-          <span data-label="last-run" className="text-[11px] text-on-surface-variant">Last run: {lastRun}</span>
-        )}
+        {/* Removed params span, conditionally rendering lastRun if it exists */}
+        <span data-label="last-run" className="text-[11px] text-on-surface-variant">
+          {lastRun ? `Last run: ${lastRun}` : ''}
+        </span>
 
         <div className="flex items-center gap-1.5">
           {hasN1 ? (
-            <span className="flex items-center gap-1 text-error font-body-sm text-[10px] font-semibold" data-label="n1-badge">
+            <span className="flex items-center gap-1 text-error font-body-sm text-[10px] font-semibold" data-label="n1-badge" title="N+1 Query Detected">
               <AlertTriangle className="w-3 h-3 text-error" /> N+1 Detected
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-[11px] text-on-surface-variant" data-label="latency">
-              <Gauge className="w-3 h-3 text-on-surface-variant" /> {time}
-            </span>
+            time && (
+              <span className="flex items-center gap-1 text-[11px] text-on-surface-variant" data-label="latency" title={`Execution time: ${time}`}>
+                <Gauge className="w-3 h-3 text-on-surface-variant" /> {time}
+              </span>
+            )
           )}
 
           {!triggerable && (

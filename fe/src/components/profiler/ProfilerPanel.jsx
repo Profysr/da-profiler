@@ -10,17 +10,18 @@ import SummaryPanel from './SummaryPanel.jsx';
 import { QueriesTab } from './QueriesTab.jsx';
 import { SideEffectsTab } from './SideEffectsTab.jsx';
 import { ResponseTab } from './ResponseTab.jsx';
+import { LogsTab } from './LogsTab.jsx';
 import { ProfilerEmptyState } from '../dashboard/EmptyState.jsx';
 import { ErrorState } from '../dashboard/EmptyState.jsx';
 import { Bug, Database, AlertTriangle, FileCode, List, Activity } from 'lucide-react';
 
 const PROFILER_TABS = [
-  { id: 'summary', label: 'Summary', icon: Bug, variant: 'error' },
-  { id: 'queries', label: 'SQL Queries', icon: Database, variant: 'default' },
+  { id: 'summary',     label: 'Summary',      icon: Bug,          variant: 'error' },
+  { id: 'queries',     label: 'SQL Queries',  icon: Database,     variant: 'default' },
   { id: 'sideEffects', label: 'Side Effects', icon: AlertTriangle, variant: 'default' },
-  { id: 'response', label: 'Raw Response', icon: FileCode, variant: 'default' },
-  { id: 'logs', label: 'Logs', icon: List, variant: 'default' },
-  { id: 'timeline', label: 'Timeline', icon: Activity, variant: 'default' },
+  { id: 'response',    label: 'Raw Response', icon: FileCode,     variant: 'default' },
+  { id: 'logs',        label: 'Logs',         icon: List,         variant: 'default' },
+  { id: 'timeline',    label: 'Timeline',     icon: Activity,     variant: 'default' },
 ];
 
 /**
@@ -34,27 +35,47 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
 
   // Get normalized route info from target
   const getRouteInfo = (target) => {
-    if (!target) return { path: '', method: 'GET', target_model: null, triggerable: false };
-    
+    if (!target) return { path: '', method: 'GET', methods: ['GET'], target_model: null, triggerable: false };
+
     if (target.kind === 'view') {
+      const methods = target.trigger_spec?.methods || ['GET'];
       return {
         path: target.trigger_spec?.path || '',
-        method: target.trigger_spec?.methods?.[0] || 'GET',
+        method: methods[0],
+        methods,
         target_model: target.trigger_spec?.target_model || null,
         triggerable: target.triggerable,
+        path_params: target.trigger_spec?.path_params || [],
       };
     }
     // For non-view kinds, return minimal info (static analysis only)
     return {
       path: target.name || target.id,
       method: target.kind.toUpperCase(),
+      methods: [target.kind.toUpperCase()],
       target_model: null,
       triggerable: false,
     };
   };
 
   const routeInfo = getRouteInfo(selectedTarget);
-  console.log("DEBUG: Selected Target and Route Info", selectedTarget, routeInfo);
+
+  // Track which method the user has selected via the header pills
+  const [selectedMethod, setSelectedMethod] = useState(routeInfo.method);
+
+  // Reset selected method when a new target is picked
+  const prevTargetId = useRef(selectedTarget?.id);
+  if (selectedTarget?.id !== prevTargetId.current) {
+    prevTargetId.current = selectedTarget?.id;
+    // synchronously reset so we don't need an extra render via useEffect
+    if (selectedMethod !== routeInfo.method) {
+      setSelectedMethod(routeInfo.method);
+    }
+  }
+
+  const handleMethodChange = useCallback((method) => {
+    setSelectedMethod(method);
+  }, []);
 
   // onRun receives the built payload from ProfilerControls
   const handleRunProfile = useCallback((payload) => {
@@ -94,6 +115,8 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
           route={{ ...routeInfo, kind: selectedTarget.kind, staticOnly: true }}
           onRun={handleHeaderExecute}
           loading={loading}
+          selectedMethod={selectedMethod}
+          onMethodChange={handleMethodChange}
           data-label={`${testId}-header`}
         />
         <div className="flex-1 overflow-y-auto p-4" data-label={`${testId}-results-area`}>
@@ -125,22 +148,24 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
   }
 
   const tabContent = {
-    summary: <SummaryPanel result={result} data-label={`${testId}-summary-panel`} />,
-    queries: <QueriesTab result={result} data-label={`${testId}-queries-tab`} />,
+    summary:     <SummaryPanel result={result} data-label={`${testId}-summary-panel`} />,
+    queries:     <QueriesTab result={result} data-label={`${testId}-queries-tab`} />,
     sideEffects: <SideEffectsTab result={result} data-label={`${testId}-side-effects-tab`} />,
-    response: <ResponseTab result={result} data-label={`${testId}-response-tab`} />,
-    logs: <div className="text-on-surface p-4" data-label={`${testId}-logs-tab`}>Logs Panel — coming soon</div>,
-    timeline: <div className="text-on-surface p-4" data-label={`${testId}-timeline-tab`}>Timeline Panel — coming soon</div>,
+    response:    <ResponseTab result={result} data-label={`${testId}-response-tab`} />,
+    logs:        <LogsTab result={result} data-label={`${testId}-logs-tab`} />,
+    timeline:    <div className="text-on-surface p-4" data-label={`${testId}-timeline-tab`}>Timeline Panel — coming soon</div>,
   };
 
   return (
     <div className="h-full flex flex-col overflow-hidden" data-label={testId}>
 
-      {/* Header: method badge + path + Execute button */}
+      {/* Header: method pills + path + Execute button */}
       <ProfilerHeader
         route={routeInfo}
         onRun={handleHeaderExecute}
         loading={loading}
+        selectedMethod={selectedMethod}
+        onMethodChange={handleMethodChange}
         data-label={`${testId}-header`}
       />
 
@@ -151,13 +176,14 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
         onRun={handleRunProfile}
         loading={loading}
         disabled={loading}
+        selectedMethod={selectedMethod}
         data-label={`${testId}-controls`}
       />
 
       {/* Results Area */}
       <div className="flex-1 overflow-y-auto" data-label={`${testId}-results-area`}>
         <AnimatePresence mode="wait">
-          {error && !result?.sql_queries?.length ? (
+          {error && !result?.queries?.length ? (
             <motion.div
               key="error"
               initial={{ opacity: 0, y: 20 }}
