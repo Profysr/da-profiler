@@ -37,7 +37,7 @@ export function MetricsGrid({ result, "data-label": testId = "metrics-grid" }) {
       variant: "default",
       // Replaced the jagged border with a clean, modern gradient flare in the corner
       addon: (
-        <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-primary/10 to-transparent rounded-tl-full pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-20 h-20 bg-linear-to-tl from-primary/10 to-transparent rounded-tl-full pointer-events-none" />
       ),
       delay: 50,
     },
@@ -75,7 +75,7 @@ export function MetricsGrid({ result, "data-label": testId = "metrics-grid" }) {
 
   return (
     <div
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3"
       data-label={testId}
       data-has-result={!!result}
       data-n-plus-one={nPlusOneDetected}

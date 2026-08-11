@@ -10,7 +10,7 @@ export function N1AlertCard({
 }) {
   return (
     <div
-      className="bg-error-container/10 border border-error/50 rounded-lg p-3 md:p-4 flex gap-3 items-start"
+      className="bg-error-container/10 border border-error/50 rounded p-3 flex gap-3 items-start"
       data-label={testId}
       data-title={title}
       data-loop-location={loopLocation}
@@ -31,7 +31,7 @@ export function N1AlertCard({
         </h3>
 
         <p
-          className="font-code-sm text-xs text-on-surface-variant bg-surface-dim p-2.5 rounded-md border border-outline-variant overflow-x-auto"
+          className="font-code-sm text-xs text-on-surface-variant bg-surface-dim p-2.5 rounded border border-outline-variant overflow-x-auto"
           data-label="alert-description"
         >
           Loop in{" "}
@@ -92,7 +92,7 @@ export default function SummaryPanel({
   if (!nPlusOneDetected) {
     return (
       <div
-        className="p-4 md:p-md bg-surface-container border border-outline-variant rounded-lg flex flex-col justify-center gap-2"
+        className="p-4 md:p-md bg-surface-container border border-outline-variant rounded flex flex-col justify-center gap-2"
         data-label={`${testId}-clean`}
         data-n-plus-one={false}
       >
@@ -146,8 +146,8 @@ export default function SummaryPanel({
       {/* Step 5: Map through the entire analysis array to render a card for each issue */}
       {analysis.map((issue, index) => {
         // Step 6: Extract traces dynamically for the current issue in the loop
-        const traces = issue?.source_location
-          ? [issue.source_location, issue.sample_queries?.[0]].filter(Boolean)
+        const traces = issue?.src_loc
+          ? [issue.src_loc, issue.sample_queries?.[0]].filter(Boolean)
           : [];
 
         // Step 7: Return the customized card component for the current issue
@@ -155,7 +155,7 @@ export default function SummaryPanel({
           <N1AlertCard
             key={index}
             title={`Redundant Query Loop Detected`}
-            loopLocation={issue?.source_location || "Unknown Location"}
+            loopLocation={issue?.src_loc || "Unknown Location"}
             queryCount={issue?.count || 10}
             targetTable={issue?.table || "'unknown'"}
             traces={traces}

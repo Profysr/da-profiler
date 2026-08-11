@@ -104,6 +104,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+button{
+  cursor: pointer;
+}
+
 /* Custom Typography Utility Classes */
 .font-headline-lg, .text-headline-lg {
   font-family: 'Inter', system-ui, sans-serif;

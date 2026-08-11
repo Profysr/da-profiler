@@ -46,7 +46,7 @@ export function RouteCard({
   return (
     <div
       onClick={onClick}
-      className={`p-3 rounded-lg border cursor-pointer transition-all relative group ${isActive ? activeWrapperStyles : inactiveWrapperStyles} ${!triggerable ? disabledStyles : ''}`}
+      className={`p-2 rounded-xs border cursor-pointer transition-all relative group ${isActive ? activeWrapperStyles : inactiveWrapperStyles} ${!triggerable ? disabledStyles : ''}`}
       data-label={testId || `target-card-${targetId}`}
       data-target-id={targetId}
       data-target-kind={targetKind || kind}
@@ -58,22 +58,25 @@ export function RouteCard({
     >
       {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-lg" data-label="active-indicator" />}
 
-      <div className={`flex items-center gap-2 mb-2 ${isActive ? 'pl-2' : ''}`}>
+      <div className={`space-y-2 ${isActive ? 'pl-2' : ''}`}>
         <div className="flex gap-1 flex-wrap">
           {displayMethods.map((m, idx) => (
             <span 
               key={idx}
-              className={`text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${methodStyles[m] || methodStyles.GET}`} 
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-xs border uppercase tracking-wider ${methodStyles[m] || methodStyles.GET}`} 
               data-label="method-badge"
             >
               {m}
             </span>
           ))}
         </div>
+        <div className='flex gap-1'>
+
         <KindIcon className={`w-3.5 h-3.5 ${kindConfig.color} shrink-0`} aria-hidden="true" />
         <span className={`font-code-sm text-code-sm truncate transition-colors ${isActive ? 'text-primary font-semibold' : 'text-on-surface-variant group-hover:text-on-surface'}`} data-label="target-path">
           {path}
         </span>
+        </div>
       </div>
 
       <div className={`flex justify-between items-center ${isActive ? 'pl-2' : 'text-on-surface-variant font-body-sm text-[10px]'}`}>

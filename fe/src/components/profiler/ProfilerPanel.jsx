@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import { useRoutesStore } from '../../store/routesStore.js';
 import { useProfile } from '../../hooks/useProfile.js';
 import { ProfilerHeader } from './ProfilerHeader.jsx';
@@ -14,6 +15,8 @@ import { LogsTab } from './tabs/LogsTab.jsx';
 import { ProfilerEmptyState } from '../dashboard/EmptyState.jsx';
 import { ErrorState } from '../dashboard/EmptyState.jsx';
 import { PROFILER_TABS } from '../../utils/constants.js';
+import { Button } from '../ui/Button.jsx';
+import { cn } from '../../utils/classNames.js';
 
 
 /**
@@ -25,10 +28,15 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
   const [activeTab, setActiveTab] = useState('summary');
   const controlsRef = useRef(null);
   const [resultsHeight, setResultsHeight] = useState(null); // null = flex-1 (default)
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const isResizingRef = useRef(false);
   const dragStartYRef = useRef(0);
   const dragStartHeightRef = useRef(0);
   const resultsPanelRef = useRef(null);
+
+  const toggleFullScreen = useCallback(() => {
+    setIsFullScreen((prev) => !prev);
+  }, []);
 
   const handleResizeMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -182,7 +190,7 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden" data-label={testId}>
+    <div className="h-full flex flex-col overflow-hidden relative" data-label={testId}>
 
       {/* Header: method pills + path + Execute button */}
       <ProfilerHeader
@@ -195,38 +203,70 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
       />
 
       {/* Controls: Path Params / Query Params tables */}
-      <ProfilerControls
-        ref={controlsRef}
-        route={routeInfo}
-        onRun={handleRunProfile}
-        loading={loading}
-        disabled={loading}
-        selectedMethod={selectedMethod}
-        data-label={`${testId}-controls`}
-      />
+      {!isFullScreen && (
+        <ProfilerControls
+          ref={controlsRef}
+          route={routeInfo}
+          onRun={handleRunProfile}
+          loading={loading}
+          disabled={loading}
+          selectedMethod={selectedMethod}
+          data-label={`${testId}-controls`}
+        />
+      )}
 
-      {/* Resize Handle */}
+      {/* Resize Handle / Bar */}
       <div
-        onMouseDown={handleResizeMouseDown}
+        onMouseDown={!isFullScreen ? handleResizeMouseDown : undefined}
         data-label={`${testId}-resize-handle`}
-        title="Drag to resize results panel"
-        className="group flex-shrink-0 flex items-center justify-center h-2 cursor-row-resize bg-surface-container hover:bg-primary/10 border-y border-outline-variant/50 transition-colors relative"
+        title={isFullScreen ? undefined : "Drag to resize results panel"}
+        className={cn(
+          "group shrink-0 flex items-center justify-between px-3 py-1 bg-surface-container border-y border-outline-variant/50 transition-colors relative z-10",
+          !isFullScreen && "cursor-row-resize hover:bg-primary/10"
+        )}
       >
         {/* visual grip dots */}
-        <div className="flex gap-0.5 opacity-40 group-hover:opacity-80 transition-opacity">
-          <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
-          <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
-          <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
-          <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
-          <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
+        <div className="flex gap-0.5 opacity-40 group-hover:opacity-80 transition-opacity items-center">
+          {!isFullScreen && (
+            <>
+              <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
+              <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
+              <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
+              <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
+              <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
+            </>
+          )}
+          <span className="text-[10px] font-label-caps uppercase tracking-wider text-on-surface-variant/70 ml-2">
+            Results
+          </span>
         </div>
+
+        {/* Fullscreen Toggle Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleFullScreen}
+          icon={isFullScreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          title={isFullScreen ? "Exit Full Screen" : "Full Screen Results"}
+          aria-label={isFullScreen ? "Exit Full Screen" : "Full Screen Results"}
+          className="text-on-surface-variant hover:text-primary p-1 h-6 text-[11px] gap-1"
+        >
+          <span>{isFullScreen ? "Minimize" : "Full Screen"}</span>
+        </Button>
       </div>
 
       {/* Results Area */}
       <div
         ref={resultsPanelRef}
-        className="overflow-y-auto"
-        style={resultsHeight !== null ? { height: resultsHeight, flexShrink: 0 } : { flex: 1 }}
+        className={cn(
+          "overflow-y-auto",
+          isFullScreen
+            ? "flex-1 bg-background"
+            : resultsHeight !== null
+            ? "shrink-0"
+            : "flex-1"
+        )}
+        style={!isFullScreen && resultsHeight !== null ? { height: resultsHeight } : undefined}
         data-label={`${testId}-results-area`}
       >
         <AnimatePresence mode="wait">

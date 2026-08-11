@@ -234,7 +234,7 @@ const TargetGroup = ({
       </button>
 
       {!effectivelyCollapsed && count > 0 && (
-        <div className="flex flex-col gap-1 pl-6 border-l border-outline-variant/50 ml-3">
+        <div className="flex flex-col gap-1 pl-3 border-l border-outline-variant/50 ml-3">
           {targets.map((target) => (
             <TargetItem
               key={target.id}
@@ -264,8 +264,9 @@ export default function SideNavBar() {
     activeFilter,
     loading,
     total,
+    fetchTargets,
   } = useRoutesStore();
-  const { getActiveConnection } = useConnectionsStore();
+  const { getActiveConnection, activeConnectionId } = useConnectionsStore();
   const activeConnection = getActiveConnection();
 
   // === LOCAL STATE ===
@@ -284,6 +285,12 @@ export default function SideNavBar() {
   });
 
   // === EFFECTS ===
+  useEffect(() => {
+    if (activeConnectionId) {
+      fetchTargets();
+    }
+  }, [activeConnectionId, fetchTargets]);
+
   useEffect(() => {
     localStorage.setItem("dqs.collapsedKinds", JSON.stringify(collapsedKinds));
   }, [collapsedKinds]);

@@ -19,12 +19,13 @@ export function TabBar({ tabs, activeTabId, onTabChange, "data-label": testId = 
         const isErrorTab = tab.variant === 'error';
         const IconComponent = typeof tab.icon === 'string' ? (ICON_MAP[tab.icon] || Circle) : tab.icon;
 
-        let btnClasses = "px-3 md:px-4 py-3 border-b-2 font-label-caps text-label-caps flex items-center gap-2 whitespace-nowrap transition-colors font-medium text-xs ";
+        let btnClasses = "px-3 md:px-4 py-3 border-b-2 font-label-caps text-label-caps flex items-center gap-2 whitespace-nowrap transition-colors font-medium text-xs";
 
         if (isActive) {
-          btnClasses += isErrorTab
-            ? "border-error text-error bg-error-container/10 font-bold"
-            : "border-primary text-primary bg-primary/10 font-bold";
+          // btnClasses += isErrorTab
+          //   ? "border-error text-error bg-error-container/10 font-bold"
+          //   : "border-primary text-primary bg-primary/10 font-bold";
+          btnClasses += "border-primary text-primary bg-primary/10 font-bold";
         } else {
           btnClasses += "border-transparent text-on-surface-variant hover:text-on-surface";
         }

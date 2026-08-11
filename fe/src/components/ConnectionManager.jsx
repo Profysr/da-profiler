@@ -69,7 +69,7 @@ export function ProjectSelector() {
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg bg-surface-container border border-outline-variant hover:border-primary/50 hover:bg-surface-container-high transition-all shadow-sm group w-48 sm:w-60 text-left outline-none focus:ring-2 focus:ring-primary/30"
+        className="flex items-center justify-between gap-3 px-3 py-1.5 rounded bg-surface-container border border-outline-variant hover:border-primary/50 hover:bg-surface-container-high transition-all shadow-sm group w-48 sm:w-60 text-left outline-none focus:ring-2 focus:ring-primary/30"
       >
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <div className="relative flex items-center justify-center">
@@ -95,7 +95,7 @@ export function ProjectSelector() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-surface-container border border-outline-variant rounded-xl shadow-2xl py-2 z-50 animate-in fade-in-0 zoom-in-95 duration-150 backdrop-blur-xl">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-surface-container border border-outline-variant rounded shadow-2xl py-2 z-50 animate-in fade-in-0 zoom-in-95 duration-150 backdrop-blur-xl">
           <div className="px-3 py-1.5 text-[10px] font-label-caps uppercase tracking-wider text-on-surface-variant/60 border-b border-outline-variant/50 mb-1">
             Switch Workspace
           </div>
@@ -106,14 +106,13 @@ export function ProjectSelector() {
                 <button
                   key={conn.id}
                   onClick={() => handleSelect(conn.id)}
-                  className={`w-full px-2.5 py-2 text-left flex items-center gap-2.5 rounded-lg transition-all ${
-                    isActive
+                  className={`w-full px-2.5 py-2 text-left flex items-center gap-2.5 rounded transition-all ${isActive
                       ? "bg-primary/15 text-primary font-medium"
                       : "hover:bg-surface-variant/50 text-on-surface"
-                  }`}
+                    }`}
                 >
                   <span
-                    className={`w-2 h-2 rounded-full flex-shrink-0 ${conn.connected ? "bg-emerald-400" : "bg-zinc-500"}`}
+                    className={`w-2 h-2 rounded-full shrink-0 ${conn.connected ? "bg-emerald-400" : "bg-zinc-500"}`}
                   />
                   <div className="flex flex-col flex-1 min-w-0">
                     <span className="truncate text-xs font-medium leading-tight">
@@ -139,7 +138,7 @@ export function ProjectSelector() {
                 setIsOpen(false);
                 window.dispatchEvent(new CustomEvent("dqs:open-connections"));
               }}
-              className="w-full px-3 py-2 text-left flex items-center gap-2 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
+              className="w-full px-3 py-2 text-left flex items-center gap-2 text-xs font-medium text-primary hover:bg-primary/10 rounded transition-colors"
             >
               <Settings className="w-3.5 h-3.5" />
               <span>Manage Connections</span>
@@ -168,7 +167,7 @@ export function ConnectionManager({ isOpen, onClose }) {
   const [editName, setEditName] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [newName, setNewName] = useState("");
-  const [newUrl, setNewUrl] = useState("");
+  const [newUrl, setNewUrl] = useState("http://127.0.0.1:8000");
   const [isVerifying, setIsVerifying] = useState(false);
   const [validationError, setValidationError] = useState(null);
   const [checkingId, setCheckingId] = useState(null);
@@ -179,23 +178,42 @@ export function ConnectionManager({ isOpen, onClose }) {
       e.preventDefault();
       if (!newName.trim() || !newUrl.trim()) return;
 
+      // Normalise the URL the same way the store does
+      const trimmedName = newName.trim();
+      const normalizedUrl = newUrl.trim().replace(/\/$/, '');
+
+      // Duplicate guard — block same name OR same URL
+      const duplicate = connections.find(
+        (c) =>
+          c.name.toLowerCase() === trimmedName.toLowerCase() ||
+          c.baseUrl.replace(/\/$/, '') === normalizedUrl,
+      );
+      if (duplicate) {
+        setValidationError(
+          duplicate.name.toLowerCase() === trimmedName.toLowerCase()
+            ? `A project named "${duplicate.name}" already exists. Choose a different name.`
+            : `The URL "${normalizedUrl}" is already used by "${duplicate.name}".`,
+        );
+        return;
+      }
+
       setIsVerifying(true);
       setValidationError(null);
 
       try {
         // Test health BEFORE saving to avoid creating broken phantom endpoints
-        const result = await testConnection(newUrl.trim());
+        const result = await testConnection(normalizedUrl);
 
         if (result.success) {
-          const id = addConnection(newName.trim(), newUrl.trim());
+          const id = addConnection(trimmedName, normalizedUrl);
           updateConnection(id, { connected: true });
           setNewName("");
-          setNewUrl("");
+          setNewUrl("http://127.0.0.1:8000");
           clearTestResult();
         } else {
           setValidationError(
             result.error ||
-              "Failed to establish connection. Ensure DEBUG=True and router is configured.",
+            "Failed to establish connection. Ensure DEBUG=True and router is configured.",
           );
         }
       } catch (err) {
@@ -209,6 +227,7 @@ export function ConnectionManager({ isOpen, onClose }) {
     [
       newName,
       newUrl,
+      connections,
       testConnection,
       addConnection,
       updateConnection,
@@ -313,7 +332,7 @@ export function ConnectionManager({ isOpen, onClose }) {
               <Input
                 value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
-                placeholder="http://localhost:8000"
+                placeholder="http://127.0.0.1:8000"
                 className="w-full bg-surface font-mono text-xs"
               />
             </div>
@@ -321,7 +340,7 @@ export function ConnectionManager({ isOpen, onClose }) {
 
           {validationError && (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 animate-in fade-in-50">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{validationError}</span>
             </div>
           )}
@@ -378,7 +397,7 @@ export function ConnectionManager({ isOpen, onClose }) {
           </div>
 
           {connections.length === 0 ? (
-            <div className="text-center py-12 border border-dashed border-outline-variant rounded-xl bg-surface-container/50 text-on-surface-variant">
+            <div className="text-center py-12 border border-dashed border-outline-variant rounded bg-surface-container/50 text-on-surface-variant">
               <WifiOff className="w-10 h-10 mx-auto mb-3 opacity-40 text-primary" />
               <p className="text-sm font-medium text-on-surface">
                 No project connections configured
@@ -397,18 +416,16 @@ export function ConnectionManager({ isOpen, onClose }) {
                 return (
                   <div
                     key={conn.id}
-                    className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all ${
-                      isActive
+                    className={`flex items-center gap-3 px-3 py-2 rounded border transition-all ${isActive
                         ? "bg-primary/10 border-primary/40 shadow-sm"
                         : "bg-surface-container border-outline-variant hover:border-outline"
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
-                        conn.connected
+                      className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${conn.connected
                           ? "bg-emerald-500/20 text-emerald-400"
                           : "bg-surface-variant text-on-surface-variant"
-                      }`}
+                        }`}
                     >
                       {conn.connected ? (
                         <Wifi className="w-4 h-4" />
@@ -440,7 +457,7 @@ export function ConnectionManager({ isOpen, onClose }) {
                               {conn.name}
                             </span>
                             {isActive && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold tracking-wider">
+                              <span className="text-[8px] px-1.5 py-px bg-primary/20 text-primary font-bold tracking-wide">
                                 ACTIVE
                               </span>
                             )}
@@ -454,82 +471,83 @@ export function ConnectionManager({ isOpen, onClose }) {
 
                     <div className="flex items-center gap-1">
                       {isEditing ? (
-                        <>
+                        [
+                          {
+                            key: "save",
+                            title: "Save",
+                            ariaLabel: "Save",
+                            onClick: () => handleSaveEdit(conn.id),
+                            icon: <CheckCircle className="w-4 h-4 text-emerald-400" />,
+                          },
+                          {
+                            key: "cancel",
+                            title: "Cancel",
+                            ariaLabel: "Cancel",
+                            onClick: handleCancelEdit,
+                            icon: <X className="w-4 h-4 text-on-surface-variant" />,
+                          },
+                        ].map((btn) => (
                           <Button
+                            key={btn.key}
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleSaveEdit(conn.id)}
-                            icon={
-                              <CheckCircle className="w-4 h-4 text-emerald-400" />
-                            }
-                            aria-label="Save"
+                            onClick={btn.onClick}
+                            icon={btn.icon}
+                            title={btn.title}
+                            aria-label={btn.ariaLabel}
                           />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleCancelEdit}
-                            icon={
-                              <X className="w-4 h-4 text-on-surface-variant" />
-                            }
-                            aria-label="Cancel"
-                          />
-                        </>
+                        ))
                       ) : (
-                        <>
-                          {/* Health Check Button */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleTestExisting(conn)}
-                            disabled={isChecking}
-                            icon={
-                              isChecking ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                              ) : (
-                                <CheckCircle className="w-4 h-4 text-on-surface-variant hover:text-emerald-400" />
-                              )
-                            }
-                            title="Check Health Status"
-                            aria-label="Check health status"
-                          />
-
-                          {/* Edit Details Button */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditClick(conn)}
-                            icon={
-                              <Edit2 className="w-4 h-4 text-on-surface-variant hover:text-primary" />
-                            }
-                            title="Edit connection"
-                            aria-label="Edit connection"
-                          />
-
-                          {/* Switch Active Connection Button */}
-                          {!isActive && (
+                        [
+                          {
+                            key: "health-check",
+                            title: "Check Health Status",
+                            ariaLabel: "Check health status",
+                            onClick: () => handleTestExisting(conn),
+                            disabled: isChecking,
+                            icon: isChecking ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4 text-on-surface-variant hover:text-emerald-400" />
+                            ),
+                          },
+                          {
+                            key: "edit",
+                            title: "Edit connection",
+                            ariaLabel: "Edit connection",
+                            onClick: () => handleEditClick(conn),
+                            icon: <Edit2 className="w-4 h-4 text-on-surface-variant hover:text-primary" />,
+                          },
+                          !isActive && {
+                            key: "connect",
+                            title: "Set as active workspace",
+                            ariaLabel: "Connect",
+                            onClick: () => handleConnect(conn.id),
+                            icon: <Play className="w-4 h-4 text-on-surface-variant hover:text-primary" />,
+                          },
+                          {
+                            key: "delete",
+                            title: "Remove project",
+                            ariaLabel: "Remove",
+                            onClick: () => handleDelete(conn.id),
+                            icon: <Trash2 className="w-4 h-4" />,
+                            className: "text-on-surface-variant hover:text-red-400 hover:bg-red-500/10",
+                          },
+                        ]
+                          .filter(Boolean)
+                          .map((btn) => (
                             <Button
+                              key={btn.key}
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleConnect(conn.id)}
-                              icon={
-                                <Play className="w-4 h-4 text-on-surface-variant hover:text-primary" />
-                              }
-                              title="Set as active workspace"
-                              aria-label="Connect"
+                              onClick={btn.onClick}
+                              disabled={btn.disabled}
+                              icon={btn.icon}
+                              title={btn.title}
+                              aria-label={btn.ariaLabel}
+                              className={btn.className}
                             />
-                          )}
-
-                          {/* Delete Connection Button */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(conn.id)}
-                            icon={<Trash2 className="w-4 h-4" />}
-                            title="Remove project"
-                            aria-label="Remove"
-                            className="text-on-surface-variant hover:text-red-400 hover:bg-red-500/10"
-                          />
-                        </>
+                          ))
                       )}
                     </div>
                   </div>

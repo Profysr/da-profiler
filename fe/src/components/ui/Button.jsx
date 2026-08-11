@@ -9,6 +9,7 @@ import { cn } from '../../utils/classNames.js'
  */
 export function Button({
   children,
+  icon,
   variant = 'primary',
   size = 'md',
   disabled = false,
@@ -26,10 +27,12 @@ export function Button({
     success: 'btn-success',
   }
   
+  const isIconOnly = !children && icon;
+
   const sizes = {
-    sm: 'px-3 py-1.5 text-xs',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-6 py-3 text-base',
+    sm: isIconOnly ? 'p-1.5 text-xs' : 'px-3 py-1.5 text-xs',
+    md: isIconOnly ? 'p-2 text-sm' : 'px-4 py-2 text-sm',
+    lg: isIconOnly ? 'p-3 text-base' : 'px-6 py-3 text-base',
   }
   
   return (
@@ -48,7 +51,12 @@ export function Button({
       {loading && (
         <Loader2 className="w-4 h-4 animate-spin text-current" />
       )}
-      {!loading && children}
+      {!loading && (
+        <>
+          {icon}
+          {children}
+        </>
+      )}
     </button>
   );
 }

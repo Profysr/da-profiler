@@ -1,6 +1,7 @@
 // components/profiler/ProfilerHeader.jsx
 import { cn } from '../../utils/classNames.js'
 import { Play } from 'lucide-react'
+import { Button } from '../ui/Button.jsx'
 
 /**
  * Profiler header component showing selected route info - matches design
@@ -57,7 +58,7 @@ export function ProfilerHeader({
         {/* Method pills — single badge when only one method, clickable pills when multiple */}
         {methods.length <= 1 ? (
           <span
-            className={cn('text-[11px] font-bold px-2.5 py-1 rounded uppercase tracking-wider flex-shrink-0', getMethodBadgeClass(activeMethod))}
+            className={cn('text-[11px] font-bold px-2.5 py-1 rounded-xs uppercase tracking-wider flex-shrink-0', getMethodBadgeClass(activeMethod))}
             data-label={`${testId}-method-badge`}
           >
             {activeMethod}
@@ -71,7 +72,7 @@ export function ProfilerHeader({
                   key={m}
                   onClick={() => onMethodChange?.(m)}
                   className={cn(
-                    'text-[11px] font-bold px-2.5 py-1 rounded uppercase tracking-wider transition-all duration-150',
+                    'text-[11px] font-bold px-2.5 py-1 rounded-xs uppercase tracking-wider transition-all duration-150',
                     isActive
                       ? getMethodBadgeClass(m)
                       : getMethodMutedClass(m)
@@ -98,21 +99,18 @@ export function ProfilerHeader({
         </h1>
 
         {/* Execute & Profile button — lives here in the header */}
-        <button
-          className={cn(
-            'shrink-0 flex items-center gap-2 px-4 py-2 rounded text-xs font-bold tracking-wider transition-all cursor-pointer',
-            'bg-[#2e7d32] hover:bg-[#388e3c] text-white border border-[#1b5e20]',
-            'shadow-success-glow hover:shadow-success-glow-hover',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
-          )}
+        <Button
+          variant="success"
+          size="sm"
           onClick={onRun}
-          disabled={loading}
+          loading={loading}
+          icon={<Play className="w-4 h-4 fill-current" />}
+          className="shrink-0 font-bold tracking-wider rounded-xs"
           data-label={`${testId}-execute-btn`}
           data-loading={loading}
         >
-          <Play className="w-4 h-4 fill-white" />
           {loading ? 'Running…' : 'Execute & Profile'}
-        </button>
+        </Button>
       </div>
 
       {/* Description */}

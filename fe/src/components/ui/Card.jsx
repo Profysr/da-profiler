@@ -1,4 +1,3 @@
-// components/ui/Card.jsx
 import { cn } from '../../utils/classNames.js'
 
 /**
@@ -6,19 +5,19 @@ import { cn } from '../../utils/classNames.js'
  * @param {Object} props - Component props
  * @returns {JSX.Element}
  */
-export function Card({ children, className = '', hover = false, padding = 'md', ...props }) {
+export function Card({ children, className = '', hover = false, padding = 'sm', ...props }) {
   const paddingClasses = {
     none: '',
     sm: 'p-3',
     md: 'p-4',
-    lg: 'p-6',
+    lg: 'p-5',
   }
   
   return (
     <div
       className={cn(
-        'card',
-        hover && 'card-hover',
+        'card border border-outline-variant/40 rounded bg-surface-container/30',
+        hover && 'hover:bg-surface-container/60 transition-colors',
         paddingClasses[padding],
         className
       )}
@@ -36,7 +35,7 @@ export function Card({ children, className = '', hover = false, padding = 'md', 
  */
 export function CardHeader({ children, className = '', ...props }) {
   return (
-    <div className={cn('border-b border-border pb-3 mb-3', className)} {...props}>
+    <div className={cn('border-b border-outline-variant/30 pb-2.5 mb-2.5', className)} {...props}>
       {children}
     </div>
   )
@@ -58,7 +57,7 @@ export function CardContent({ children, className = '', ...props }) {
  */
 export function CardFooter({ children, className = '', ...props }) {
   return (
-    <div className={cn('border-t border-border pt-3 mt-3', className)} {...props}>
+    <div className={cn('border-t border-outline-variant/30 pt-2.5 mt-2.5', className)} {...props}>
       {children}
     </div>
   )
