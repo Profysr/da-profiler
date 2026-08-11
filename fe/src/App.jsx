@@ -1,15 +1,6 @@
-import { useEffect } from 'react'
-import { Workbench } from './components/workbench'
-import { useUIStore } from './store/uiStore.js'
+import React from 'react'
+import { Workbench } from './components/Workbench.jsx'
 
-function App() {
-  const theme = useUIStore((state) => state.theme)
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-  }, [theme])
-
+export default function App() {
   return <Workbench />
 }
-
-export default App
