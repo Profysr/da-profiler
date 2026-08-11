@@ -1,9 +1,19 @@
+import {
+  LayoutDashboard,
+  FolderOpen,
+  Server,
+  History,
+  Settings,
+  HelpCircle,
+  Bell,
+} from 'lucide-react'
+
 // src/utils/workbenchData.js
 export const WORKSPACE_TABS = [
-  { id: 'workspaces', label: 'Workspaces', icon: 'space_dashboard' },
-  { id: 'collections', label: 'Collections', icon: 'folder_copy' },
-  { id: 'environments', label: 'Environments', icon: 'deployed_code' },
-  { id: 'history', label: 'History', icon: 'history' },
+  { id: 'workspaces', label: 'Workspaces', icon: LayoutDashboard },
+  { id: 'collections', label: 'Collections', icon: FolderOpen },
+  { id: 'environments', label: 'Environments', icon: Server },
+  { id: 'history', label: 'History', icon: History },
 ]
 
 export const HTTP_METHODS = [
@@ -15,7 +25,7 @@ export const HTTP_METHODS = [
 ]
 
 export const HEADER_ICON_BUTTONS = [
-  { id: 'settings', icon: 'settings', title: 'Settings' },
-  { id: 'help', icon: 'help', title: 'Help' },
-  { id: 'notifications', icon: 'notifications', title: 'Notifications' },
+  { id: 'settings', icon: Settings, title: 'Settings' },
+  { id: 'help', icon: HelpCircle, title: 'Help' },
+  { id: 'notifications', icon: Bell, title: 'Notifications' },
 ]

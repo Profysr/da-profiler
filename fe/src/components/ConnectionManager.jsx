@@ -68,7 +68,7 @@ export function ProjectSelector() {
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg bg-surface-container-high border border-dialog-border hover:border-primary/50 transition-all group w-full text-left outline-none"
+        className="flex items-center justify-between gap-3 px-3 py-1.5 rounded bg-surface-container-high border border-dialog-border hover:border-primary/50 transition-all group w-full text-left outline-none"
       >
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <div className="relative flex items-center justify-center">
@@ -91,7 +91,7 @@ export function ProjectSelector() {
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-2 w-72 bg-dialog border border-dialog-border rounded-xl shadow-2xl py-2 z-50">
+        <div className="relative mt-2 w-full bg-surface-container-high border border-dialog-border rounded py-2">
           <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant/60 border-b border-outline-variant mb-1">
             Switch Workspace
           </div>

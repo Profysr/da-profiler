@@ -1,10 +1,9 @@
 // src/components/Sidebar.jsx
 import { useState, useRef, useCallback } from 'react'
-import { useConnectionsStore } from '../store/connectionsStore.js'
 import { useRoutesStore } from '../store/routesStore.js'
 import { TARGET_KINDS, TARGET_KIND_ORDER } from '../utils/constants.js'
 import { ProjectSelector, ConnectionManager } from './ConnectionManager.jsx'
-import { Icon } from './Icon.jsx'
+import { Search, X, Loader2, ChevronDown, ChevronRight, Folder, Link as LinkIcon } from 'lucide-react'
 
 export function Sidebar({
   onSelectTarget,
@@ -88,13 +87,13 @@ export function Sidebar({
         {/* Search Bar */}
         <div className="p-3 border-b border-outline-variant bg-surface-container-low space-y-2.5">
           <div className="relative w-full">
-            <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search endpoints, routes..."
-              className="w-full bg-surface-container-high border border-dialog-border rounded-lg py-2 pl-9 pr-8 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary transition-colors shadow-inner"
+              className="w-full bg-surface-container-high border border-dialog-border rounded-lg py-2 pl-9 pr-8 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none transition-colors shadow-inner"
             />
             {searchQuery && (
               <button
@@ -102,7 +101,7 @@ export function Sidebar({
                 onClick={() => setSearchQuery('')}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface text-xs"
               >
-                <Icon name="close" size={12} />
+                <X size={12} />
               </button>
             )}
           </div>
@@ -119,7 +118,7 @@ export function Sidebar({
                 key={f.id}
                 type="button"
                 onClick={() => setActiveFilter(f.id)}
-                className={`text-[10px] px-2.5 py-1 rounded-md transition-colors font-medium whitespace-nowrap ${
+                className={`text-[10px] px-2.5 py-1 rounded transition-colors font-medium whitespace-nowrap ${
                   activeFilter === f.id
                     ? 'bg-primary text-white font-bold shadow-sm'
                     : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface border border-outline-variant'
@@ -135,8 +134,8 @@ export function Sidebar({
         <nav className="flex-1 overflow-y-auto p-3 space-y-3">
           {loading ? (
             <div className="p-4 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2">
-              <Icon name="progress_activity" size={14} spin />
-              <span>Loading targets...</span>
+              <Loader2 size={14} className="animate-spin" />
+              {/* <span>Loading targets...</span> */}
             </div>
           ) : filteredTargets.length === 0 ? (
             <div className="p-4 text-center text-xs text-on-surface-variant">
@@ -154,11 +153,11 @@ export function Sidebar({
                   <button
                     type="button"
                     onClick={() => toggleFolder(kind)}
-                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors text-xs font-semibold"
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors text-xs font-semibold"
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <Icon name={isExpanded ? 'expand_more' : 'chevron_right'} size={14} />
-                      <Icon name="folder" size={14} className="text-primary" />
+                      {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      <Folder size={14} className="text-primary" />
                       <span className="truncate">{meta.label}</span>
                     </div>
                     <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-container-highest text-on-surface-variant font-mono">
@@ -179,7 +178,7 @@ export function Sidebar({
                             key={target.id}
                             type="button"
                             onClick={() => onSelectTarget?.(target)}
-                            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-all text-xs gap-2 group ${
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-left transition-all text-xs gap-2 group ${
                               isSelected
                                 ? 'bg-primary/20 text-primary font-bold border-l-2 border-primary shadow-sm'
                                 : 'hover:bg-surface-container-high text-on-surface/90'
@@ -222,7 +221,7 @@ export function Sidebar({
             onClick={() => setIsConnManagerOpen(true)}
             className="flex items-center gap-1 hover:text-primary transition-colors text-[11px] font-semibold"
           >
-            <Icon name="add_link" size={14} />
+            <LinkIcon size={14} />
             <span>Manage Connections</span>
           </button>
           <span className="text-[10px] font-mono text-on-surface-variant/60">v1.0.0</span>

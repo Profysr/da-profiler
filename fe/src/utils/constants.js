@@ -140,6 +140,7 @@ export const PROFILER_TABS = [
     variant: "default",
   },
   { id: "response", label: "Raw Response", icon: FileCode, variant: "default" },
+  { id: "headers", label: "Headers", icon: FileList, variant: "default" },
   { id: "logs", label: "Logs", icon: List, variant: "default" },
   { id: "timeline", label: "Timeline", icon: Activity, variant: "default" },
 ];

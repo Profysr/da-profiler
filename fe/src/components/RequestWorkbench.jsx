@@ -5,8 +5,7 @@ import 'react-json-view-lite/dist/index.css'
 import { PaneTabs } from './PaneTabs.jsx'
 import { KeyValueEditor } from './KeyValueEditor.jsx'
 import { DjangoRibbon } from './DjangoRibbon.jsx'
-import { Icon } from './Icon.jsx'
-import { Trash2, Upload } from 'lucide-react'
+import { Trash2, Upload, Plus, ChevronsUpDown, ChevronsDownUp, CircleAlert } from 'lucide-react'
 
 // ─── Form Data Editor ─────────────────────────────────────────────────────────
 // Supports both text fields and file upload fields (multipart/form-data)
@@ -146,7 +145,7 @@ function FormDataEditor({ fields = [], onChange }) {
           onClick={() => add('text')}
           className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
         >
-          <Icon name="add" size={13} />
+          <Plus size={13} />
           Add Text Field
         </button>
         <span className="text-outline-variant">·</span>
@@ -370,7 +369,7 @@ export function RequestWorkbench({
                           bodyExpandState === true ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
-                        <Icon name="unfold_more" size={12} />
+                        <ChevronsUpDown size={12} />
                         Expand All
                       </button>
                       <button
@@ -380,7 +379,7 @@ export function RequestWorkbench({
                           bodyExpandState === false ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
-                        <Icon name="unfold_less" size={12} />
+                        <ChevronsDownUp size={12} />
                         Collapse All
                       </button>
                     </div>
@@ -425,7 +424,7 @@ export function RequestWorkbench({
                       />
                     ) : (
                       <div className="flex items-center gap-2 py-4 text-xs text-rose-400">
-                        <Icon name="error" size={14} />
+                        <CircleAlert size={14} />
                         <span>Invalid JSON — fix syntax errors in Raw mode to preview the tree.</span>
                       </div>
                     )}

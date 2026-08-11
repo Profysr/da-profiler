@@ -1,7 +1,7 @@
 // src/components/MethodSelector.jsx
 import { useState, useRef, useEffect } from 'react'
+import { ChevronDown, Check } from 'lucide-react'
 import { HTTP_METHODS } from '../utils/workbenchData.js'
-import { Icon } from './Icon.jsx'
 
 function getMethodBadgeClass(method) {
   switch (method) {
@@ -73,8 +73,7 @@ export function MethodSelector({
         className={`flex items-center justify-between w-full h-10 px-3 border rounded transition-all cursor-pointer font-mono text-xs font-bold focus:outline-none focus:border-primary active:scale-[0.99] ${currentBadgeClass}`}
       >
         <span>{value}</span>
-        <Icon
-          name="arrow_drop_down"
+        <ChevronDown
           size={16}
           className={`opacity-70 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`}
         />
@@ -107,7 +106,7 @@ export function MethodSelector({
                   {methodId}
                 </span>
                 {isSelected && (
-                  <Icon name="check" size={14} className="text-primary ml-2" />
+                  <Check size={14} className="text-primary ml-2" />
                 )}
               </li>
             )

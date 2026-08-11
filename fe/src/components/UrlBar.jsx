@@ -1,7 +1,7 @@
 // src/components/UrlBar.jsx
 import { MethodSelector } from './MethodSelector.jsx'
 import { useConnectionsStore } from '../store/connectionsStore.js'
-import { Icon } from './Icon.jsx'
+import { Loader2, Send } from 'lucide-react'
 
 export function UrlBar({
   method = 'GET',
@@ -57,13 +57,13 @@ export function UrlBar({
       >
         {loading ? (
           <>
-            <Icon name="progress_activity" size={14} spin />
+            <Loader2 size={14} className="animate-spin" />
             <span>Sending...</span>
           </>
         ) : (
           <>
             <span>Send</span>
-            <Icon name="send" size={14} />
+            <Send size={14} />
           </>
         )}
       </button>

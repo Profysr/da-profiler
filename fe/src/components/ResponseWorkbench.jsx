@@ -5,7 +5,7 @@ import 'react-json-view-lite/dist/index.css'
 import { PaneTabs } from './PaneTabs.jsx'
 import { ResponseMetrics } from './ResponseMetrics.jsx'
 import { CopyButton } from './ui/CopyButton.jsx'
-import { Icon } from './Icon.jsx'
+import { Loader2, ChevronsUpDown, ChevronsDownUp, TriangleAlert, CheckCircle, Info } from 'lucide-react'
 
 // ─── Dark-themed JSON viewer styles ─────────────────────────────────────────
 const darkJsonStyles = {
