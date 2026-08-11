@@ -1,4 +1,4 @@
-import { AlertTriangle, Gauge, Lock, Globe } from 'lucide-react';
+import { AlertTriangle, Gauge, Lock, Globe, Cpu, Zap, Bell } from 'lucide-react';
 import { TARGET_KINDS } from '../../utils/constants.js';
 
 const KIND_ICONS = {

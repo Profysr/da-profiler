@@ -52,7 +52,7 @@ export function ProjectSelector() {
       <Button
         variant="outline"
         size="sm"
-        className="gap-2 bg-surface-container border-outline-variant hover:border-primary/50 text-on-surface transition-all shadow-sm"
+        className="gap-2 bg-surface-container border-outline-variant hover:border-primary/50 text-on-surface transition-all shadow-sm flex"
         onClick={() =>
           window.dispatchEvent(new CustomEvent("dqs:open-connections"))
         }
@@ -330,7 +330,7 @@ export function ConnectionManager({ isOpen, onClose }) {
             <Button
               type="submit"
               disabled={isVerifying}
-              className="gap-2 bg-primary text-on-primary hover:opacity-90 shadow-sm transition-all"
+              className="gap-2 bg-primary text-on-primary hover:opacity-90 shadow-sm transition-all flex items-center justify-center rounded"
             >
               {isVerifying ? (
                 <>
@@ -348,14 +348,14 @@ export function ConnectionManager({ isOpen, onClose }) {
         </form>
 
         {/* Global Test Result Toast if applicable */}
-        {testResult && !validationError && (
+        {/* {testResult && !validationError && (
           <div
             className={`p-3 rounded-xl border flex items-center gap-3 ${testResult.success ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-red-500/10 border-red-500/30 text-red-400"}`}
           >
             {testResult.success ? (
-              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 shrink-0" />
             ) : (
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <AlertCircle className="w-5 h-5 shrink-0" />
             )}
             <span className="flex-1 text-xs font-medium">
               {testResult.success
@@ -369,7 +369,7 @@ export function ConnectionManager({ isOpen, onClose }) {
               icon={<X className="w-4 h-4" />}
             />
           </div>
-        )}
+        )} */}
 
         {/* Connections List */}
         <div className="space-y-3">
@@ -388,7 +388,7 @@ export function ConnectionManager({ isOpen, onClose }) {
               </p>
             </div>
           ) : (
-            <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-85 overflow-y-auto pr-1">
               {connections.map((conn) => {
                 const isActive = conn.id === activeConnectionId;
                 const isEditing = editingId === conn.id;
@@ -404,7 +404,7 @@ export function ConnectionManager({ isOpen, onClose }) {
                     }`}
                   >
                     <div
-                      className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+                      className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
                         conn.connected
                           ? "bg-emerald-500/20 text-emerald-400"
                           : "bg-surface-variant text-on-surface-variant"

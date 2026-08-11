@@ -130,9 +130,7 @@ const TargetItem = ({ target, selectedTarget, onTargetClick }) => {
   let path = target.trigger_spec?.path || "";
   // let hasN1 = false;
 
-  // Extract display properties based on kind
   if (target.kind === "view") {
-    // If methods array exists and has items, use it. Otherwise default to ['GET']
     methods = target.trigger_spec?.methods?.length
       ? target.trigger_spec.methods
       : ["GET"];
@@ -146,9 +144,8 @@ const TargetItem = ({ target, selectedTarget, onTargetClick }) => {
     path = target.trigger_spec?.consumer || target.name;
   } else if (target.kind === "signal") {
     methods = ["SIGNAL"];
-    path =
-      `${target.trigger_spec?.signal}:${target.trigger_spec?.receiver}` ||
-      target.name;
+    let str = `${target.trigger_spec?.signal}:${target.trigger_spec?.receiver}`;
+    path = str || target.name;
   }
 
   return (
@@ -291,6 +288,25 @@ export default function SideNavBar() {
     localStorage.setItem("dqs.collapsedKinds", JSON.stringify(collapsedKinds));
   }, [collapsedKinds]);
 
+  // === RESIZE LOGIC ===
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (!isResizing) return;
+      const newWidth = Math.max(240, Math.min(500, e.clientX));
+      setSidebarWidth(newWidth);
+    },
+    [isResizing, setSidebarWidth],
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+    document.body.style.userSelect = ""; // Restore text selection
+    document.body.style.cursor = ""; // Restore cursor
+
+    document.removeEventListener("mousemove", handleMouseMoveRef.current);
+    document.removeEventListener("mouseup", handleMouseUpRef.current);
+  }, []);
+  
   useEffect(() => {
     handleMouseMoveRef.current = handleMouseMove;
     handleMouseUpRef.current = handleMouseUp;
@@ -313,24 +329,6 @@ export default function SideNavBar() {
     [selectTarget],
   );
 
-  // === RESIZE LOGIC ===
-  const handleMouseMove = useCallback(
-    (e) => {
-      if (!isResizing) return;
-      const newWidth = Math.max(240, Math.min(500, e.clientX));
-      setSidebarWidth(newWidth);
-    },
-    [isResizing, setSidebarWidth],
-  );
-
-  const handleMouseUp = useCallback(() => {
-    setIsResizing(false);
-    document.body.style.userSelect = ""; // Restore text selection
-    document.body.style.cursor = ""; // Restore cursor
-
-    document.removeEventListener("mousemove", handleMouseMoveRef.current);
-    document.removeEventListener("mouseup", handleMouseUpRef.current);
-  }, []);
 
   const handleMouseDown = useCallback(
     (e) => {

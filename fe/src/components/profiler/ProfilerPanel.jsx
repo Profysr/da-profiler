@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoutesStore } from '../../store/routesStore.js';
 import { useProfile } from '../../hooks/useProfile.js';
