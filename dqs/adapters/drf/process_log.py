@@ -90,17 +90,17 @@ class ProcessLogger:
                 lines.append(f"      Error: {s.error}")
         return "\n".join(lines)
 
-
-@contextmanager
-def timed_step(step: str, message: str, **metadata):
-    """Context manager to time and log a step."""
-    start = time.perf_counter()
-    ProcessLogger.log_start(step, message, **metadata)
-    try:
-        yield
-        duration = (time.perf_counter() - start) * 1000
-        ProcessLogger.log_success(step, message, duration_ms=duration, **metadata)
-    except Exception as e:
-        duration = (time.perf_counter() - start) * 1000
-        ProcessLogger.log_error(step, message, error=str(e), duration_ms=duration, **metadata)
-        raise
+    @staticmethod
+    @contextmanager
+    def timed_step(step: str, message: str, **metadata):
+        """Context manager to time and log a step."""
+        start = time.perf_counter()
+        ProcessLogger.log_start(step, message, **metadata)
+        try:
+            yield
+            duration = (time.perf_counter() - start) * 1000
+            ProcessLogger.log_success(step, message, duration_ms=duration, **metadata)
+        except Exception as e:
+            duration = (time.perf_counter() - start) * 1000
+            ProcessLogger.log_error(step, message, error=str(e), duration_ms=duration, **metadata)
+            raise
