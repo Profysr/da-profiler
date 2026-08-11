@@ -1,7 +1,7 @@
 // components/profiler/SideEffectsTab.jsx
 import { AlertTriangle, Shield } from 'lucide-react'
-import { cn } from '../../utils/classNames.js'
-import { EmptyState } from '../dashboard/EmptyState.jsx'
+import { cn } from '../../../utils/classNames.js'
+import { EmptyState } from '../../dashboard/EmptyState.jsx'
 
 /**
  * Side effects tab component
@@ -10,7 +10,7 @@ import { EmptyState } from '../dashboard/EmptyState.jsx'
  */
 export function SideEffectsTab({ result }) {
   const warnings = result?.side_effect_warnings || []
-  
+
   if (!result || warnings.length === 0) {
     return (
       <EmptyState
@@ -20,14 +20,14 @@ export function SideEffectsTab({ result }) {
       />
     )
   }
-  
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-sm text-text-secondary mb-4">
         <AlertTriangle className="h-4 w-4 text-accent-orange" aria-hidden="true" />
         <span>{warnings.length} warning{warnings.length !== 1 ? 's' : ''} detected</span>
       </div>
-      
+
       <div className="space-y-2">
         {warnings.map((warning, index) => (
           <div

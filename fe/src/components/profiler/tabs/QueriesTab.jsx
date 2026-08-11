@@ -1,6 +1,6 @@
-import { cn } from '../../utils/classNames.js';
-import { SqlHighlighter } from '../ui/SqlHighlighter.jsx';
-import { EmptyState } from '../dashboard/EmptyState.jsx';
+import { cn } from '../../../utils/classNames.js';
+import { SqlHighlighter } from '../../ui/SqlHighlighter.jsx';
+import { EmptyState } from '../../dashboard/EmptyState.jsx';
 
 export function QueriesTab({ result, "data-label": testId = "queries-tab" }) {
   const queries = result?.queries || [];

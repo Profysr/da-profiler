@@ -1,7 +1,7 @@
 // components/profiler/LogsTab.jsx
 import { CheckCircle, XCircle, Clock, ChevronRight } from 'lucide-react';
-import { EmptyState } from '../dashboard/EmptyState.jsx';
-import { cn } from '../../utils/classNames.js';
+import { EmptyState } from '../../dashboard/EmptyState.jsx';
+import { cn } from '../../../utils/classNames.js';
 
 /**
  * LogsTab — renders the process_log from ExecutionResult as a structured step timeline.

@@ -1,5 +1,5 @@
-import { JsonViewer } from '../ui/JsonViewer.jsx';
-import { EmptyState } from '../dashboard/EmptyState.jsx';
+import { JsonViewer } from '../../ui/JsonViewer.jsx';
+import { EmptyState } from '../../dashboard/EmptyState.jsx';
 
 export function ResponseTab({ result, "data-label": testId = "response-tab" }) {
   const responseBody = result?.response_body;
