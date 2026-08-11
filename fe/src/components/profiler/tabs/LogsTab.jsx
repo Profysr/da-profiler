@@ -69,7 +69,7 @@ export function LogsTab({ result, "data-label": testId = "logs-tab" }) {
                 {/* Row 1: icon + step name + message + duration */}
                 <div className="flex items-start gap-3">
                   {/* Status icon */}
-                  <div className="flex-shrink-0 mt-0.5">
+                  <div className="shrink-0 mt-0.5">
                     {isSuccess ? (
                       <CheckCircle className="w-4 h-4 text-[#4caf50]" />
                     ) : (

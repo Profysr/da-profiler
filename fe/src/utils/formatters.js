@@ -1,5 +1,4 @@
 // utils/formatters.js
-
 export function formatDuration(ms) {
   if (ms < 1) return `${(ms * 1000).toFixed(1)}µs`
   if (ms < 1000) return `${ms.toFixed(2)}ms`

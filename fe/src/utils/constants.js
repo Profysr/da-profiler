@@ -1,6 +1,6 @@
 // utils/constants.js
 
-import { Globe, Cpu, Zap, Bell, Play, FileText } from 'lucide-react'
+import { Globe, Cpu, Zap, Bell, Play, FileText, Bug, Database, AlertTriangle, FileCode, List, Activity } from 'lucide-react'
 
 /**
  * HTTP Method to CSS class mapping (matching new design tokens)
@@ -131,10 +131,15 @@ export const ROUTE_FILTERS = [
  * Profiler tab configuration
  */
 export const PROFILER_TABS = [
-  { id: 'n1', label: 'N+1 Analysis' },
-  { id: 'queries', label: 'SQL Queries' },
-  { id: 'sideEffects', label: 'Side Effects' },
-  { id: 'response', label: 'Response Body' },
-  { id: 'logs', label: 'Logs' },
-  { id: 'timeline', label: 'Timeline' },
-]
+  { id: "summary", label: "Summary", icon: Bug, variant: "error" },
+  { id: "queries", label: "SQL Queries", icon: Database, variant: "default" },
+  {
+    id: "sideEffects",
+    label: "Side Effects",
+    icon: AlertTriangle,
+    variant: "default",
+  },
+  { id: "response", label: "Raw Response", icon: FileCode, variant: "default" },
+  { id: "logs", label: "Logs", icon: List, variant: "default" },
+  { id: "timeline", label: "Timeline", icon: Activity, variant: "default" },
+];

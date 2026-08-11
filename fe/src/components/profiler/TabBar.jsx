@@ -28,27 +28,27 @@ export function TabBar({ activeTab, onChange, className = '' }) {
           const isActive = activeTab === tab.id
           const IconComponent = TAB_ICONS[tab.id] || Circle
 
-          if (tab.id === 'n1' || tab.id === 'summary') {
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onChange(tab.id)}
-                role="tab"
-                aria-selected={isActive}
-                aria-controls={`panel-${tab.id}`}
-                id={`tab-${tab.id}`}
-                className={cn(
-                  'tab-btn px-3 md:px-4 py-3 border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors text-xs font-semibold',
-                  isActive
-                    ? 'border-error text-error bg-error-container/10'
-                    : 'border-transparent text-on-surface-variant hover:text-on-surface'
-                )}
-              >
-                <IconComponent className="w-4 h-4" />
-                {tab.label}
-              </button>
-            )
-          }
+          // if (tab.id === 'n1' || tab.id === 'summary') {
+          //   return (
+          //     <button
+          //       key={tab.id}
+          //       onClick={() => onChange(tab.id)}
+          //       role="tab"
+          //       aria-selected={isActive}
+          //       aria-controls={`panel-${tab.id}`}
+          //       id={`tab-${tab.id}`}
+          //       className={cn(
+          //         'tab-btn px-3 md:px-4 py-3 border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors text-xs font-semibold',
+          //         isActive
+          //           ? 'border-error text-error bg-error-container/10'
+          //           : 'border-transparent text-on-surface-variant hover:text-on-surface'
+          //       )}
+          //     >
+          //       <IconComponent className="w-4 h-4" />
+          //       {tab.label}
+          //     </button>
+          //   )
+          // }
 
           return (
             <button

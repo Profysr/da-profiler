@@ -1,130 +1,223 @@
-import { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { cn } from '../../utils/classNames.js';
-import { ParamTable } from '../ui/Table.jsx';
+import { Plus, Trash2 } from "lucide-react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
+import {Table} from "../ui/Table";
+import { TabBar } from "../ui/Tabs";
 
 /**
- * ProfilerControls — Path/Query param editor.
- * Exposes a `run()` method via ref so the parent (ProfilerPanel) can trigger
- * execution from the header's Execute button while keeping param state here.
+ * Custom Hook: Manages state and handlers for key-value parameter lists.
  */
-export const ProfilerControls = forwardRef(function ProfilerControls({
-  route,
-  onRun,
-  loading = false,
-  disabled = false,
-  selectedMethod,
-  "data-label": testId = "profiler-controls"
-}, ref) {
-  const [method, setMethod] = useState(selectedMethod || route?.method || 'GET');
-  const [seedCount, setSeedCount] = useState(5);
-  // Path params: [{id, key, value}] — starts from route definition, user can add more
-  const [pathParamRows, setPathParamRows] = useState([]);
-  const [queryParams, setQueryParams] = useState([{ id: 1, key: '', value: '' }]);
-  const [activeTab, setActiveTab] = useState('path');
+function useParamList(initialState = []) {
+  const [params, setParams] = useState(initialState);
 
-  // Sync internal method when parent-controlled selectedMethod changes (header pill switch)
+  const update = useCallback((id, field, value) => {
+    setParams((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
+    );
+  }, []);
+
+  const remove = useCallback((id) => {
+    setParams((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const add = useCallback(() => {
+    setParams((prev) => [...prev, { id: Date.now(), key: "", value: "" }]);
+  }, []);
+
+  const toObject = useCallback(() => {
+    return params.reduce((acc, { key, value }) => {
+      if (key && value !== "") acc[key] = value;
+      return acc;
+    }, {});
+  }, [params]);
+
+  return { params, setParams, update, remove, add, toObject };
+}
+
+
+/**
+ * ParamTable — reusable editable key/value table for path and query params.
+ * Description column intentionally omitted per UX requirements.
+ */
+export function ParamTable({ params, onUpdate, onDelete, onAdd, "data-label": testId = "param-table" }) {
+  const columns = [
+    { label: 'Key',   className: 'w-2/5' },
+    { label: 'Value', className: 'w-2/5' },
+    { label: '',      className: 'w-[40px]' },
+  ];
+
+  const AddButton = (
+    <button
+      onClick={onAdd}
+      className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase text-primary hover:bg-primary/10 px-2.5 py-1.5 rounded transition-colors"
+      data-label={`${testId}-add-btn`}
+      type="button"
+    >
+      <Plus className="w-3.5 h-3.5" />
+      Add Param
+    </button>
+  );
+
+  return (
+    <Table columns={columns} footerAction={AddButton} data-label={testId}>
+      {params.map((param) => (
+        <tr
+          key={param.id}
+          className="border-b border-outline-variant/40 hover:bg-surface-variant/10 transition-colors"
+          data-label={`${testId}-row-${param.id}`}
+          data-param-id={param.id}
+        >
+          {/* Key cell */}
+          <td className="px-2 py-1.5" data-label={`${testId}-cell-key`}>
+            <input
+              className="w-full px-2 py-1 rounded border border-outline-variant bg-surface-container text-primary font-mono text-[12px] outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-colors placeholder:text-on-surface-variant/40"
+              type="text"
+              value={param.key}
+              onChange={(e) => onUpdate(param.id, 'key', e.target.value)}
+              placeholder="key"
+              data-label={`${testId}-input-key-${param.id}`}
+            />
+          </td>
+
+          {/* Value cell */}
+          <td className="px-2 py-1.5" data-label={`${testId}-cell-value`}>
+            <input
+              className="w-full px-2 py-1 rounded border border-outline-variant bg-surface-container text-on-surface font-mono text-[12px] outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-colors placeholder:text-on-surface-variant/40"
+              type="text"
+              value={param.value}
+              onChange={(e) => onUpdate(param.id, 'value', e.target.value)}
+              placeholder="value"
+              data-label={`${testId}-input-value-${param.id}`}
+            />
+          </td>
+
+          {/* Delete button */}
+          <td className="px-2 py-1.5 text-center" data-label={`${testId}-cell-delete`}>
+            <button
+              onClick={() => onDelete(param.id)}
+              className="text-on-surface-variant hover:text-error transition-colors p-1 rounded hover:bg-error/10"
+              data-label={`${testId}-delete-btn-${param.id}`}
+              title="Remove param"
+              type="button"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </td>
+        </tr>
+      ))}
+    </Table>
+  );
+}
+
+/**
+ * Main Component
+ */
+export const ProfilerControls = forwardRef(function ProfilerControls(
+  {
+    route,
+    onRun,
+    loading = false,
+    disabled = false,
+    selectedMethod,
+    "data-label": testId = "profiler-controls",
+  },
+  ref,
+) {
+  const [method, setMethod] = useState(
+    selectedMethod || route?.method || "GET",
+  );
+  const [activeTab, setActiveTab] = useState("path");
+
+  const pathParams = useParamList([]);
+  const queryParams = useParamList([{ id: 1, key: "", value: "" }]);
+
+  // Sync internal method when parent-controlled selectedMethod changes
   useEffect(() => {
     if (selectedMethod) setMethod(selectedMethod);
   }, [selectedMethod]);
 
+  // Seed path params from route definition
   useEffect(() => {
     if (route) {
       if (!selectedMethod && route.method) setMethod(route.method);
-      // Seed path param rows from route definition
+
       const seeded = (route.path_params || []).map((p) => ({
         id: p.name,
         key: p.name,
-        value: '',
+        value: "",
       }));
-      setPathParamRows(seeded.length > 0 ? seeded : []);
+
+      pathParams.setParams(seeded.length > 0 ? seeded : []);
     }
   }, [route]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handlePathParamChange = useCallback((id, field, value) => {
-    setPathParamRows((prev) => prev.map((p) => p.id === id ? { ...p, [field]: value } : p));
-  }, []);
+  const buildPayload = useCallback(
+    () => ({
+      method,
+      path_params: pathParams.toObject(),
+      query_params: queryParams.toObject(),
+    }),
+    [method, pathParams, queryParams],
+  );
 
-  const removePathParam = useCallback((id) => {
-    setPathParamRows((prev) => prev.filter((p) => p.id !== id));
-  }, []);
+  // Expose run() to parent via ref
+  useImperativeHandle(
+    ref,
+    () => ({
+      run: () => onRun(buildPayload()),
+    }),
+    [onRun, buildPayload],
+  );
 
-  const addPathParam = useCallback(() => {
-    setPathParamRows((prev) => [...prev, { id: Date.now(), key: '', value: '' }]);
-  }, []);
-
-  const addQueryParam = useCallback(() => {
-    setQueryParams((prev) => [...prev, { id: Date.now(), key: '', value: '' }]);
-  }, []);
-
-  const removeQueryParam = useCallback((id) => {
-    setQueryParams((prev) => prev.filter((p) => p.id !== id));
-  }, []);
-
-  const updateQueryParam = useCallback((id, field, newValue) => {
-    setQueryParams((prev) => prev.map(p => (p.id === id ? { ...p, [field]: newValue } : p)));
-  }, []);
-
-  const buildPayload = useCallback(() => {
-    const pathParamsObj = {};
-    pathParamRows.forEach(({ key, value }) => {
-      if (key && value !== '') pathParamsObj[key] = value;
-    });
-    const queryParamsObj = {};
-    queryParams.forEach(({ key, value }) => {
-      if (key && value) queryParamsObj[key] = value;
-    });
-    return { method, seed_count: seedCount, path_params: pathParamsObj, query_params: queryParamsObj };
-  }, [method, seedCount, pathParamRows, queryParams]);
-
-  // Expose run() to parent via ref — so the Execute button in the header can fire it
-  useImperativeHandle(ref, () => ({
-    run: () => onRun(buildPayload()),
-  }), [onRun, buildPayload]);
-
-  // pathParamRows is already in the right shape for ParamTable
+  // Tab items configuration for the shared TabBar component
+  const tabs = [
+    { id: "path", label: "Path Params", icon: "list_alt" },
+    { id: "query", label: "Query Params", icon: "database" },
+  ];
 
   return (
-    <div className="bg-surface-container-low border-b border-outline-variant px-4 py-3 flex flex-col gap-3 flex-shrink-0" data-label={testId} data-loading={loading} data-disabled={disabled}>
-      {/* Param Tabs */}
-      <div className="flex items-center gap-6 border-b border-outline-variant pb-2" data-label={`${testId}-param-tabs`}>
-        <button
-          className={cn('font-label-caps text-xs pb-1 whitespace-nowrap transition-colors font-semibold', activeTab === 'path' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-on-surface')}
-          onClick={() => setActiveTab('path')}
-          disabled={disabled || loading}
-          data-label={`${testId}-tab-path`}
-          data-active={activeTab === 'path'}
-        >
-          Path Params
-        </button>
-        <button
-          className={cn('font-label-caps text-xs pb-1 whitespace-nowrap transition-colors font-semibold', activeTab === 'query' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-on-surface')}
-          onClick={() => setActiveTab('query')}
-          disabled={disabled || loading}
-          data-label={`${testId}-tab-query`}
-          data-active={activeTab === 'query'}
-        >
-          Query Params
-        </button>
-      </div>
+    <div
+      className="bg-surface-container-low border-b border-outline-variant flex flex-col flex-shrink-0"
+      data-label={testId}
+      data-loading={loading}
+      data-disabled={disabled}
+    >
+      {/* Standardized Tab Bar */}
+      <TabBar
+        tabs={tabs}
+        activeTabId={activeTab}
+        onTabChange={setActiveTab}
+        disabled={disabled || loading}
+        data-label={`${testId}-tabs`}
+      />
 
-      {/* Param Table */}
-      {activeTab === 'path' ? (
-        <ParamTable
-          params={pathParamRows}
-          onUpdate={handlePathParamChange}
-          onDelete={removePathParam}
-          onAdd={addPathParam}
-          data-label={`${testId}-path-param-table`}
-        />
-      ) : (
-        <ParamTable
-          params={queryParams}
-          onUpdate={updateQueryParam}
-          onDelete={removeQueryParam}
-          onAdd={addQueryParam}
-          data-label={`${testId}-query-param-table`}
-        />
-      )}
+      {/* Parameter Table Content */}
+      <div className="p-4 flex flex-col gap-3">
+        {activeTab === "path" && (
+          <ParamTable
+            params={pathParams.params}
+            onUpdate={pathParams.update}
+            onDelete={pathParams.remove}
+            onAdd={pathParams.add}
+            data-label={`${testId}-path-param-table`}
+          />
+        )}
+
+        {activeTab === "query" && (
+          <ParamTable
+            params={queryParams.params}
+            onUpdate={queryParams.update}
+            onDelete={queryParams.remove}
+            onAdd={queryParams.add}
+            data-label={`${testId}-query-param-table`}
+          />
+        )}
+      </div>
     </div>
   );
 });

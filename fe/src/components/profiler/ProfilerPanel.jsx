@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoutesStore } from '../../store/routesStore.js';
 import { useProfile } from '../../hooks/useProfile.js';
@@ -6,23 +6,15 @@ import { ProfilerHeader } from './ProfilerHeader.jsx';
 import { ProfilerControls } from './ProfilerControls.jsx';
 import { MetricsGrid } from './MetricsGrid.jsx';
 import { TabBar, TabPanel } from '../ui/Tabs.jsx';
-import SummaryPanel from './SummaryPanel.jsx';
-import { QueriesTab } from './QueriesTab.jsx';
-import { SideEffectsTab } from './SideEffectsTab.jsx';
-import { ResponseTab } from './ResponseTab.jsx';
-import { LogsTab } from './LogsTab.jsx';
+import SummaryPanel from './tabs/SummaryPanel.jsx';
+import { QueriesTab } from './tabs/QueriesTab.jsx';
+import { SideEffectsTab } from './tabs/SideEffectsTab.jsx';
+import { ResponseTab } from './tabs/ResponseTab.jsx';
+import { LogsTab } from './tabs/LogsTab.jsx';
 import { ProfilerEmptyState } from '../dashboard/EmptyState.jsx';
 import { ErrorState } from '../dashboard/EmptyState.jsx';
-import { Bug, Database, AlertTriangle, FileCode, List, Activity } from 'lucide-react';
+import { PROFILER_TABS } from '../../utils/constants.js';
 
-const PROFILER_TABS = [
-  { id: 'summary',     label: 'Summary',      icon: Bug,          variant: 'error' },
-  { id: 'queries',     label: 'SQL Queries',  icon: Database,     variant: 'default' },
-  { id: 'sideEffects', label: 'Side Effects', icon: AlertTriangle, variant: 'default' },
-  { id: 'response',    label: 'Raw Response', icon: FileCode,     variant: 'default' },
-  { id: 'logs',        label: 'Logs',         icon: List,         variant: 'default' },
-  { id: 'timeline',    label: 'Timeline',     icon: Activity,     variant: 'default' },
-];
 
 /**
  * Profiler panel component - main content area (Postman-style)
@@ -32,6 +24,38 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
   const { result, loading, error, runProfile } = useProfile();
   const [activeTab, setActiveTab] = useState('summary');
   const controlsRef = useRef(null);
+  const [resultsHeight, setResultsHeight] = useState(null); // null = flex-1 (default)
+  const isResizingRef = useRef(false);
+  const dragStartYRef = useRef(0);
+  const dragStartHeightRef = useRef(0);
+  const resultsPanelRef = useRef(null);
+
+  const handleResizeMouseDown = useCallback((e) => {
+    e.preventDefault();
+    isResizingRef.current = true;
+    dragStartYRef.current = e.clientY;
+    dragStartHeightRef.current = resultsPanelRef.current?.offsetHeight ?? 300;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMouseMove = (e) => {
+      if (!isResizingRef.current) return;
+      const delta = dragStartYRef.current - e.clientY; // drag up = expand
+      const newHeight = Math.max(120, dragStartHeightRef.current + delta);
+      setResultsHeight(newHeight);
+    };
+
+    const onMouseUp = () => {
+      isResizingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, []);
 
   // Get normalized route info from target
   const getRouteInfo = (target) => {
@@ -94,6 +118,7 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
     }
   }, []);
 
+  // if no route is selected, show empty page
   if (!selectedTarget) {
     return (
       <motion.div
@@ -148,12 +173,12 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
   }
 
   const tabContent = {
-    summary:     <SummaryPanel result={result} data-label={`${testId}-summary-panel`} />,
-    queries:     <QueriesTab result={result} data-label={`${testId}-queries-tab`} />,
+    summary: <SummaryPanel result={result} data-label={`${testId}-summary-panel`} />,
+    queries: <QueriesTab result={result} data-label={`${testId}-queries-tab`} />,
     sideEffects: <SideEffectsTab result={result} data-label={`${testId}-side-effects-tab`} />,
-    response:    <ResponseTab result={result} data-label={`${testId}-response-tab`} />,
-    logs:        <LogsTab result={result} data-label={`${testId}-logs-tab`} />,
-    timeline:    <div className="text-on-surface p-4" data-label={`${testId}-timeline-tab`}>Timeline Panel — coming soon</div>,
+    response: <ResponseTab result={result} data-label={`${testId}-response-tab`} />,
+    logs: <LogsTab result={result} data-label={`${testId}-logs-tab`} />,
+    timeline: <div className="text-on-surface p-4" data-label={`${testId}-timeline-tab`}>Timeline Panel — coming soon</div>,
   };
 
   return (
@@ -180,8 +205,30 @@ export function ProfilerPanel({ "data-label": testId = "profiler-panel" }) {
         data-label={`${testId}-controls`}
       />
 
+      {/* Resize Handle */}
+      <div
+        onMouseDown={handleResizeMouseDown}
+        data-label={`${testId}-resize-handle`}
+        title="Drag to resize results panel"
+        className="group flex-shrink-0 flex items-center justify-center h-2 cursor-row-resize bg-surface-container hover:bg-primary/10 border-y border-outline-variant/50 transition-colors relative"
+      >
+        {/* visual grip dots */}
+        <div className="flex gap-0.5 opacity-40 group-hover:opacity-80 transition-opacity">
+          <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
+          <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
+          <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
+          <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
+          <div className="w-1 h-1 rounded-full bg-on-surface-variant" />
+        </div>
+      </div>
+
       {/* Results Area */}
-      <div className="flex-1 overflow-y-auto" data-label={`${testId}-results-area`}>
+      <div
+        ref={resultsPanelRef}
+        className="overflow-y-auto"
+        style={resultsHeight !== null ? { height: resultsHeight, flexShrink: 0 } : { flex: 1 }}
+        data-label={`${testId}-results-area`}
+      >
         <AnimatePresence mode="wait">
           {error && !result?.queries?.length ? (
             <motion.div

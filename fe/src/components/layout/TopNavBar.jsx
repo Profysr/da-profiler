@@ -1,7 +1,7 @@
 import { GlobalSearch } from '../ui/GlobalSearch';
 import { Zap, PanelLeft, PanelLeftClose, Bell, HelpCircle, User, Activity } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore.js';
-import { ProjectSelector } from '../ProjectSelector.jsx';
+import { ProjectSelector } from '../ConnectionManager.jsx';
 
 export default function TopNavBar({ onToggleSidebar, sidebarCollapsed }) {
   const healthStatus = useUIStore((state) => state.healthStatus);
