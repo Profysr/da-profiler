@@ -23,35 +23,21 @@ const darkJsonStyles = {
   collapseIcon: 'text-zinc-500 hover:text-primary cursor-pointer select-none mr-1 transition-colors',
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const MOCK_RESPONSE = {
+// ─── Empty-state placeholder data ────────────────────────────────────────────
+//
+// Shown when no profile run has been executed yet, so the user can see what
+// the panels will look like with real data. NOT profile results — replaced
+// as soon as the engine returns something real.
+const EMPTY_RESPONSE = {
   status: 'success',
-  message: 'Fetched 4 books from database',
-  count: 4,
-  results: [
-    { id: 1, title: 'The Great Gatsby',       author: { id: 1, name: 'F. Scott Fitzgerald' } },
-    { id: 2, title: 'Tender Is the Night',    author: { id: 1, name: 'F. Scott Fitzgerald' } },
-    { id: 3, title: 'To Kill a Mockingbird',  author: { id: 2, name: 'Harper Lee' } },
-    { id: 4, title: 'Go Set a Watchman',      author: { id: 2, name: 'Harper Lee' } },
-  ],
+  message: 'No profile run yet — pick a target and hit Execute to see results.',
+  count: 0,
+  results: [],
 }
 
-const MOCK_RESPONSE_HEADERS = [
-  { key: 'Content-Type',         value: 'application/json' },
-  { key: 'Vary',                 value: 'Accept, Cookie' },
-  { key: 'Allow',                value: 'GET, POST, HEAD, OPTIONS' },
-  { key: 'X-Frame-Options',      value: 'DENY' },
-  { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'Content-Length',       value: '312' },
-  { key: 'X-DRF-Response-Time',  value: '14.2ms' },
-]
+const EMPTY_RESPONSE_HEADERS = []
 
-const MOCK_SQL_QUERIES = [
-  { sql: 'SELECT "myapp_book"."id", "myapp_book"."title" FROM "myapp_book"', time: '0.4ms', n1: false },
-  { sql: 'SELECT "myapp_author"."id", "myapp_author"."name" FROM "myapp_author" WHERE "myapp_author"."id" = 1', time: '0.8ms', n1: true },
-  { sql: 'SELECT "myapp_author"."id", "myapp_author"."name" FROM "myapp_author" WHERE "myapp_author"."id" = 1', time: '0.8ms', n1: true },
-  { sql: 'SELECT "myapp_author"."id", "myapp_author"."name" FROM "myapp_author" WHERE "myapp_author"."id" = 2', time: '0.8ms', n1: true },
-]
+const EMPTY_SQL_QUERIES = []
 
 // ─── View-mode pill toggle (Pretty / Raw) ─────────────────────────────────────
 function ViewToggle({ mode, onChange }) {
@@ -100,13 +86,13 @@ export function ResponseWorkbench({
   const responseTabs = [
     { id: 'response',    label: 'Response' },
     { id: 'headers',     label: 'Headers' },
-    { id: 'queries',     label: 'SQL Queries', count: profileResult?.sql_queries?.length || MOCK_SQL_QUERIES.length },
+    { id: 'queries',     label: 'SQL Queries', count: profileResult?.sql_queries?.length || EMPTY_SQL_QUERIES.length },
     { id: 'summary',     label: 'Summary' },
     { id: 'sideEffects', label: 'Side Effects' },
     { id: 'logs',        label: 'Logs' },
   ]
 
-  const jsonData   = profileResult?.response?.data || profileResult?.data || MOCK_RESPONSE
+  const jsonData   = profileResult?.response?.data || profileResult?.data || EMPTY_RESPONSE
   const jsonString = JSON.stringify(jsonData, null, 2)
 
   return (
@@ -201,7 +187,7 @@ export function ResponseWorkbench({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/40">
-                    {MOCK_RESPONSE_HEADERS.map((h, i) => (
+                    {EMPTY_RESPONSE_HEADERS.map((h, i) => (
                       <tr key={i} className="hover:bg-surface-container/50 transition-colors">
                         <td className="p-2.5 font-semibold text-primary border-r border-outline-variant font-mono text-[11px]">
                           {h.key}
@@ -224,7 +210,7 @@ export function ResponseWorkbench({
                   <span>Detected N+1 Query: Author fetched 3 times in loop — consider <code className="font-mono">select_related('author')</code></span>
                 </div>
                 <div className="space-y-2">
-                  {MOCK_SQL_QUERIES.map((q, idx) => (
+                  {EMPTY_SQL_QUERIES.map((q, idx) => (
                     <div
                       key={idx}
                       className={`p-2.5 rounded-lg border ${
