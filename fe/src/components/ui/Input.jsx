@@ -1,6 +1,6 @@
 // components/ui/Input.jsx
+import { useId } from 'react'
 import { cn } from '../../utils/classNames.js'
-import { generateId } from '../../utils/formatters.js'
 
 /**
  * Input component matching the design - uses wrapper with borderless input inside
@@ -16,7 +16,8 @@ export function Input({
   wrapperClassName = '',
   ...props
 }) {
-  const inputId = id || generateId()
+  const autoId = useId()
+  const inputId = id || autoId
   const errorId = `${inputId}-error`
   const hintId = `${inputId}-hint`
 

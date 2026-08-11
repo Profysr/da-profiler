@@ -1,41 +1,17 @@
 // utils/constants.js
 
-import { Globe, Cpu, Zap, Bell, Play, FileText, Bug, Database, AlertTriangle, FileCode, List, Activity } from 'lucide-react'
-
-/**
- * HTTP Method to CSS class mapping (matching new design tokens)
- */
-export const METHOD_COLORS = {
-  GET: 'method-get',
-  POST: 'method-post',
-  PUT: 'method-put',
-  PATCH: 'method-put',
-  DELETE: 'method-delete',
-  HEAD: 'method-badge badge-gray',
-  OPTIONS: 'method-badge badge-gray',
-}
-
-/**
- * Status code CSS class mapping
- */
-export const STATUS_COLORS = {
-  2: 'status-2xx',
-  3: 'status-3xx',
-  4: 'status-4xx',
-  5: 'status-5xx',
-}
-
-/**
- * Converter placeholder mapping
- */
-export const CONVERTER_PLACEHOLDERS = {
-  int: '42',
-  uuid: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-  slug: 'my-slug',
-  str: 'value',
-  path: 'path/to/resource',
-  default: 'value',
-}
+import {
+  Globe,
+  Cpu,
+  Zap,
+  Bell,
+  HelpCircle,
+  Settings,
+  FolderOpen,
+  Server,
+  History,
+  LayoutDashboard,
+} from 'lucide-react'
 
 /**
  * localStorage keys
@@ -50,21 +26,34 @@ export const STORAGE_KEYS = {
 }
 
 /**
- * Animation durations (ms)
+ * Workspace tab configuration for the top-level navigator
  */
-export const ANIMATION_DURATION = {
-  fast: 150,
-  normal: 250,
-  slow: 350,
-}
+export const WORKSPACE_TABS = [
+  { id: 'workspaces', label: 'Workspaces', icon: LayoutDashboard },
+  { id: 'collections', label: 'Collections', icon: FolderOpen },
+  { id: 'environments', label: 'Environments', icon: Server },
+  { id: 'history', label: 'History', icon: History },
+]
 
 /**
- * Query param default limits
+ * HTTP methods available in the request workbench
  */
-export const QUERY_PARAM_LIMITS = {
-  MAX_ROWS: 1000,
-  MAX_SEED_COUNT: 100,
-}
+export const HTTP_METHODS = [
+  { id: 'GET', label: 'GET' },
+  { id: 'POST', label: 'POST' },
+  { id: 'PUT', label: 'PUT' },
+  { id: 'DELETE', label: 'DELETE' },
+  { id: 'PATCH', label: 'PATCH' },
+]
+
+/**
+ * Icon buttons rendered in the global header
+ */
+export const HEADER_ICON_BUTTONS = [
+  { id: 'settings', icon: Settings, title: 'Settings' },
+  { id: 'help', icon: HelpCircle, title: 'Help' },
+  { id: 'notifications', icon: Bell, title: 'Notifications' },
+]
 
 /**
  * Target kind configuration with icons and styling
@@ -126,21 +115,3 @@ export const ROUTE_FILTERS = [
   { value: 'kind:consumer', label: 'Consumers Only' },
   { value: 'kind:signal', label: 'Signals Only' },
 ]
-
-/**
- * Profiler tab configuration
- */
-export const PROFILER_TABS = [
-  { id: "summary", label: "Summary", icon: Bug, variant: "error" },
-  { id: "queries", label: "SQL Queries", icon: Database, variant: "default" },
-  {
-    id: "sideEffects",
-    label: "Side Effects",
-    icon: AlertTriangle,
-    variant: "default",
-  },
-  { id: "response", label: "Raw Response", icon: FileCode, variant: "default" },
-  { id: "headers", label: "Headers", icon: FileList, variant: "default" },
-  { id: "logs", label: "Logs", icon: List, variant: "default" },
-  { id: "timeline", label: "Timeline", icon: Activity, variant: "default" },
-];

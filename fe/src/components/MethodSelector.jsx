@@ -1,7 +1,7 @@
 // src/components/MethodSelector.jsx
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Check } from 'lucide-react'
-import { HTTP_METHODS } from '../utils/workbenchData.js'
+import { HTTP_METHODS } from '../utils/constants.js'
 
 function getMethodBadgeClass(method) {
   switch (method) {

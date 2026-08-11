@@ -131,7 +131,7 @@ export function ResponseWorkbench({
         {/* ── Loading ─────────────────────────────────────────────── */}
         {loading ? (
           <div className="flex items-center justify-center h-full gap-2 text-on-surface-variant">
-            <Icon name="progress_activity" size={20} className="animate-spin" />
+            <Loader2 size={20} className="animate-spin" />
             <span className="text-xs">Executing target &amp; profiling execution...</span>
           </div>
         ) : (
@@ -152,7 +152,7 @@ export function ResponseWorkbench({
                           expandState === true ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
-                        <Icon name="unfold_more" size={12} />
+                        <ChevronsUpDown size={12} />
                         Expand All
                       </button>
                       <button
@@ -163,7 +163,7 @@ export function ResponseWorkbench({
                           expandState === false ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
-                        <Icon name="unfold_less" size={12} />
+                        <ChevronsDownUp size={12} />
                         Collapse All
                       </button>
                     </div>
@@ -220,7 +220,7 @@ export function ResponseWorkbench({
             {activeTabId === 'queries' && (
               <div className="space-y-3">
                 <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs flex items-center gap-2">
-                  <Icon name="warning" size={14} />
+                  <TriangleAlert size={14} />
                   <span>Detected N+1 Query: Author fetched 3 times in loop — consider <code className="font-mono">select_related('author')</code></span>
                 </div>
                 <div className="space-y-2">
@@ -283,13 +283,13 @@ export function ResponseWorkbench({
                 <p className="font-semibold text-on-surface">Database Mutations / Side Effects</p>
                 <div className="divide-y divide-outline-variant/30 border border-outline-variant rounded-lg overflow-hidden">
                   {[
-                    { icon: 'check_circle', color: 'text-emerald-400', label: 'No database writes (INSERT/UPDATE/DELETE) detected.' },
-                    { icon: 'check_circle', color: 'text-emerald-400', label: 'No Celery tasks spawned during request cycle.' },
-                    { icon: 'info',         color: 'text-sky-400',     label: 'Signal listeners triggered: post_init (×4).' },
-                    { icon: 'info',         color: 'text-sky-400',     label: 'Middleware: SessionMiddleware, CsrfViewMiddleware, AuthenticationMiddleware.' },
-                  ].map(({ icon, color, label }) => (
+                    { Icon: CheckCircle, color: 'text-emerald-400', label: 'No database writes (INSERT/UPDATE/DELETE) detected.' },
+                    { Icon: CheckCircle, color: 'text-emerald-400', label: 'No Celery tasks spawned during request cycle.' },
+                    { Icon: Info,        color: 'text-sky-400',     label: 'Signal listeners triggered: post_init (×4).' },
+                    { Icon: Info,        color: 'text-sky-400',     label: 'Middleware: SessionMiddleware, CsrfViewMiddleware, AuthenticationMiddleware.' },
+                  ].map(({ Icon: RowIcon, color, label }) => (
                     <div key={label} className="flex items-start gap-2.5 px-3 py-2.5 bg-surface hover:bg-surface-container/40 transition-colors">
-                      <Icon name={icon} size={14} className={color} />
+                      <RowIcon size={14} className={color} />
                       <span className="text-on-surface-variant">{label}</span>
                     </div>
                   ))}

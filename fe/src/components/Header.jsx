@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { Globe, Cable, User } from 'lucide-react'
 import { ConnectionManager } from './ConnectionManager.jsx'
-import { HEADER_ICON_BUTTONS } from '../utils/workbenchData.js'
+import { HEADER_ICON_BUTTONS } from '../utils/constants.js'
 
 export function Header({
   userAvatarUrl,
