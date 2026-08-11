@@ -1,8 +1,8 @@
 // store/profileStore.js
 import { create } from 'zustand'
-import { profileRoute } from '../api/endpoints.js'
+import { getApiClient } from '../api/client.js'
 
-export const useProfileStore = create((set) => ({
+export const useProfileStore = create((set, get) => ({
   // State
   result: null,
   loading: false,
@@ -11,9 +11,17 @@ export const useProfileStore = create((set) => ({
   
   // Actions
   runProfile: async (payload) => {
+    const { activeConnectionId, getActiveConnection } = await import('../store/connectionsStore.js').then(m => m.useConnectionsStore.getState());
+    const connection = getActiveConnection();
+    if (!connection) {
+      throw new Error('No active connection');
+    }
+    
     set({ loading: true, error: null, lastPayload: payload })
     try {
-      const result = await profileRoute(payload)
+      const client = getApiClient(connection.baseUrl);
+      const response = await client.post('/profile/', payload);
+      const result = response.data;
       set({ result, loading: false, error: null })
       return result
     } catch (error) {

@@ -44,7 +44,7 @@ export function EmptyState({
 export function ProfilerEmptyState({ className = '' }) {
   return (
     <div className={cn('flex flex-col items-center justify-center h-full p-8 text-center', className)}>
-      <div className="mb-4 p-4 bg-surface-variant/80 border border-outline-variant rounded-full text-primary shadow-glow-primary">
+      <div className="mb-4 p-4 bg-surface-variant/25 border border-outline-variant rounded-full text-primary shadow-glow-primary">
         <Play className="w-8 h-8 fill-primary" />
       </div>
       <h3 className="font-headline-sm text-headline-sm text-on-surface mb-1 font-semibold">Ready to Profile</h3>

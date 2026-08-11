@@ -96,6 +96,7 @@ class DjangoTargetDiscovery:
                     queried_fields = advisor.queried_fields
                 except (TypeError, OSError, Exception):
                     pass
+                    
             static_findings.extend(check_missing_indexes(route.target_model, queried_fields))
 
             targets.append(Target(

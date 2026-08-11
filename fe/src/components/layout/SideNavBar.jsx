@@ -25,7 +25,7 @@ export default function SideNavBar() {
   const { filteredTargets, selectedTarget, selectTarget, searchQuery, setSearchQuery, activeFilter, setActiveFilter, loading, counts, total, fetchTargets } = useRoutesStore();
   
   // Connections store
-  const { connections, activeConnectionId, getActiveConnection } = useConnectionsStore();
+  const { getActiveConnection } = useConnectionsStore();
   const activeConnection = getActiveConnection();
   
   // Local state for collapsed kind sections
@@ -56,6 +56,7 @@ export default function SideNavBar() {
   }, {});
 
   const handleTargetClick = useCallback((target) => {
+    console.log("DEBUG: Setting target into the router profile");
     selectTarget(target);
   }, [selectTarget]);
 
@@ -166,7 +167,7 @@ export default function SideNavBar() {
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="px-4 py-3.5 border-b border-outline-variant flex-shrink-0" data-label="sidebar-header">
-          <div className="flex items-center justify-between mb-3" data-label="sidebar-brand">
+          {/* <div className="flex items-center justify-between mb-3" data-label="sidebar-brand">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-surface-variant flex items-center justify-center text-primary border border-outline-variant">
                 <Layers className="w-4 h-4 text-primary" />
@@ -183,7 +184,7 @@ export default function SideNavBar() {
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-          </div>
+          </div> */}
 
           <div className="flex flex-col gap-2.5" data-label="sidebar-search-filters">
             <GlobalSearch
@@ -234,7 +235,7 @@ export default function SideNavBar() {
                       aria-expanded={!isCollapsed}
                     >
                       <Icon className={`w-3.5 h-3.5 ${kindConfig.color}`} />
-                      <span className="flex-1 truncate">{kindConfig.label}</span>
+                      <span className="flex-1 truncate text-left">{kindConfig.label}</span>
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${kindConfig.bgColor} ${kindConfig.borderColor} ${kindConfig.color}`}>
                         {count}
                       </span>

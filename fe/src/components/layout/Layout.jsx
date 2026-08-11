@@ -3,16 +3,12 @@ import TopNavBar from './TopNavBar.jsx';
 import SideNavBar from './SideNavBar.jsx';
 import { ConnectionManager } from '../ConnectionManager.jsx';
 import { useUIStore } from '../../store/uiStore.js';
-import { useConnectionsStore } from '../../store/connectionsStore.js';
 
 /**
- * Main layout component matching design
- * @param {Object} props - Component props
- * @returns {JSX.Element}
+ * Main layout component matching design spec. Contains top nav, side nav, and main content area.
  */
 export function Layout({ children, "data-label": testId = "app-layout" }) {
   const { sidebarCollapsed, sidebarWidth } = useUIStore();
-  const { connections } = useConnectionsStore();
   const [showConnections, setShowConnections] = useState(false);
 
   useEffect(() => {
