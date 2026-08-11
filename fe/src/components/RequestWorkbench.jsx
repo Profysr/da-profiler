@@ -1,7 +1,7 @@
 // src/components/RequestWorkbench.jsx
-import { PaneTabs } from './workbench/PaneTabs.jsx'
+import { PaneTabs } from './PaneTabs.jsx'
 import { KeyValueEditor } from './KeyValueEditor.jsx'
-import { DjangoRibbon } from './workbench/DjangoRibbon.jsx'
+import { DjangoRibbon } from './DjangoRibbon.jsx'
 
 export function RequestWorkbench({
   activeTabId = 'params',

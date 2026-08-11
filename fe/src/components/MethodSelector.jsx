@@ -1,5 +1,5 @@
 // src/components/MethodSelector.jsx
-import { HTTP_METHODS } from './workbench/data.js'
+import { HTTP_METHODS } from '../utils/workbenchData.js'
 
 function getMethodBadgeClass(method) {
   switch (method) {

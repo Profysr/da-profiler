@@ -1,6 +1,6 @@
 // src/components/ResponseWorkbench.jsx
-import { PaneTabs } from './workbench/PaneTabs.jsx'
-import { ResponseMetrics } from './workbench/ResponseMetrics.jsx'
+import { PaneTabs } from './PaneTabs.jsx'
+import { ResponseMetrics } from './ResponseMetrics.jsx'
 import { PROFILER_TABS } from '../utils/constants.js'
 import { CopyButton } from './ui/CopyButton.jsx'
 

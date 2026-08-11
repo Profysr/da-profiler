@@ -2,7 +2,7 @@
 import { useConnectionsStore } from '../store/connectionsStore.js'
 import { ProjectSelector, ConnectionManager } from './ConnectionManager.jsx'
 import { useState } from 'react'
-import { WORKSPACE_TABS, HEADER_ICON_BUTTONS } from './workbench/data.js'
+import { WORKSPACE_TABS, HEADER_ICON_BUTTONS } from '../utils/workbenchData.js'
 
 export function Header({
   activeTabId = 'workspaces',
