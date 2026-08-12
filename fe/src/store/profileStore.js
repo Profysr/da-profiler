@@ -27,7 +27,7 @@ export const useProfileStore = create((set, get) => ({
     set({ loading: true, error: null, lastPayload: payload })
     try {
       const client = getApiClient(connection.baseUrl);
-      const response = await client.post('/execute/', payload);
+      const response = await client.post('/profiler/execute', payload);
       const result = response.data;
       set({ result, loading: false, error: null })
       return result

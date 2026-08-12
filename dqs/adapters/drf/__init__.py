@@ -15,8 +15,8 @@ Public surface (what other code is expected to import):
   DB rows or explicit values.
 - `DjangoTargetDiscovery` — collects views, Celery tasks, and Channels
   consumers into one Target list.
-- `Target`, `RouteMetadata`, `PathParam`, `ProfileReport`, `PathResolution` —
-  the shared data shapes (re-exported from `types.py`).
+- `Route`, `UrlParam`, `ProfileResult`, `ResolvedPath` — the shared data
+  shapes (defined in `types.py`).
 """
 
 from dqs.adapters.drf.execution.discovery import DjangoTargetDiscovery, serialize_target
@@ -24,24 +24,24 @@ from dqs.adapters.drf.execution.runner import DjangoSandboxRunner
 from dqs.adapters.drf.routing.converters import PathConverterResolver
 from dqs.adapters.drf.routing.introspector import DjangoIntrospector
 from dqs.adapters.drf.types import (
-    InvalidPathParamError,
-    PathParam,
-    PathResolution,
-    ProfileReport,
-    RouteMetadata,
+    ProfileResult,
+    ResolvedPath,
+    Route,
     TargetNotFoundError,
+    UnresolvablePathError,
+    UrlParam,
 )
 
 __all__ = [
     "DjangoIntrospector",
     "DjangoSandboxRunner",
     "DjangoTargetDiscovery",
-    "InvalidPathParamError",
     "PathConverterResolver",
-    "PathParam",
-    "PathResolution",
-    "ProfileReport",
-    "RouteMetadata",
+    "ProfileResult",
+    "ResolvedPath",
+    "Route",
     "TargetNotFoundError",
+    "UnresolvablePathError",
+    "UrlParam",
     "serialize_target",
 ]

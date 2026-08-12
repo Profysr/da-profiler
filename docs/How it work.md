@@ -96,10 +96,10 @@ Imagine you have a lock that needs a specific key. Instead of trying random keys
 ### 💻 How Da Profiler does it:
 For URLs like `/books/<int:pk>/` or `/authors/<uuid:id>/`:
 1. **Introspect Path Converters** → Extract `int`, `uuid`, `slug`, `str`, `path` from URL pattern
-2. **Resolve Model & Seed Mock** → Look for existing DB record, or create one with `model_bakery`
+2. **Resolve Model** → Look for an existing DB record (`Model.objects.first()`) and extract the value via the DRF `lookup_field`/`lookup_url_kwarg` map
 3. **Reverse Executable URL** → Generate concrete URL like `/books/42/`
 
-For `POST`/`PUT`/`PATCH` requests, it also **infers the request body** by inspecting DRF serializers or Django forms!
+> The v0.35 redesign **removed auto-seeding** (`model_bakery`) and the request-body inferrer. If no record exists and the caller hasn't supplied a value, the engine returns a clear `UnresolvablePathError` instead of silently fabricating data. Payloads are caller-supplied via the `body` field of `POST /profiler/execute`.
 
 ---
 
@@ -136,10 +136,11 @@ After profiling, you get a structured `ExecutionResult` with:
     }
   ],
   "response_body": [...],
-  "seeded_records": [{"pk": 1, "__str__": "Book object (1)"}],
   "side_effect_warnings": ["Blocking network call 'requests.get' detected at line 42"]
 }
 ```
+
+> **Note:** The `seeded_records` field was removed in the v0.35 cleanup — the engine no longer auto-seeds the DB. If a request includes a path parameter that can't be resolved, the response includes a `skip_reason` field on the resolved path instead.
 
 ---
 

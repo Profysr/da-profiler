@@ -30,10 +30,10 @@ from django.urls.exceptions import NoReverseMatch
 from django.urls.resolvers import RoutePattern
 
 from dqs.adapters.drf.types import (
-    InvalidPathParamError,
-    PathParam,
-    PathResolution,
-    RouteMetadata,
+    ResolvedPath,
+    Route,
+    UnresolvablePathError,
+    UrlParam,
 )
 
 logger = logging.getLogger("dqs.routing")
@@ -54,27 +54,27 @@ class PathConverterResolver:
     # 1. Reading the placeholders out of a URL pattern
     # ------------------------------------------------------------------------
     @classmethod
-    def extract_converters_from_pattern(cls, pattern: URLPattern) -> list[PathParam]:
+    def extract_params_from_pattern(cls, pattern: URLPattern) -> list[UrlParam]:
         """
         Read the `<name:converter>` placeholders from a Django URLPattern.
 
         ELI5: We open the route definition and copy down every blank. For
-        `/books/<int:pk>/` we return one PathParam: name="pk", converter="int".
+        `/books/<int:pk>/` we return one UrlParam: name="pk", converter="int".
         """
-        params: list[PathParam] = []
+        params: list[UrlParam] = []
         route_pattern = getattr(pattern, "pattern", None)
         if isinstance(route_pattern, RoutePattern):
             for name, converter in route_pattern.converters.items():
                 # Convert "IntConverter" -> "int", "SlugConverter" -> "slug", etc.
                 conv_type = type(converter).__name__.replace("Converter", "").lower() or "str"
-                params.append(PathParam(name=name, converter=conv_type))
+                params.append(UrlParam(name=name, converter=conv_type))
         return params
 
     # ------------------------------------------------------------------------
     # 2. Figuring out which DB field the placeholder refers to
     # ------------------------------------------------------------------------
     @classmethod
-    def build_lookup_map(cls, view_callable: Any | None) -> dict[str, str]:
+    def build_lookup_map(cls, view: Any | None) -> dict[str, str]:
         """
         Build the mapping from "URL kwarg name" to "model field name".
 
@@ -86,10 +86,10 @@ class PathConverterResolver:
         Returns `{"pk": "pk"}` for normal views, or
         `{"article_slug": "slug"}` for a view with custom lookup config.
         """
-        if not view_callable:
+        if not view:
             return {}
 
-        view_class = view_callable if inspect.isclass(view_callable) else getattr(view_callable, "cls", None)
+        view_class = view if inspect.isclass(view) else getattr(view, "cls", None)
         if not view_class:
             return {}
 
@@ -130,10 +130,10 @@ class PathConverterResolver:
     @classmethod
     def resolve(
         cls,
-        route: RouteMetadata,
+        route: Route,
         explicit_params: dict[str, Any] | None = None,
         lookup_map: dict[str, str] | None = None,
-    ) -> PathResolution:
+    ) -> ResolvedPath:
         """
         Resolve every path parameter on a route and return a concrete URL.
 
@@ -146,54 +146,54 @@ class PathConverterResolver:
         caller already tell us what to put here?", then "is there a real
         row in the database we can copy a value from?", then "we have no
         idea, please tell us what to use." That last case returns a
-        PathResolution with `concrete_url=None` and `reason="no_record_found"`.
+        ResolvedPath with `url=None` and `reason="no_record_found"`.
         """
         resolved: dict[str, Any] = dict(explicit_params or {})
 
-        if not route.has_path_params:
-            return PathResolution(
-                concrete_url=cls._render_url(route, resolved),
+        if not route.has_url_params:
+            return ResolvedPath(
+                url=cls._render_url(route, resolved),
                 params=resolved,
             )
 
-        missing = [p.name for p in route.path_params if p.name not in resolved]
+        missing = [p.name for p in route.url_params if p.name not in resolved]
         if not missing:
-            return PathResolution(
-                concrete_url=cls._render_url(route, resolved),
+            return ResolvedPath(
+                url=cls._render_url(route, resolved),
                 params=resolved,
             )
 
-        model_class = cls._resolve_target_model(route.target_model)
+        model_class = cls._resolve_target_model(route.model)
         if model_class is None:
-            return PathResolution(
-                concrete_url=None,
+            return ResolvedPath(
+                url=None,
                 params=resolved,
                 reason=(
                     f"Route '{route.path}' has path parameter(s) "
                     f"{missing!r} but no resolvable target model "
-                    f"('{route.target_model}'). Provide explicit values."
+                    f"('{route.model}'). Provide explicit values."
                 ),
             )
 
         instance = cls._find_first_instance(model_class)
         if instance is None:
-            return PathResolution(
-                concrete_url=None,
+            return ResolvedPath(
+                url=None,
                 params=resolved,
                 reason=(
                     f"Route '{route.path}' needs values for {missing!r} but "
-                    f"model '{route.target_model}' has no rows in the database. "
+                    f"model '{route.model}' has no rows in the database. "
                     f"Pick an existing record or enter a value."
                 ),
             )
 
-        effective_lookup_map = cls.build_lookup_map(getattr(route, "view_callable", None))
-        if getattr(route, "lookup_map", None):
-            effective_lookup_map.update(route.lookup_map)
+        effective_lookup_map = cls.build_lookup_map(getattr(route, "view", None))
+        if getattr(route, "url_kwarg_to_field", None):
+            effective_lookup_map.update(route.url_kwarg_to_field)
         if lookup_map:
             effective_lookup_map.update(lookup_map)
 
-        for p in route.path_params:
+        for p in route.url_params:
             if p.name in resolved:
                 continue
             value = cls.extract_from_model_instance(instance, p.name, effective_lookup_map)
@@ -205,10 +205,10 @@ class PathConverterResolver:
                     p.name, model_class.__name__, route.path,
                 )
 
-        still_missing = [p.name for p in route.path_params if p.name not in resolved]
+        still_missing = [p.name for p in route.url_params if p.name not in resolved]
         if still_missing:
-            return PathResolution(
-                concrete_url=None,
+            return ResolvedPath(
+                url=None,
                 params=resolved,
                 reason=(
                     f"Could not resolve path parameter(s) {still_missing!r} for "
@@ -216,22 +216,22 @@ class PathConverterResolver:
                 ),
             )
 
-        return PathResolution(
-            concrete_url=cls._render_url(route, resolved),
+        return ResolvedPath(
+            url=cls._render_url(route, resolved),
             params=resolved,
         )
 
     @classmethod
     def build_executable_url(
         cls,
-        route: RouteMetadata,
+        route: Route,
         explicit_params: dict[str, Any] | None = None,
         lookup_map: dict[str, str] | None = None,
-    ) -> PathResolution:
+    ) -> ResolvedPath:
         """
         Convenience alias for `resolve()`. Kept so older callers that expect
         a tuple don't break — but the new code should call `resolve()` and
-        use the PathResult directly.
+        use the ResolvedPath directly.
         """
         return cls.resolve(route, explicit_params=explicit_params, lookup_map=lookup_map)
 
@@ -260,7 +260,7 @@ class PathConverterResolver:
             return None
 
     @classmethod
-    def _render_url(cls, route: RouteMetadata, params: dict[str, Any]) -> str:
+    def _render_url(cls, route: Route, params: dict[str, Any]) -> str:
         """
         Build the final URL string from a route template and resolved values.
 
@@ -268,11 +268,11 @@ class PathConverterResolver:
         falls back to literal placeholder substitution if reverse() can't
         resolve the URL name.
         """
-        if route.view_name:
+        if route.name:
             try:
-                return reverse(route.view_name, kwargs=params)
+                return reverse(route.name, kwargs=params)
             except NoReverseMatch:
-                logger.debug("reverse() failed for %s; falling back to string substitution", route.view_name)
+                logger.debug("reverse() failed for %s; falling back to string substitution", route.name)
 
         url = route.path
         for name, value in params.items():
@@ -286,16 +286,16 @@ class PathConverterResolver:
     @classmethod
     def resolve_or_raise(
         cls,
-        route: RouteMetadata,
+        route: Route,
         explicit_params: dict[str, Any] | None = None,
         lookup_map: dict[str, str] | None = None,
     ) -> tuple[str, dict[str, Any]]:
         """
-        Same as `resolve()` but raises `InvalidPathParamError` instead of
-        returning a PathResolution with `concrete_url=None`. Useful when
-        the caller would rather catch an exception than inspect the result.
+        Same as `resolve()` but raises `UnresolvablePathError` instead of
+        returning a ResolvedPath with `url=None`. Useful when the caller
+        would rather catch an exception than inspect the result.
         """
         result = cls.resolve(route, explicit_params=explicit_params, lookup_map=lookup_map)
-        if result.concrete_url is None:
-            raise InvalidPathParamError(result.reason or "Path parameters could not be resolved.")
-        return result.concrete_url, result.params
+        if result.url is None:
+            raise UnresolvablePathError(result.reason or "Path parameters could not be resolved.")
+        return result.url, result.params

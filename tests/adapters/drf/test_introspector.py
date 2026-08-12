@@ -14,7 +14,7 @@ import pytest
 from django.core.exceptions import ImproperlyConfigured
 
 from dqs.adapters.drf.routing.introspector import DjangoIntrospector
-from dqs.adapters.drf.types import RouteMetadata
+from dqs.adapters.drf.types import Route
 
 
 class TestDjangoIntrospector:
@@ -29,42 +29,41 @@ class TestDjangoIntrospector:
         """Every DRF route in the test project should be discoverable."""
         routes = introspector.list_all_routes()
         assert len(routes) > 0
-        # At least one known route should appear (drf viewset and apiview).
         paths = [r.path for r in routes]
         assert any("books-drf" in p for p in paths) or any("books-set" in p for p in paths)
 
-    def test_route_metadata_is_correct_type(self, introspector: DjangoIntrospector) -> None:
-        """Every discovered route must be a RouteMetadata instance."""
+    def test_route_is_correct_type(self, introspector: DjangoIntrospector) -> None:
+        """Every discovered route must be a Route instance."""
         routes = introspector.list_all_routes()
-        assert all(isinstance(r, RouteMetadata) for r in routes)
+        assert all(isinstance(r, Route) for r in routes)
         assert all(isinstance(r.methods, list) for r in routes)
 
     def test_drf_viewset_classification(self, introspector: DjangoIntrospector) -> None:
-        """DRF ViewSets must be classified as DRF_ViewSet with a resolved target_model."""
+        """DRF ViewSets must be classified with kind='viewset' and a resolved model."""
         routes = introspector.list_all_routes()
         viewset_route = next((r for r in routes if "books-set" in r.path), None)
         if viewset_route is not None:
             assert viewset_route.is_drf is True
-            assert viewset_route.view_type == "DRF_ViewSet"
-            assert viewset_route.target_model == "sample_app.Book"
+            assert viewset_route.kind == "viewset"
+            assert viewset_route.model == "sample_app.Book"
 
-    def test_dqs_routes_are_excluded(self, introspector: DjangoIntrospector) -> None:
-        """Internal /dqs/api/ routes must never appear in discovered targets — no recursion."""
+    def test_profiler_routes_are_excluded(self, introspector: DjangoIntrospector) -> None:
+        """Internal /profiler/ routes must never appear in discovered targets — no recursion."""
         routes = introspector.list_all_routes()
         for route in routes:
-            assert not route.path.startswith("/dqs/api/"), f"DQS route leaked: {route.path}"
+            assert not route.path.startswith("/profiler/"), f"Profiler route leaked: {route.path}"
 
     def test_unresolvable_routes_mark_themselves_non_executable(self, introspector: DjangoIntrospector) -> None:
         """Routes we can't statically analyze must report executable=False with a reason."""
         routes = introspector.list_all_routes()
         for route in routes:
             if not route.executable:
-                assert route.reason_unexecutable is not None
+                assert route.skip_reason is not None
                 assert route.methods == []  # no methods when we can't safely run it
 
 
 class TestLookupMapExtraction:
-    """The lookup-map extraction moved to PathConverterResolver in the v0.35 cleanup."""
+    """The lookup-map extraction lives in PathConverterResolver (moved in the v0.35 cleanup)."""
 
     def test_lookup_map_standard_pk(self) -> None:
         """Standard DRF view (no custom lookup_field) must return pk -> pk."""

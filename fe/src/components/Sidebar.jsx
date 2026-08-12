@@ -110,7 +110,7 @@ export function Sidebar({
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
             {[
               { id: 'all', label: 'All' },
-              { id: 'executable', label: 'Triggerable' },
+              { id: 'executable', label: 'Executable' },
               { id: 'kind:view', label: 'Views' },
               { id: 'kind:task', label: 'Tasks' },
             ].map((f) => (
@@ -167,11 +167,11 @@ export function Sidebar({
 
                   {isExpanded && (
                     <div className="pl-4 space-y-1 border-l border-outline-variant ml-3">
-                      {targets.map((target) => {
-                        const isSelected = selectedTarget?.id === target.id
-                        const methods = target.trigger_spec?.methods || ['GET']
-                        const primaryMethod = methods[0] || 'GET'
-                        const path = target.trigger_spec?.path || target.name || 'Unnamed Target'
+  {targets.map((target) => {
+    const isSelected = selectedTarget?.id === target.id
+    const methods = target.target_details?.methods || ['GET']
+    const primaryMethod = methods[0] || 'GET'
+    const path = target.target_details?.path || target.name || 'Unnamed Target'
 
                         return (
                           <button

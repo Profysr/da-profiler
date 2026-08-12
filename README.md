@@ -90,8 +90,8 @@ Da Profiler enforces a clean architectural separation. One execution engine, two
                        │   Human surface     │      │   Agent surface     │
                        └─────────┬──────────┘      └─────────┬──────────┘
                                  │                            │
-                                 │   POST /dqs/api/execute/   │
-                                 │   POST /dqs/api/audit/     │
+                                  │   POST /profiler/execute   │
+                                  │   POST /profiler/audit     │
                                  └────────────┬───────────────┘
                                               │
                                               ▼
@@ -127,16 +127,15 @@ dqs/
 │       ├── router.py                  # Shadow DB router & profiling_session context manager
 │       ├── types.py                   # Shared dataclasses
 │       ├── views.py                   # Workbench & profiling endpoints
-│       ├── urls.py                    # URL config (/dqs/api/execute/, /dqs/api/audit/, /dqs/api/users/)
+│       ├── urls.py                    # URL config (/profiler/manage/routes, /profiler/execute, /profiler/connection/health)
 │       ├── database/
-│       │   └── db_manager.py          # Shadow DB validation & migrations
+│       │   └── db_manager.py          # Shadow DB validation & migrations (legacy / opt-out)
 │       ├── routing/
 │       │   ├── introspector.py        # URL route pattern tree walker
 │       │   └── converters.py          # Dynamic path parameter resolver (no auto-seeding)
 │       ├── auth/                      # NEW in v0.5
 │       │   ├── impersonation.py       # Session / Bearer / Anonymous user context injection
 │       │   └── audit.py               # Multi-role AuthZ matrix runner
-│       ├── payload_suggester.py       # NEW in v0.35 (replaces mocking/) — serializer→JSON template
 │       └── execution/
 │           ├── discovery.py           # Target discovery (views, signals, tasks, consumers)
 │           ├── query_interceptor.py   # DB connection.execute_wrapper hook + QueryAnalysisEngine
@@ -245,19 +244,7 @@ The workbench renders the response and the trace side-by-side. The MCP agent rea
 
 The workbench's **request builder** is the human-facing half of the engine. The MCP agent constructs equivalent requests programmatically.
 
-For both surfaces, when the caller doesn't know what to put in the body, the **payload suggester** inspects the target's `serializer_class` (or `get_serializer_class()` / `form_class`) and returns a JSON template:
-
-```json
-POST /dqs/api/suggest-payload/  →  { "target_id": "view:/api/v1/books/" }
-
-{
-  "template": {
-    "title": "Sample Book",
-    "author_id": 1,
-    "isbn": "978-0-13-235088-4",
-    "published_date": "2026-08-11",
-    "is_published": false
-  },
+> **Note:** The payload suggester is **deferred to a later release**. Today, payloads are caller-supplied via the `body` field of `POST /profiler/execute`. Both the workbench and the MCP agent construct or hand-write the request body directly. When the suggester lands it will follow this shape:
   "notes": [
     "author_id is a PrimaryKeyRelatedField — pick an existing Author row or leave 1 for the dev DB.",
     "isbn uses SlugField — value above passes the slug pattern."
@@ -282,7 +269,7 @@ Da Profiler ships a native Model Context Protocol (MCP) server so AI coding agen
 |---|---|
 | `list_targets` | Returns all discovered `Target` records (views, signals, tasks, consumers) with their kinds and static findings. |
 | `get_static_findings` | Returns AST findings for a target or the whole project — N+1 candidates, blocking I/O, missing indexes (when implemented). |
-| `suggest_payload(target_id)` | Returns a JSON template derived from the target's serializer. Never writes to the DB. |
+| `suggest_payload(target_id)` | **Deferred.** Will return a JSON template derived from the target's serializer. Currently the agent constructs payloads directly. |
 | `execute_request(target_id, payload, headers, query_params, path_params, user_context, sandbox)` | The core tool — sends a request through the execution proxy and returns HTTP response + SQL trace + N+1 flags. |
 | `audit_authz(target_id, user_ids[])` | Runs the same target under N different user contexts and returns an access matrix. Flags permission leaks. *(Implementation lands in v0.5; tool is registered in v0.4 and returns 501 until then.)* |
 | `apply_fix(target_id, fix_type, params)` | Applies a prescriptive fix (e.g. `.select_related('author')`) at the flagged source location using AST-level source edits. The agent calls this, then `execute_request` again to verify. |
@@ -399,8 +386,6 @@ tests/
 ├── adapters/
 │   └── drf/                         # Marker: `django` + `drf` — requires DB
 │       ├── conftest.py              # Shared fixtures: runner, introspector, seeded_book
-│       ├── test_payload_suggester.py# NEW — serializer→JSON template tests (v0.35)
-│       ├── test_proxy_shim.py       # NEW — v0.35 thin proxy shim (v0.35)
 │       ├── test_proxy.py            # NEW — hardened execution proxy (v0.5)
 │       ├── test_converters.py       # PathConverterResolver unit tests
 │       ├── test_discovery.py        # Signal & task discovery tests

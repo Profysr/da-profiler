@@ -1,5 +1,7 @@
 # CODEBASE.md — DQS (da-profiler) Complete Context Reference
 
+> ⚠️ **DEPRECATED.** This file describes the pre-v0.35 architecture (auto-seeding via `ModelBakeryGenerator`, `/dqs/` dashboard, `execute_isolated()`, `RouteMetadata`, `body_inferrer`). All of that was deleted or renamed in the v0.35 cleanup. For the current architecture, read [`architecture.md`](./architecture.md) and [`ROADMAP.md`](./ROADMAP.md). This file is preserved for historical reference and will be removed in a future cleanup.
+
 > **For agents and developers.** This file replaces `codebase.json` as the single source of truth for understanding this project. It is meant to be read at the start of any task.
 
 ---

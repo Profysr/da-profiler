@@ -6,7 +6,7 @@ A condensed map of the `fe/` codebase. Open this first; treat it as a single-pag
 
 ## 1. TL;DR
 
-The frontend is a **React 19 + Vite + Tailwind v4** SPA. State lives in **Zustand** stores; data fetching is **Axios** against a Django `/dqs/*` backend; the API surface is the public contract.
+The frontend is a **React 19 + Vite + Tailwind v4** SPA. State lives in **Zustand** stores; data fetching is **Axios** against a Django `/profiler/*` backend; the API surface is the public contract.
 
 Two parallel component trees currently exist:
 

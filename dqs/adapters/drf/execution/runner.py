@@ -20,7 +20,7 @@ You give the runner:
 - whether to keep or discard the side effects (the `sandbox` toggle).
 
 You get back:
-- the HTTP response the view produced (status code, headers, body),
+- the HTTP response the view produced (status code, body),
 - every SQL query that fired while the view ran, with file:line origins,
 - any N+1 patterns we spotted, with copy-pasteable `.select_related()` fixes.
 
@@ -47,9 +47,9 @@ from dqs.adapters.drf.database.db_manager import ShadowDatabaseManager
 from dqs.adapters.drf.routing.introspector import DjangoIntrospector
 from dqs.adapters.drf.routing.converters import PathConverterResolver
 from dqs.adapters.drf.types import (
-    InvalidPathParamError,
-    ProfileReport,
-    RouteMetadata,
+    ProfileResult,
+    Route,
+    UnresolvablePathError,
 )
 from dqs.core.static_advisor import StaticASTAdvisor
 
@@ -139,7 +139,7 @@ class DjangoSandboxRunner:
         body: dict[str, Any] | None = None,
         user: Any | None = None,
         sandbox: bool = True,
-    ) -> ProfileReport:
+    ) -> ProfileResult:
         """
         Execute one HTTP request against a discovered route, under observation.
 
@@ -150,7 +150,7 @@ class DjangoSandboxRunner:
         3. Build an HTTP request with your headers/body/user attached.
         4. Hand it to the view, watching every SQL query.
         5. Roll back the transaction (unless sandbox=False).
-        6. Package up the response and the query trace into a ProfileReport.
+        6. Package up the response and the query trace into a ProfileResult.
 
         Args:
             url_name_or_path: the URL pattern (e.g. `/api/v1/books/`) or the
@@ -170,7 +170,7 @@ class DjangoSandboxRunner:
                 the caller wants to verify a write actually persisted.
 
         Returns:
-            A ProfileReport containing the HTTP response, every captured
+            A ProfileResult containing the HTTP response, every captured
             query with file:line origins, and any N+1 flags with fixes.
         """
         method = method.upper()
@@ -179,40 +179,37 @@ class DjangoSandboxRunner:
         headers = headers or {}
 
         if method not in {"GET", "POST", "PUT", "PATCH", "DELETE"}:
-            return ProfileReport(
-                route=url_name_or_path,
+            return ProfileResult(
+                path=url_name_or_path,
                 status_code=400,
                 error=f"Invalid HTTP method: {method}",
             )
 
-        route_meta = self._lookup_route(url_name_or_path)
+        route = self._lookup_route(url_name_or_path)
 
         # Resolve path parameters. If we can't, surface a clear error instead
         # of inventing data.
         try:
-            resolution = PathConverterResolver.resolve(
-                route_meta,
-                explicit_params=path_params,
-            )
-        except InvalidPathParamError as exc:
-            return ProfileReport(route=url_name_or_path, status_code=400, error=str(exc))
+            resolution = PathConverterResolver.resolve(route, explicit_params=path_params)
+        except UnresolvablePathError as exc:
+            return ProfileResult(path=url_name_or_path, status_code=400, error=str(exc))
 
-        if resolution.concrete_url is None:
-            return ProfileReport(
-                route=url_name_or_path,
+        if resolution.url is None:
+            return ProfileResult(
+                path=url_name_or_path,
                 status_code=400,
                 error=resolution.reason or "Path parameters could not be resolved.",
             )
 
-        concrete_url = resolution.concrete_url
+        concrete_url = resolution.url
 
         # Match the resolved URL to its view callable.
         try:
             match = resolve(concrete_url)
             view_func = match.func
         except Exception as exc:
-            return ProfileReport(
-                route=concrete_url,
+            return ProfileResult(
+                path=concrete_url,
                 status_code=404,
                 error=f"Route resolution failed: {exc}",
             )
@@ -231,8 +228,8 @@ class DjangoSandboxRunner:
                 _dispatch_view, view_func, request, match, sandbox=sandbox,
             )
         except Exception as exc:
-            return ProfileReport(
-                route=concrete_url,
+            return ProfileResult(
+                path=concrete_url,
                 status_code=500,
                 error=f"Exception raised inside view execution: {exc}",
                 side_effect_warnings=side_effect_warnings,
@@ -240,13 +237,13 @@ class DjangoSandboxRunner:
 
         status_code = getattr(response, "status_code", 200)
         response_body = _extract_response_body(response)
-        request_spec = {
+        request_snapshot = {
             "route": url_name_or_path,
             "method": method,
             "resolved_url": concrete_url,
             "path_params": [
                 {"name": p.name, "value": resolution.params.get(p.name)}
-                for p in route_meta.path_params
+                for p in route.url_params
             ],
             "query_params": query_params,
             "headers": headers,
@@ -254,38 +251,38 @@ class DjangoSandboxRunner:
             "sandbox": sandbox,
         }
 
-        return QueryAnalysisEngine.build_report(
-            route=concrete_url,
+        return QueryAnalysisEngine.build_result(
+            path=concrete_url,
             status_code=status_code,
             queries_captured=queries_captured,
             db_duration_ms=db_duration_ms,
             response_body=response_body,
             side_effect_warnings=side_effect_warnings,
-            request_spec=request_spec,
-            target_model=route_meta.target_model,
+            request=request_snapshot,
+            target_model=route.model,
         )
 
     # ------------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------------
-    def _lookup_route(self, url_name_or_path: str) -> RouteMetadata:
+    def _lookup_route(self, url_name_or_path: str) -> Route:
         """
-        Find the RouteMetadata for a given URL pattern or URL name.
+        Find the Route for a given URL pattern or URL name.
 
-        Falls back to a minimal RouteMetadata if introspection can't find the
+        Falls back to a minimal Route if introspection can't find the
         route — this lets the runner still attempt the request, which will
         then fail at `resolve()` with a clear 404 if the URL really doesn't
         exist.
         """
         introspector = DjangoIntrospector()
         for route in introspector.list_all_routes():
-            if route.path == url_name_or_path or route.view_name == url_name_or_path:
+            if route.path == url_name_or_path or route.name == url_name_or_path:
                 return route
-        return RouteMetadata(
+        return Route(
             path=url_name_or_path,
             methods=["GET"],
-            view_name="",
-            view_type="DRF_APIView",
+            name="",
+            kind="api_view",
         )
 
     def _build_request(

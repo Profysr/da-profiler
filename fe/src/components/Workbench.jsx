@@ -75,9 +75,9 @@ export function Workbench({
   // Sync selected target into URL bar pattern
   useEffect(() => {
     if (selectedTarget) {
-      const methods = selectedTarget.trigger_spec?.methods || ['GET']
-      setMethod(methods[0] || 'GET')
-      const targetPath = selectedTarget.trigger_spec?.path || selectedTarget.name || '/api/v1/books/'
+const methods = selectedTarget.target_details?.methods || ['GET']
+setMethod(methods[0] || 'GET')
+const targetPath = selectedTarget.target_details?.path || selectedTarget.name || '/api/v1/books/'
       setBasePathPattern(targetPath)
     }
   }, [selectedTarget])

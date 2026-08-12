@@ -37,7 +37,7 @@ from django.urls import URLPattern, URLResolver, get_resolver
 from django.urls.resolvers import RegexPattern, RoutePattern
 
 from dqs.adapters.drf.routing.converters import PathConverterResolver
-from dqs.adapters.drf.types import PathParam, RouteMetadata
+from dqs.adapters.drf.types import Route
 
 try:
     from rest_framework.views import APIView
@@ -54,8 +54,8 @@ VALID_HTTP_METHODS: set[str] = CORE_HTTP_METHODS | {"HEAD", "OPTIONS"}
 
 class DjangoIntrospector:
     """
-    Walks Django's URL resolver tree and produces a RouteMetadata object for
-    every DRF-backed URL it finds.
+    Walks Django's URL resolver tree and produces a Route object for every
+    DRF-backed URL it finds.
     """
 
     def __init__(self) -> None:
@@ -69,26 +69,26 @@ class DjangoIntrospector:
     # ------------------------------------------------------------------------
     # 1. The main entry point
     # ------------------------------------------------------------------------
-    def list_all_routes(self) -> list[RouteMetadata]:
+    def list_all_routes(self) -> list[Route]:
         """
-        Recursively scan the entire URL tree and return one RouteMetadata per
+        Recursively scan the entire URL tree and return one Route per
         discovered DRF route.
 
         ELI5: Start at the root of your project's URLs, then walk every
         `include()` and every leaf route. Skip any URL that starts with
-        `/dqs/` (those are OUR endpoints; we don't profile ourselves).
+        `/profiler/` (those are OUR endpoints; we don't profile ourselves).
         """
-        routes: list[RouteMetadata] = []
+        routes: list[Route] = []
         self._walk(self.resolver.url_patterns, prefix="/", routes=routes)
         return routes
 
     # ------------------------------------------------------------------------
     # 2. The recursive walker
     # ------------------------------------------------------------------------
-    def _walk(self, patterns: list[Any], prefix: str, routes: list[RouteMetadata]) -> None:
+    def _walk(self, patterns: list[Any], prefix: str, routes: list[Route]) -> None:
         """
         Recursively visit URL patterns, diving into URLResolver groups and
-        emitting RouteMetadata for each URLPattern leaf.
+        emitting a Route for each URLPattern leaf.
 
         ELI5: Imagine a folder tree where some folders contain more folders
         (`include()` calls) and some contain files (the actual routes). We
@@ -103,12 +103,12 @@ class DjangoIntrospector:
                 continue
 
             if isinstance(pattern, URLPattern):
-                # Skip our own DQS endpoints — profiling them would be recursive nonsense.
-                if full_path.startswith("/dqs/"):
+                # Skip our own profiler endpoints — profiling them would be recursive nonsense.
+                if full_path.startswith("/profiler/"):
                     continue
-                route_meta = self._analyze_view(pattern, full_path)
-                if route_meta is not None:
-                    routes.append(route_meta)
+                route = self._analyze_view(pattern, full_path)
+                if route is not None:
+                    routes.append(route)
 
     # ------------------------------------------------------------------------
     # 3. Path normalization (handles both Django's new path() syntax and old regex urls)
@@ -125,7 +125,7 @@ class DjangoIntrospector:
         """
         pattern_obj = getattr(pattern, "pattern", None)
 
-        if isinstance(pattern_obj, RoutePattern):
+        if isinstance(pattern_obj, RoutePattern): # A RoutePattern object holding the prefix (e.g., RoutePattern('api/v1/auth/')) 
             route = str(pattern_obj)
         elif isinstance(pattern_obj, RegexPattern):
             raw_regex = str(pattern_obj)
@@ -143,117 +143,117 @@ class DjangoIntrospector:
     # ------------------------------------------------------------------------
     # 4. Find the model behind a view (so we can resolve path params later)
     # ------------------------------------------------------------------------
-    @staticmethod
-    def extract_model_from_view(view_class: type, pattern: Optional[URLPattern] = None) -> Optional[str]:
-        """
-        Try five different ways to figure out which Django Model a view is
-        about, returning it as "app_label.ModelName".
+    # @staticmethod
+    # def extract_model_from_view(view_class: type, pattern: Optional[URLPattern] = None) -> Optional[str]:
+    #     """
+    #     Try five different ways to figure out which Django Model a view is
+    #     about, returning it as "app_label.ModelName".
 
-        ELI5: Different DRF views advertise their model in different places
-        — sometimes as a class attribute, sometimes via a method, sometimes
-        not at all. We try the easy ones first, then fall back to clever
-        tricks, and finally give up and return None (which is fine — the
-        path resolver just won't be able to auto-fill values for it).
-        """
-        if not isinstance(view_class, type):
-            return None
+    #     ELI5: Different DRF views advertise their model in different places
+    #     — sometimes as a class attribute, sometimes via a method, sometimes
+    #     not at all. We try the easy ones first, then fall back to clever
+    #     tricks, and finally give up and return None (which is fine — the
+    #     path resolver just won't be able to auto-fill values for it).
+    #     """
+    #     if not isinstance(view_class, type):
+    #         return None
 
-        def as_label(model_cls: Any) -> Optional[str]:
-            if isinstance(model_cls, type) and issubclass(model_cls, models.Model) and hasattr(model_cls, "_meta"):
-                return f"{model_cls._meta.app_label}.{model_cls._meta.object_name}"
-            return None
+    #     def as_label(model_cls: Any) -> Optional[str]:
+    #         if isinstance(model_cls, type) and issubclass(model_cls, models.Model) and hasattr(model_cls, "_meta"):
+    #             return f"{model_cls._meta.app_label}.{model_cls._meta.object_name}"
+    #         return None
 
-        # Strategy 1: explicit class attributes (the common case).
-        try:
-            queryset = getattr(view_class, "queryset", None)
-            if queryset is not None and hasattr(queryset, "model"):
-                label = as_label(queryset.model)
-                if label:
-                    return label
-            label = as_label(getattr(view_class, "model", None))
-            if label:
-                return label
-        except Exception as exc:
-            logger.debug("Strategy 1 (class attrs) failed for %s: %s", view_class, exc)
+    #     # Strategy 1: explicit class attributes (the common case).
+    #     try:
+    #         queryset = getattr(view_class, "queryset", None)
+    #         if queryset is not None and hasattr(queryset, "model"):
+    #             label = as_label(queryset.model)
+    #             if label:
+    #                 return label
+    #         label = as_label(getattr(view_class, "model", None))
+    #         if label:
+    #             return label
+    #     except Exception as exc:
+    #         logger.debug("Strategy 1 (class attrs) failed for %s: %s", view_class, exc)
 
-        # Strategy 2: read it from the serializer's Meta.model.
-        try:
-            serializer_cls = getattr(view_class, "serializer_class", None)
-            if not serializer_cls and hasattr(view_class, "get_serializer_class"):
-                try:
-                    serializer_cls = view_class.get_serializer_class(None)
-                except Exception:
-                    pass
-            if serializer_cls and hasattr(serializer_cls, "Meta"):
-                label = as_label(getattr(serializer_cls.Meta, "model", None))
-                if label:
-                    return label
-        except Exception as exc:
-            logger.debug("Strategy 2 (serializer Meta) failed for %s: %s", view_class, exc)
+    #     # Strategy 2: read it from the serializer's Meta.model.
+    #     try:
+    #         serializer_cls = getattr(view_class, "serializer_class", None)
+    #         if not serializer_cls and hasattr(view_class, "get_serializer_class"):
+    #             try:
+    #                 serializer_cls = view_class.get_serializer_class(None)
+    #             except Exception:
+    #                 pass
+    #         if serializer_cls and hasattr(serializer_cls, "Meta"):
+    #             label = as_label(getattr(serializer_cls.Meta, "model", None))
+    #             if label:
+    #                 return label
+    #     except Exception as exc:
+    #         logger.debug("Strategy 2 (serializer Meta) failed for %s: %s", view_class, exc)
 
-        # Strategy 3: actually run get_queryset() in a safe mock context.
-        if hasattr(view_class, "get_queryset"):
-            try:
-                from rest_framework.test import APIRequestFactory
+    #     # Strategy 3: actually run get_queryset() in a safe mock context.
+    #     if hasattr(view_class, "get_queryset"):
+    #         try:
+    #             from rest_framework.test import APIRequestFactory
 
-                view_instance = view_class()
-                view_instance.request = APIRequestFactory().get("/")
-                view_instance.format_kwarg = None
+    #             view_instance = view_class()
+    #             view_instance.request = APIRequestFactory().get("/")
+    #             view_instance.format_kwarg = None
 
-                # Pretend we have every path param so the queryset can resolve.
-                extracted_kwargs: dict[str, Any] = {}
-                if pattern:
-                    pattern_obj = getattr(pattern, "pattern", None)
-                    if pattern_obj and hasattr(pattern_obj, "converters"):
-                        extracted_kwargs = {name: 1 for name in pattern_obj.converters.keys()}
-                view_instance.args = ()
-                view_instance.kwargs = extracted_kwargs
+    #             # Pretend we have every path param so the queryset can resolve.
+    #             extracted_kwargs: dict[str, Any] = {}
+    #             if pattern:
+    #                 pattern_obj = getattr(pattern, "pattern", None)
+    #                 if pattern_obj and hasattr(pattern_obj, "converters"):
+    #                     extracted_kwargs = {name: 1 for name in pattern_obj.converters.keys()}
+    #             view_instance.args = ()
+    #             view_instance.kwargs = extracted_kwargs
 
-                qs = view_instance.get_queryset()
-                label = as_label(getattr(qs, "model", None))
-                if label:
-                    return label
-            except Exception as exc:
-                logger.debug("Strategy 3 (get_queryset) failed for %s: %s", view_class, exc)
+    #             qs = view_instance.get_queryset()
+    #             label = as_label(getattr(qs, "model", None))
+    #             if label:
+    #                 return label
+    #         except Exception as exc:
+    #             logger.debug("Strategy 3 (get_queryset) failed for %s: %s", view_class, exc)
 
-        # Strategy 4: read the return-type annotation of get_queryset.
-        if hasattr(view_class, "get_queryset"):
-            try:
-                sig = inspect.signature(view_class.get_queryset)
-                return_type = sig.return_annotation
-                if return_type is not inspect.Signature.empty:
-                    label = as_label(getattr(return_type, "model", None))
-                    if label:
-                        return label
-                    for arg in getattr(return_type, "__args__", []) or []:
-                        label = as_label(arg)
-                        if label:
-                            return label
-            except Exception as exc:
-                logger.debug("Strategy 4 (return annotation) failed for %s: %s", view_class, exc)
+    #     # Strategy 4: read the return-type annotation of get_queryset.
+    #     if hasattr(view_class, "get_queryset"):
+    #         try:
+    #             sig = inspect.signature(view_class.get_queryset)
+    #             return_type = sig.return_annotation
+    #             if return_type is not inspect.Signature.empty:
+    #                 label = as_label(getattr(return_type, "model", None))
+    #                 if label:
+    #                     return label
+    #                 for arg in getattr(return_type, "__args__", []) or []:
+    #                     label = as_label(arg)
+    #                     if label:
+    #                         return label
+    #         except Exception as exc:
+    #             logger.debug("Strategy 4 (return annotation) failed for %s: %s", view_class, exc)
 
-        # Strategy 5: heuristic — does any model name appear in the URL pattern?
-        if pattern:
-            try:
-                pattern_name = getattr(pattern, "name", "") or ""
-                pattern_str = str(getattr(pattern, "pattern", ""))
-                for registered_model in apps.get_models():
-                    model_name = registered_model._meta.model_name
-                    if pattern_name and model_name in pattern_name.lower().replace("_", "-").split("-"):
-                        return as_label(registered_model)
-                    if f"{model_name}_id" in pattern_str or f"{model_name}_pk" in pattern_str:
-                        return as_label(registered_model)
-            except Exception as exc:
-                logger.debug("Strategy 5 (heuristic) failed for %s: %s", view_class, exc)
+    #     # Strategy 5: heuristic — does any model name appear in the URL pattern?
+    #     if pattern:
+    #         try:
+    #             pattern_name = getattr(pattern, "name", "") or ""
+    #             pattern_str = str(getattr(pattern, "pattern", ""))
+    #             for registered_model in apps.get_models():
+    #                 model_name = registered_model._meta.model_name
+    #                 if pattern_name and model_name in pattern_name.lower().replace("_", "-").split("-"):
+    #                     return as_label(registered_model)
+    #                 if f"{model_name}_id" in pattern_str or f"{model_name}_pk" in pattern_str:
+    #                     return as_label(registered_model)
+    #         except Exception as exc:
+    #             logger.debug("Strategy 5 (heuristic) failed for %s: %s", view_class, exc)
 
-        return None
+    #     return None
 
     # ------------------------------------------------------------------------
-    # 5. Analyze a single URL pattern into a RouteMetadata
+    # 5. Analyze a single URL pattern into a Route
     # ------------------------------------------------------------------------
-    def _analyze_view(self, pattern: URLPattern, full_path: str) -> RouteMetadata | None:
+    def _analyze_view(self, pattern: URLPattern, full_path: str) -> Route | None:
         """
-        Pull everything we know about one route into a RouteMetadata object.
+        Pull everything we know about one route into a Route object.
 
         ELI5: We open one URLPattern file from the tree, figure out which
         Python class backs it, ask the path-param resolver what blanks it
@@ -276,9 +276,9 @@ class DjangoIntrospector:
         if view_class is None or APIView is None or not issubclass(view_class, APIView):
             return None
 
-        target_model = self.extract_model_from_view(view_class, pattern)
-        path_params = PathConverterResolver.extract_converters_from_pattern(pattern)
-        lookup_map = PathConverterResolver.build_lookup_map(view_class)
+        # model = self.extract_model_from_view(view_class, pattern)
+        url_params = PathConverterResolver.extract_params_from_pattern(pattern)
+        url_kwarg_to_field = PathConverterResolver.build_lookup_map(view_class)
 
         # ViewSets advertise their methods via the .actions dict; regular
         # APIViews inherit from APIView and have http_method_names.
@@ -286,8 +286,8 @@ class DjangoIntrospector:
             actions = getattr(callback, "actions", {})
             methods = [m.upper() for m in actions if m.upper() in VALID_HTTP_METHODS]
             executable = bool(methods)
-            reason = None if executable else "Could not resolve ViewSet actions mapping."
-            view_type = "DRF_ViewSet"
+            skip_reason = None if executable else "Could not resolve ViewSet actions mapping."
+            kind = "viewset"
         else:
             raw_methods = [
                 m.upper()
@@ -298,18 +298,19 @@ class DjangoIntrospector:
             has_core_handlers = any(m in CORE_HTTP_METHODS for m in raw_methods)
             methods = raw_methods if has_core_handlers else []
             executable = bool(methods)
-            reason = None if executable else "No core HTTP method handlers (GET, POST, etc.) defined on view class."
-            view_type = "DRF_APIView"
+            skip_reason = None if executable else "No core HTTP method handlers (GET, POST, etc.) defined on view class."
+            kind = "api_view"
 
-        return RouteMetadata(
+        return Route(
             path=full_path,
             methods=methods if executable else [],
-            view_name=pattern.name or view_class.__name__,
-            view_type=view_type,
+            name=pattern.name or view_class.__name__,
+            kind=kind,
+            is_drf=True,
             executable=executable,
-            path_params=path_params,
-            target_model=target_model,
-            reason_unexecutable=reason,
-            view_callable=view_class,
-            lookup_map=lookup_map,
+            url_params=url_params,
+            model=None,  # model,  # TODO: re-enable model detection once it's more reliable
+            skip_reason=skip_reason,
+            view=view_class,
+            url_kwarg_to_field=url_kwarg_to_field,
         )

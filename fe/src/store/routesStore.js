@@ -9,8 +9,8 @@ function filterRoutes(routes, searchQuery, activeFilter) {
   
   return routes.filter((route) => {
     // Filter by executable status
-    if (activeFilter === 'executable' && !route.triggerable) return false
-    if (activeFilter === 'params' && (!route.trigger_spec?.path_params || route.trigger_spec.path_params.length === 0)) return false
+if (activeFilter === 'executable' && !route.can_execute) return false
+if (activeFilter === 'params' && (!route.target_details?.path_params || route.target_details.path_params.length === 0)) return false
     
     // Filter by kind
     if (activeFilter.startsWith('kind:')) {
@@ -21,13 +21,13 @@ function filterRoutes(routes, searchQuery, activeFilter) {
     // Filter by search query
     if (query) {
       const searchableText = [
-        route.trigger_spec?.path || '',
+        route.target_details?.path || '',
         route.name || '',
-        route.trigger_spec?.task_name || '',
-        route.trigger_spec?.consumer || '',
-        route.trigger_spec?.signal || '',
-        route.trigger_spec?.receiver || '',
-        ...(route.trigger_spec?.methods || []),
+        route.target_details?.task_name || '',
+        route.target_details?.consumer || '',
+        route.target_details?.signal || '',
+        route.target_details?.receiver || '',
+        ...(route.target_details?.methods || []),
       ].join(' ').toLowerCase()
       
       if (!searchableText.includes(query)) return false

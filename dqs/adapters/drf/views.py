@@ -5,9 +5,9 @@ DQS HTTP API (Workbench-facing)
 ELI5: This is the front door of DQS. The workbench UI (and the MCP agent,
 internally) talks to Django by hitting these URLs:
 
-- GET  /dqs/api/targets/  — list every discoverable target
-- POST /dqs/api/execute/  — run a single request, return HTTP response + SQL trace
-- GET  /dqs/api/health/   — am I configured correctly?
+- GET  /profiler/manage/routes     — list every discoverable target
+- POST /profiler/execute           — run a single request, return HTTP response + SQL trace
+- GET  /profiler/connection/health — am I configured correctly?
 
 Everything is gated on `DEBUG=True` — these endpoints return 403 if the
 project is running in production. DQS is a development tool, period.
@@ -66,10 +66,19 @@ def _add_cors_headers(response: Response, request: Request) -> Response:
 
 
 class CORSEnabledAPIView(APIView):
-    """Base view that handles OPTIONS preflight + adds CORS headers to every response."""
+    """Base view that handles OPTIONS preflight, enforces DEBUG=True, and adds CORS headers."""
 
     authentication_classes: list = []
     permission_classes: list = []
+
+    def dispatch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Block requests immediately if DEBUG is False before running any view logic."""
+        if not getattr(settings, "DEBUG", False):
+            return Response(
+                {"error": "Da Profiler is disabled in production. Set DEBUG=True in local settings."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().dispatch(request, *args, **kwargs)
 
     def options(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return _add_cors_headers(Response(), request)
@@ -78,28 +87,12 @@ class CORSEnabledAPIView(APIView):
         response = super().finalize_response(request, response, *args, **kwargs)
         return _add_cors_headers(response, request)
 
-
-def _require_debug(view_func: Any) -> Any:
-    """Decorator: return 403 unless DEBUG=True. DQS is dev-only."""
-
-    def wrapper(self: Any, request: Request, *args: Any, **kwargs: Any) -> Response:
-        if not getattr(settings, "DEBUG", False):
-            return Response(
-                {"error": "Da Profiler is disabled in production. Set DEBUG=True in local settings."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        return view_func(self, request, *args, **kwargs)
-
-    return wrapper
-
-
 # ---------------------------------------------------------------------------
-# Targets — GET /dqs/api/targets/
+# GET /profiler/manage/routes
 # ---------------------------------------------------------------------------
-class TargetsView(CORSEnabledAPIView):
+class ManageRoutesView(CORSEnabledAPIView):
     """List every discoverable target (views, tasks, consumers) plus their static findings."""
 
-    @_require_debug
     def get(self, request: Request) -> Response:
         try:
             routes = DjangoIntrospector().list_all_routes()
@@ -114,25 +107,14 @@ class TargetsView(CORSEnabledAPIView):
         counts = dict(Counter(t.kind for t in targets))
         return Response({"targets": serialized, "counts": counts, "total": len(serialized)})
 
-
 # ---------------------------------------------------------------------------
-# Execute — POST /dqs/api/execute/
+# POST /profiler/execute
 # ---------------------------------------------------------------------------
 class ExecuteView(CORSEnabledAPIView):
     """
-    Run a single request through the engine and return the ProfileReport.
-
-    ELI5: This is the workbench's "Send" button. The UI sends a JSON body
-    describing the request (target id, method, headers, body, user, sandbox
-    toggle) and we run it through the runner, returning the HTTP response
-    + SQL trace in one payload.
-
-    Non-view targets (signals, tasks) aren't executable through this
-    endpoint yet — they return a clear "static analysis only" response with
-    the target's findings.
+    Run a single request through the engine and return the ProfileResult.
     """
 
-    @_require_debug
     def post(self, request: Request) -> Response:
         body = request.data or {}
         target_id = body.get("target_id")
@@ -144,12 +126,10 @@ class ExecuteView(CORSEnabledAPIView):
         if kind in ("task", "consumer", "signal"):
             return _static_analysis_response(target_id, kind)
 
-        # Resolve target_id back to a route path. Target ids look like
-        # "view:/api/v1/books/" — strip the "view:" prefix to get the path.
         route_path = body.get("route") or target_id.replace("view:", "", 1)
 
         try:
-            report = DjangoSandboxRunner().execute_request(
+            result = DjangoSandboxRunner().execute_request(
                 url_name_or_path=route_path,
                 method=body.get("method", "GET"),
                 path_params=body.get("path_params") or {},
@@ -164,16 +144,15 @@ class ExecuteView(CORSEnabledAPIView):
             logger.exception("Sandbox execution failed")
             return Response({"error": f"Sandbox execution failed: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response(_profile_report_to_dict(report))
+        return Response(_profile_result_to_dict(result))
 
 
 # ---------------------------------------------------------------------------
-# Health — GET /dqs/api/health/
+# GET /profiler/connection/health
 # ---------------------------------------------------------------------------
-class HealthView(CORSEnabledAPIView):
-    """Quick sanity check: is DQS configured? Is DEBUG on? Is the shadow DB (if used) wired up?"""
+class ConnectionHealthView(CORSEnabledAPIView):
+    """Quick sanity check: is DQS configured? Is DEBUG on?"""
 
-    @_require_debug
     def get(self, request: Request) -> Response:
         from dqs.adapters.drf.router import SHADOW_DB_ALIAS
 
@@ -188,9 +167,9 @@ class HealthView(CORSEnabledAPIView):
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
-def _profile_report_to_dict(report: Any) -> dict[str, Any]:
-    """Convert a ProfileReport dataclass into a JSON-serializable dict."""
-    return report.__dict__.copy()
+def _profile_result_to_dict(result: Any) -> dict[str, Any]:
+    """Convert a ProfileResult dataclass into a JSON-serializable dict."""
+    return result.__dict__.copy()
 
 
 def _static_analysis_response(target_id: str, kind: str) -> Response:

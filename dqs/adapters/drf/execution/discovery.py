@@ -10,7 +10,7 @@ ELI5: Django code can be triggered in three different ways:
 
 This module walks all three sources and converts each one into the same
 shape — a `Target` record — so the rest of DQS doesn't have to care which
-kind of triggerable code it's looking at. The workbench sidebar shows one
+kind of executable code it's looking at. The workbench sidebar shows one
 list with views, signals, and tasks all mixed together; the MCP `list_targets`
 tool returns the same list.
 
@@ -26,7 +26,6 @@ import inspect
 import logging
 from typing import Any
 
-from django.apps import apps
 from django.conf import settings
 
 from dqs.adapters.drf.execution.schema_advisor import (
@@ -49,20 +48,23 @@ def serialize_target(target: Target) -> dict[str, Any]:
     dictionaries with display-friendly extra fields (name, path, methods)
     so the UI can show "POST /api/v1/books/" in the sidebar.
     """
-    data: dict[str, Any] = {
-        "id": target.id,
-        "kind": target.kind,
-        "triggerable": target.triggerable,
-        "trigger_spec": target.trigger_spec,
-        "static_findings": target.static_findings,
-    }
+data: dict[str, Any] = {
+    "id": target.id,
+    "kind": target.kind,
+    "can_execute": target.can_execute,
+    "target_details": target.target_details,
+    "static_findings": target.static_findings,
+}
 
-    spec = target.trigger_spec or {}
+spec = target.target_details or {}
 
     if target.kind == "view":
-        data["name"] = spec.get("view_name", target.id.split(":")[-1])
+        data["name"] = spec.get("path", target.id.split(":")[-1])
         data["methods"] = spec.get("methods", [])
         data["path"] = spec.get("path", "")
+        # Translate the internal target_details key for the wire — the UI
+        # shouldn't have to know our Python-side field names.
+        data["url_params"] = spec.get("url_params", [])
     elif target.kind == "task":
         data["name"] = spec.get("task_name", target.id.split(":")[-1])
     elif target.kind == "consumer":
@@ -116,13 +118,13 @@ class DjangoTargetDiscovery:
         targets: list[Target] = []
         for route in routes:
             static_findings: list[dict[str, Any]] = []
-            static_findings.extend(check_pk_strategy(route.target_model))
+            static_findings.extend(check_pk_strategy(route.model))
 
             # Best-effort: analyze the view's own source for queried fields
             # so we can flag missing indexes. If introspection can't get
             # source for the view, we just skip the missing-index check.
             queried_fields: list[str] = []
-            view_callable = getattr(route, "view_callable", None)
+            view_callable = getattr(route, "view", None)
             if view_callable is not None:
                 try:
                     source = inspect.getsource(view_callable)
@@ -132,20 +134,20 @@ class DjangoTargetDiscovery:
                 except (TypeError, OSError, Exception):
                     pass
 
-            static_findings.extend(check_missing_indexes(route.target_model, queried_fields))
+            static_findings.extend(check_missing_indexes(route.model, queried_fields))
 
-            targets.append(Target(
-                id=f"view:{route.path}",
-                kind="view",
-                triggerable=route.executable,
-                trigger_spec={
-                    "path": route.path,
-                    "methods": route.methods,
-                    "path_params": [p.__dict__ for p in route.path_params],
-                    "target_model": route.target_model,
-                },
-                static_findings=static_findings,
-            ))
+targets.append(Target(
+    id=f"view:{route.path}",
+    kind="view",
+    can_execute=route.executable,
+    target_details={
+        "path": route.path,
+        "methods": route.methods,
+        "url_params": [p.__dict__ for p in route.url_params],
+        "target_model": route.model,
+    },
+    static_findings=static_findings,
+))
         return targets
 
     # ------------------------------------------------------------------------
@@ -166,13 +168,13 @@ class DjangoTargetDiscovery:
             for task_name, task_func in current_app.tasks.items():
                 if task_name.startswith("celery."):
                     continue
-                targets.append(Target(
-                    id=f"task:{task_name}",
-                    kind="task",
-                    triggerable=True,
-                    trigger_spec={"task_name": task_name},
-                    static_findings=self._static_analyze(task_func),
-                ))
+targets.append(Target(
+    id=f"task:{task_name}",
+    kind="task",
+    can_execute=True,
+    target_details={"task_name": task_name},
+    static_findings=self._static_analyze(task_func),
+))
         except ImportError:
             # Celery isn't installed — that's fine, no tasks to discover.
             pass
@@ -190,9 +192,9 @@ class DjangoTargetDiscovery:
         ELI5: Django Channels lets you write WebSocket handlers. We can
         list them, but we can't actually trigger them with a request yet —
         triggering a WebSocket needs a fundamentally different mechanism
-        than RequestFactory. So consumers appear in the list with
-        `triggerable=False` and only their static findings show up in the
-        workbench for now. Full consumer execution is genuinely v2.0+ scope.
+than RequestFactory. So consumers appear in the list with
+`can_execute=False` and only their static findings show up in the
+workbench for now. Full consumer execution is genuinely v2.0+ scope.
         """
         targets: list[Target] = []
         try:
@@ -215,16 +217,16 @@ class DjangoTargetDiscovery:
                 if consumer_class is None:
                     continue
                 name = getattr(consumer_class, "__name__", "UnknownConsumer")
-                targets.append(Target(
-                    id=f"consumer:{name}",
-                    kind="consumer",
-                    triggerable=False,
-                    trigger_spec={
-                        "consumer": name,
-                        "path": str(getattr(route, "pattern", "")),
-                    },
-                    static_findings=self._static_analyze(consumer_class),
-                ))
+targets.append(Target(
+    id=f"consumer:{name}",
+    kind="consumer",
+    can_execute=False,
+    target_details={
+        "consumer": name,
+        "path": str(getattr(route, "pattern", "")),
+    },
+    static_findings=self._static_analyze(consumer_class),
+))
         except Exception as exc:
             logger.debug("Could not discover Channels consumers: %s", exc)
         return targets

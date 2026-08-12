@@ -2,26 +2,25 @@
 //
 // Thin wrappers around the DQS HTTP API. Every function takes the backend's
 // base URL (e.g. "http://localhost:8000") and returns the parsed JSON
-// payload. The axios client (client.js) handles CSRF, CORS, and error
-// normalization.
+// payload. All endpoints live under the /profiler/ namespace.
 
 import { getApiClient } from './client.js'
 
-// GET /dqs/api/health/ — quick sanity check that DQS is reachable + configured.
+// GET /profiler/connection/health — quick sanity check that DQS is reachable + configured.
 export async function getHealth(baseUrl) {
   const client = getApiClient(baseUrl)
-  const response = await client.get('/health/')
+  const response = await client.get('/profiler/connection/health')
   return response.data
 }
 
-// GET /dqs/api/targets/ — list every discoverable target (views, tasks, consumers).
+// GET /profiler/manage/routes — list every discoverable target (views, tasks, consumers).
 export async function getTargets(baseUrl) {
   const client = getApiClient(baseUrl)
-  const response = await client.get('/targets/')
+  const response = await client.get('/profiler/manage/routes')
   return response.data
 }
 
-// POST /dqs/api/execute/ — run one request, return HTTP response + SQL trace.
+// POST /profiler/execute — run one request, return HTTP response + SQL trace.
 //
 // `payload` is the full request shape the runner expects:
 //   {
@@ -35,6 +34,6 @@ export async function getTargets(baseUrl) {
 //   }
 export async function executeRequest(baseUrl, payload) {
   const client = getApiClient(baseUrl)
-  const response = await client.post('/execute/', payload)
+  const response = await client.post('/profiler/execute', payload)
   return response.data
 }

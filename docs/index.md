@@ -33,7 +33,7 @@ Da Profiler has progressed through key development milestones:
 | **DB Query Interceptor** | [`dqs/adapters/drf/query_interceptor.py`](file:///c:/Users/mprof/OneDrive/Desktop/django-profiler/dqs/adapters/drf/query_interceptor.py) | Hooks into database drivers (`execute_wrapper`) and inspects Python call stacks to pinpoint originating lines of code. | ✅ Complete |
 | **Unified `Target` Model** | [`dqs/core/targets.py`](file:///c:/Users/mprof/OneDrive/Desktop/django-profiler/dqs/core/targets.py) | Represents HTTP endpoints, signals, and background tasks under one unified data model. | ✅ Complete |
 | **Static Code Advisor** | [`dqs/core/static_advisor.py`](file:///c:/Users/mprof/OneDrive/Desktop/django-profiler/dqs/core/static_advisor.py) | Performs pure AST scans to flag ORM calls inside loops and blocking synchronous I/O. | ✅ Complete |
-| **Mock Data Generator** | `dqs/adapters/drf/mock_generator.py` | Auto-populates test rows using `model_bakery` for path parameter resolution (`/books/<int:pk>/`). | 🟡 In Progress |
+| **Mock Data Generator** | *(removed)* | Auto-seeding was deleted in the v0.35 cleanup. Payloads are now caller-supplied via `POST /profiler/execute`; the engine never writes fake data to the DB on its own. | ❌ Removed |
 | **MCP Agent Server** | `dqs/mcp/server.py` | Exposes profiling capabilities as AI-callable tools for Cursor & Claude. | 🔲 Planned |
 
 ---

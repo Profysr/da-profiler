@@ -136,8 +136,9 @@ def suggest_fix(
         )
 
     return (
-        f"Potential N+1 query detected{loc_prefix}. "
-        f"Consider optimizing your queryset using `.select_related()` or `.prefetch_related()`."
+        f"Potential N+1 query detected {loc_prefix}. "
+        f"Consider optimizing your queryset using `.select_related()` if the table is a ForeignKey or One-to-One, "
+        f"or `.prefetch_related()` if the table has a Many-to-Many or Reverse ForeignKey."
     )
 
 
@@ -169,8 +170,7 @@ def detect_n_plus_one(
 
     flags: list[dict[str, Any]] = []
     for fp, group in groups.items():
-        # Only flag SELECTs that ran too many times — repeated writes
-        # are usually intentional (bulk inserts, batched updates).
+        # Only flag SELECTs that ran too many times — repeated writes are usually intentional (bulk inserts, batched updates).
         if len(group) < threshold or not fp.strip().upper().startswith("SELECT"):
             continue
 

@@ -66,7 +66,7 @@ export const TARGET_KINDS = {
     borderColor: 'border-blue-400/20',
     label: 'HTTP Views',
     shortLabel: 'Views',
-    triggerable: true,
+    can_execute: true,
     description: 'Django REST Framework API endpoints',
   },
   task: {
@@ -76,8 +76,8 @@ export const TARGET_KINDS = {
     borderColor: 'border-purple-400/20',
     label: 'Celery Tasks',
     shortLabel: 'Tasks',
-    triggerable: false,
-    description: 'Background Celery tasks (static analysis only)',
+  can_execute: false,
+  description: 'Background Celery tasks (static analysis only)',
   },
   consumer: {
     icon: Zap,
@@ -86,8 +86,8 @@ export const TARGET_KINDS = {
     borderColor: 'border-orange-400/20',
     label: 'WebSocket Consumers',
     shortLabel: 'Consumers',
-    triggerable: false,
-    description: 'Django Channels WebSocket consumers (static analysis only)',
+  can_execute: false,
+  description: 'Django Channels WebSocket consumers (static analysis only)',
   },
   signal: {
     icon: Bell,
@@ -96,8 +96,8 @@ export const TARGET_KINDS = {
     borderColor: 'border-green-400/20',
     label: 'Django Signals',
     shortLabel: 'Signals',
-    triggerable: false,
-    description: 'Model signal receivers (static analysis only)',
+  can_execute: false,
+  description: 'Model signal receivers (static analysis only)',
   },
 }
 

@@ -38,8 +38,7 @@ You can use the brain alone, or add the screen. They ship separately, like buyin
 da-profiler/
 ├── dqs/                          # Python package (PyPI: da-profiler)
 │   ├── adapters/drf/
-│   │   ├── templates/dqs/         # Minimal HTML fallback (optional)
-│   │   └── static/dqs/           # Served via Django collectstatic
+│   │   └── ... (HTTP API only; no HTML templates)
 │   └── ...
 ├── fe/                           # React frontend (npm: @da-profiler/dashboard)
 │   ├── bin/dashboard.js           # CLI entry point
@@ -400,27 +399,22 @@ To use the published `da-profiler` in your Django app:
    python manage.py migrate --database=dqs_shadow
    ```
 
-4. **Run profiling** using the sandbox:
+4. **Profile an endpoint programmatically** — payloads are caller-supplied, no auto-seeding:
    ```python
-   from dqs.adapters.drf.router import profiling_session
-   from dqs.adapters.drf.mocking.generator import ModelBakeryGenerator
-
-   with profiling_session():
-       ModelBakeryGenerator.ensure_capped_seeding("sample_app.Book", min_threshold=1, max_cap=50)
-       # Your queries now run against the shadow DB
-   ```
-
-5. **Or profile an endpoint programmatically**:
-   ```python
-   from dqs.adapters.drf.execution.discovery import DjangoTargetDiscovery
    from dqs.adapters.drf.execution.runner import DjangoSandboxRunner
 
    runner = DjangoSandboxRunner()
-   result = runner.execute_isolated(url_name_or_path="/api/v1/books/", method="GET")
+   result = runner.execute_request(
+       url_name_or_path="/api/v1/books/",
+       method="GET",
+       body={"q": "python"},
+   )
    print(f"Queries: {result.metrics['total_queries']}")
    for n1 in result.analysis:
        print(f"🚨 N+1: {n1['fingerprint']} at {n1['src_loc']}")
    ```
+
+   > Note: the `dqs/adapters/drf/mocking/` directory was deleted in the v0.35 cleanup. The runner now runs purely against the default DB inside an atomic savepoint that rolls back automatically (`sandbox=True`, the default).
 
 6. **Or use the AI agent loop** (Cursor / Windsurf / Claude Code via MCP):
    ```bash

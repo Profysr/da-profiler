@@ -21,16 +21,13 @@ No database connection is required — we just read Python class metadata.
 """
 
 from __future__ import annotations
-
 from typing import Any
-
 from django.apps import apps
 
 # Auto-increment integer PK types — the case the schema advisor flags.
 # UUIDv7 is recommended as an alternative (sortable, no enumeration leak,
 # friendly to distributed inserts).
 AUTO_INCREMENT_PK_TYPES: set[str] = {"AutoField", "BigAutoField", "SmallAutoField"}
-
 
 def check_pk_strategy(model_path: str | None) -> list[dict[str, Any]]:
     """

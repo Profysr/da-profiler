@@ -18,7 +18,7 @@ from __future__ import annotations
 import pytest
 
 from dqs.adapters.drf.execution.runner import DjangoSandboxRunner
-from dqs.adapters.drf.types import ProfileReport
+from dqs.adapters.drf.types import ProfileResult
 
 
 class TestDjangoSandboxRunner:
@@ -27,7 +27,7 @@ class TestDjangoSandboxRunner:
         """A GET to a list endpoint must return 200 with metrics and captured queries."""
         result = runner.execute_request("/api/v1/books-fbv/", method="GET")
 
-        assert isinstance(result, ProfileReport)
+        assert isinstance(result, ProfileResult)
         assert result.status_code == 200
         assert result.error is None
         assert "total_queries" in result.metrics
@@ -61,22 +61,17 @@ class TestDjangoSandboxRunner:
 
     def test_sandbox_toggle_can_be_disabled(self, runner: DjangoSandboxRunner) -> None:
         """When sandbox=False, the runner should still return a valid report."""
-        # We don't assert side effects here — that's covered by integration tests
-        # with a real DB — we just confirm the toggle is honored without crashing.
         result = runner.execute_request("/api/v1/books-fbv/", method="GET", sandbox=False)
         assert result.status_code == 200
 
     def test_unresolved_path_param_returns_clear_error(self, runner: DjangoSandboxRunner) -> None:
         """A detail route like /api/v1/books-fbv/<int:pk>/ with no matching row
         should return a 400 with a clear reason — NOT auto-seed one."""
-        # Pretend there are no Books at all and try to hit a detail route.
         result = runner.execute_request(
             "/api/v1/books-fbv/999999/",
             method="GET",
             path_params={"pk": 999999},
         )
-        # The runner should either succeed (if the row exists in the test DB)
-        # or fail with a clear reason. Either way, no silent auto-seeding.
         assert result.status_code in (200, 400, 404)
         if result.status_code != 200:
             assert result.error is not None

@@ -29,7 +29,7 @@ from typing import Any
 
 from django.db import connection
 
-from dqs.adapters.drf.types import ProfileReport
+from dqs.adapters.drf.types import ProfileResult
 from dqs.core.analyzer import detect_n_plus_one, fingerprint
 
 
@@ -114,7 +114,7 @@ class QueryInterceptor:
 
 class QueryAnalysisEngine:
     """
-    Turns a list of raw captured queries into a structured ProfileReport.
+    Turns a list of raw captured queries into a structured ProfileResult.
 
     ELI5: The CCTV tape comes back with every query recorded. This engine
     rewatches the tape and answers three questions:
@@ -140,20 +140,20 @@ class QueryAnalysisEngine:
             return None
 
     @classmethod
-    def build_report(
+    def build_result(
         cls,
-        route: str,
+        path: str,
         status_code: int,
         queries_captured: list[dict[str, Any]],
         db_duration_ms: float,
         response_body: Any,
         side_effect_warnings: list[str],
-        request_spec: dict[str, Any] | None = None,
+        request: dict[str, Any] | None = None,
         target_model: str | None = None,
         n_plus_one_threshold: int = 3,
-    ) -> ProfileReport:
+    ) -> ProfileResult:
         """
-        Build the final ProfileReport from everything we know about the run.
+        Build the final ProfileResult from everything we know about the run.
 
         ELI5: This is where all the separate pieces (queries, response,
         timing, warnings) get glued into the single receipt the workbench
@@ -203,13 +203,13 @@ class QueryAnalysisEngine:
             ],
         }
 
-        return ProfileReport(
-            route=route,
+        return ProfileResult(
+            path=path,
             status_code=status_code,
             metrics=metrics,
             queries=formatted_queries,
             analysis=analysis_payload,
             response_body=response_body,
             side_effect_warnings=side_effect_warnings,
-            request_spec=request_spec,
+            request=request,
         )

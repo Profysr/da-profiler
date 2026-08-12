@@ -37,16 +37,15 @@ Below is the complete reference map for every file in the repository:
 | [`dqs/adapters/drf/__init__.py`](../dqs/adapters/drf/__init__.py) | Package init, exports public API. |
 | [`dqs/adapters/drf/apps.py`](../dqs/adapters/drf/apps.py) | **Django AppConfig**: Registers Da Profiler as a Django app (`dqs.adapters.drf`). Enforces safety check on startup ensuring `settings.DEBUG == True`. |
 | [`dqs/adapters/drf/router.py`](../dqs/adapters/drf/router.py) | **Shadow DB Router & Session Manager**: `DQSRouter` routes DB operations to `dqs_shadow` when `profiling_session()` is active. Thread-local storage for safety. |
-| [`dqs/adapters/drf/types.py`](../dqs/adapters/drf/types.py) | **Shared Dataclasses**: `PathParam`, `RouteMetadata`, `ExecutionResult`, `SeedDataRequiredError`. |
-| [`dqs/adapters/drf/views.py`](../dqs/adapters/drf/views.py) | **Web Dashboard & AJAX Endpoints**: `DQSDashboardView` (GET `/dqs/`), `DQSProfileView` (POST `/dqs/profile/`). |
-| [`dqs/adapters/drf/urls.py`](../dqs/adapters/drf/urls.py) | **URL Configuration**: Mounts dashboard at `/dqs/`. |
-| [`dqs/adapters/drf/database/db_manager.py`](../dqs/adapters/drf/database/db_manager.py) | **Shadow DB Validation**: Validates `dqs_shadow` in `DATABASES` and `DQSRouter` in `DATABASE_ROUTERS`. Runs migrations programmatically. |
-| [`dqs/adapters/drf/routing/introspector.py`](../dqs/adapters/drf/routing/introspector.py) | **URL Pattern Introspector**: `DjangoIntrospector.list_all_routes()` recursively walks Django's `urlpatterns` tree, classifying endpoints as DRF `ViewSet`, `APIView`, FBV, or CBV. Safely reports `executable=False` when routes cannot be statically resolved. |
-| [`dqs/adapters/drf/routing/converters.py`](../dqs/adapters/drf/routing/converters.py) | **Path Converter Engine**: `PathConverterResolver` resolves parameterized routes using DB lookup, DRF `lookup_field`/`lookup_url_kwarg` mapping, and `model_bakery` mock seeding fallback. |
-| [`dqs/adapters/drf/mocking/generator.py`](../dqs/adapters/drf/mocking/generator.py) | **Mock Data & Body Generator**: `ModelBakeryGenerator` wraps `model_bakery` with constraint safety, uniqueness guards, validation recovery, and user record cloning. `infer_request_body()` generates mock payloads from DRF serializers or Django forms. |
+| [`dqs/adapters/drf/types.py`](../dqs/adapters/drf/types.py) | **Shared Dataclasses**: `UrlParam`, `Route`, `ResolvedPath`, `ProfileResult`, `TargetNotFoundError`, `UnresolvablePathError`. |
+| [`dqs/adapters/drf/views.py`](../dqs/adapters/drf/views.py) | **HTTP Endpoints**: `ManageRoutesView` (GET `/profiler/manage/routes`), `ExecuteView` (POST `/profiler/execute`), `ConnectionHealthView` (GET `/profiler/connection/health`). |
+| [`dqs/adapters/drf/urls.py`](../dqs/adapters/drf/urls.py) | **URL Configuration**: Mounts the API under `/profiler/`. |
+| [`dqs/adapters/drf/database/db_manager.py`](../dqs/adapters/drf/database/db_manager.py) | **Shadow DB Validation** *(legacy / opt-out)*: Validates `dqs_shadow` in `DATABASES` and `DQSRouter` in `DATABASE_ROUTERS`. Runs migrations programmatically. Not required by default — the v0.35 sandbox uses `transaction.atomic()` rollback instead. |
+| [`dqs/adapters/drf/routing/introspector.py`](../dqs/adapters/drf/routing/introspector.py) | **URL Pattern Introspector**: `DjangoIntrospector.list_all_routes()` recursively walks Django's `urlpatterns` tree, classifying endpoints as DRF `ViewSet`, `APIView`, FBV, or CBV. Returns `list[Route]`. Safely reports `executable=False` + `skip_reason` when routes cannot be statically resolved. |
+| [`dqs/adapters/drf/routing/converters.py`](../dqs/adapters/drf/routing/converters.py) | **Path Converter Engine**: `PathConverterResolver.resolve()` resolves parameterized routes using DB lookup and DRF `lookup_field`/`lookup_url_kwarg` mapping. **No auto-seeding** — returns `ResolvedPath(url=None, reason="no_record_found")` when no record exists. |
 | [`dqs/adapters/drf/execution/discovery.py`](../dqs/adapters/drf/execution/discovery.py) | **Target Discovery Engine**: `DjangoTargetDiscovery.discover_all()` finds Django URL endpoints, signal receivers (`post_save`, `pre_save`, `post_delete`), Celery tasks, and Channels ASGI consumers. Integrates `schema_advisor.py` checks and feeds callables through `StaticASTAdvisor`. |
 | [`dqs/adapters/drf/execution/query_interceptor.py`](../dqs/adapters/drf/execution/query_interceptor.py) | **DB Driver Boundary Interceptor**: `QueryInterceptor` context manager hooks into Django's `connection.execute_wrapper()`. Captures SQL, duration, and walks `inspect.stack()` to attribute queries to user code line numbers. `QueryAnalysisEngine` formats results and runs N+1 detection via `dqs.core.analyzer`. |
-| [`dqs/adapters/drf/execution/runner.py`](../dqs/adapters/drf/execution/runner.py) | **Sandbox Execution Engine**: `DjangoSandboxRunner` orchestrates isolated execution via `profile_callable()` (savepoint + interceptor) and `execute_isolated()` (full HTTP request pipeline with mock seeding, side-effect detection, and result formatting). Contains helper classes: `StaticAnalysisService`, `RequestSpecBuilder`, `TargetExecutor`. |
+| [`dqs/adapters/drf/execution/runner.py`](../dqs/adapters/drf/execution/runner.py) | **Sandbox Execution Engine**: `DjangoSandboxRunner` orchestrates execution via `profile_callable(fn, *args, sandbox=True)` (savepoint + interceptor) and `execute_request(url_name_or_path, method, path_params, query_params, headers, body, user, sandbox=True)` (full HTTP request pipeline). |
 | [`dqs/adapters/drf/execution/schema_advisor.py`](../dqs/adapters/drf/execution/schema_advisor.py) | **Schema & Index Advisor**: `check_pk_strategy()` flags auto-increment PKs (recommends UUIDv7). `check_missing_indexes()` cross-references queried fields against model indexes (`db_index`, `unique`, `Meta.indexes`). |
 
 ---
@@ -84,9 +83,9 @@ cd da-profiler
 # 2. Install in editable mode with dev dependencies
 pip install -e ".[dev]"
 
-# 3. Go to demo project and run migrations
+# 3. Go to demo project and run migrations against the default DB
 cd demos/drf
-python manage.py migrate --database=dqs_shadow
+python manage.py migrate
 
 # 4. Run Pytest Suite
 pytest -m core        # Pure Python tests (fastest)
@@ -103,7 +102,7 @@ pytest                # All tests
    - Core changes **must stay framework-agnostic** (no Django imports!).
 
 2. **Adding Django/DRF adapter features**:
-   - Edit files in [`dqs/adapters/drf/execution/`](../dqs/adapters/drf/execution/), [`dqs/adapters/drf/routing/`](../dqs/adapters/drf/routing/), or [`dqs/adapters/drf/mocking/`](../dqs/adapters/drf/mocking/).
+   - Edit files in [`dqs/adapters/drf/execution/`](../dqs/adapters/drf/execution/) or [`dqs/adapters/drf/routing/`](../dqs/adapters/drf/routing/). *(The `dqs/adapters/drf/mocking/` directory was deleted in the v0.35 cleanup.)*
 
 3. **Writing Tests**:
    - Pure logic tests go to `tests/core/test_analyzer.py` or `tests/core/test_static_advisor.py`.

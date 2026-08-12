@@ -94,10 +94,10 @@ npx @da-profiler/dashboard
 5. Click a **Task/Consumer** → See static findings (ORM in loops, blocking calls)
 
 > **Why separate dashboard?**
-> - ✅ Optional — skip if you only need programmatic API
+> - ✅ Optional, skip if you only need programmatic API
 > - ✅ One dashboard serves multiple Django projects
 > - ✅ Runs on different port — zero interference with your app
-> - ✅ Stops cleanly with Ctrl+C — Django keeps running
+> - ✅ Stops cleanly with Ctrl+C, Django keeps running
 
 ---
 
@@ -114,9 +114,9 @@ runner = DjangoSandboxRunner()
 
 # 2. Execute an endpoint in isolated savepoint sandbox
 # (This simulates GET /api/books/ without saving anything to the DB!)
-result = runner.execute_isolated(
+result = runner.execute_request(
     url_name_or_path="/api/books/",
-    method="GET"
+    method="GET",
 )
 
 print(f"Status Code: {result.status_code}")
@@ -134,10 +134,10 @@ for n1 in result.analysis:
 
 ## 🎯 What Happens Under the Hood?
 
-When you run `execute_isolated()` (via dashboard or API):
+When you run `execute_request()` (via workbench UI or API):
 1. **Magic Savepoint**: Django opens a `transaction.atomic()` savepoint.
 2. **Query Interception**: Every SQL query is recorded along with the exact file name and line number in your code.
-3. **Automatic Rollback**: The savepoint is rolled back immediately when execution finishes. **Zero database clutter!**
+3. **Automatic Rollback**: The changes are rolled back immediately by flushing the shadow db. **Zero database clutter in Production!**
 
 ---
 

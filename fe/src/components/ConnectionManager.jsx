@@ -306,6 +306,9 @@ export function ConnectionManager({ isOpen, onClose }) {
                 placeholder="http://127.0.0.1:8000"
                 className="w-full bg-surface-container-lowest border-dialog-border font-mono text-xs text-on-surface"
               />
+              <p className="mt-1 text-[10px] text-on-surface-variant/70 font-mono">
+                Host + port only (no trailing slash, no /profiler — the client adds it automatically). Any port works: 8000, 8001, 8003, etc.
+              </p>
             </div>
           </div>
 

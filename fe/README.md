@@ -32,7 +32,7 @@ npm install
 npm run dev
 ```
 
-Opens http://localhost:3000 with Vite proxy forwarding `/dqs/*` to Django on http://localhost:8000.
+Opens http://localhost:3000. The frontend talks **directly** to whatever backend URLs you configure in the **Connection Manager** (top bar). CORS for dev origins (`localhost:3000`, `5173`, `127.0.0.1:3000`, `127.0.0.1:5173`) is whitelisted on the Django side in `dqs/adapters/drf/views.py` — no Vite proxy is used. To point at a different backend (e.g. `http://localhost:8001`), add a connection in the Connection Manager UI and select it.
 
 ### Production Build
 
@@ -86,23 +86,35 @@ fe/
 
 ## API Integration
 
-The frontend consumes these Django endpoints (mounted at `/dqs/`):
+The frontend consumes these Django endpoints (mounted at `/profiler/`):
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/` | GET | List all discoverable routes |
-| `/profile/` | POST | Profile a specific route |
-| `/health/` | GET | Health check & config status |
+| `/profiler/manage/routes` | GET | List all discoverable routes |
+| `/profiler/execute` | POST | Profile a specific route |
+| `/profiler/connection/health` | GET | Health check & config status |
 
 ## Configuration
 
-### Vite Proxy (Development)
+### Backend connections (multiple, dynamic ports)
+
+The workbench supports any number of backends, each on its own port. Configure them in the Connection Manager UI (top bar of the workbench). For each connection, supply a `name` and a `baseUrl` like `http://localhost:8000` — no trailing slash, no `/profiler` suffix. The axios client automatically prepends `/profiler/...` to each request.
+
+CORS for these dev origins is whitelisted automatically by `dqs.adapters.drf.views.CORSEnabledAPIView`. To add custom origins (e.g. a remote dev VM), set `DQS_ALLOWED_ORIGINS` in `settings.py`:
+
+```python
+DQS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://192.168.1.42:3000",  # remote dev VM
+]
+```
+
+No Vite proxy is used. If you want one for some reason (e.g. corporate TLS terminator that strips Origin headers), add it manually to `vite.config.js`:
 
 ```javascript
-// vite.config.js
 server: {
   proxy: {
-    '/dqs': {
+    '/profiler': {
       target: 'http://localhost:8000',
       changeOrigin: true,
     },
