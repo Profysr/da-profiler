@@ -1,117 +1,124 @@
 """
-Schema-level Static Checks
-==========================
+Schema & Best-Practice Guideline Catalog
+=========================================
 
-ELI5: The static_advisor.py module looks at one file at a time and flags
-patterns ("calling .filter() inside a loop"). This module is the next level
-up: it looks at your Django *model* definitions and compares them against
-how your code actually queries them. Two checks:
+This module is a static catalog of guidelines that a developer or AI agent
+reads and applies to Django models and ORM usage. 
 
-1. **PK strategy** — Are you using an auto-increment integer primary key on
-   a write-heavy table? Consider switching to UUIDv7: it's still sortable
-   (unlike UUIDv4), but it doesn't leak how many records you have and it
-   plays nicer with distributed writes.
-
-2. **Missing indexes** — Is your code calling `.filter(status="active")`
-   but the `status` column has no index? That'll get slow fast. We cross-
-   reference the fields you actually filter/sort on against the model's
-   declared indexes and flag the gaps.
-
-No database connection is required — we just read Python class metadata.
+It does NOT inspect models dynamically or run heuristics at runtime, eliminating
+false positives and avoiding runtime DB/model lookup overhead.
 """
 
 from __future__ import annotations
-from typing import Any
-from django.apps import apps
 
-# Auto-increment integer PK types — the case the schema advisor flags.
-# UUIDv7 is recommended as an alternative (sortable, no enumeration leak,
-# friendly to distributed inserts).
-AUTO_INCREMENT_PK_TYPES: set[str] = {"AutoField", "BigAutoField", "SmallAutoField"}
+from dataclasses import asdict, dataclass
+from typing import Any, Literal
 
-def check_pk_strategy(model_path: str | None) -> list[dict[str, Any]]:
-    """
-    Flag a model if it uses an auto-increment integer PK.
+SeverityLevel = Literal["info", "recommendation", "strong-recommendation"]
 
-    ELI5: We look up the model, ask "what kind of primary key do you use?",
-    and if it's a plain auto-increment integer, we suggest UUIDv7 as a
-    more modern alternative. Returns a one-item list with a warning, or [].
-    """
-    if not model_path:
-        return []
-    try:
-        app_label, model_name = model_path.split(".")
-        model = apps.get_model(app_label, model_name)
-    except Exception:
-        return []
+@dataclass(frozen=True)
+class SchemaGuideline:
+    id: str  # e.g., "G-001"
+    title: str  # e.g., "Add db_index=True on FK fields used in .filter()"
+    severity: SeverityLevel
+    rationale: str  # Why this rule exists
+    applies_when: str  # Condition the developer or AI agent checks
+    remediation: str  # Suggested ORM fix or pattern to apply
 
-    pk_type = model._meta.pk.get_internal_type()
-    if pk_type not in AUTO_INCREMENT_PK_TYPES:
-        return []
+    def to_dict(self) -> dict[str, Any]:
+        """Convert guideline instance to a dictionary for API/MCP serialization."""
+        return asdict(self)
 
-    return [{
-        "type": "PK_STRATEGY_ADVICE",
-        "message": (
-            f"Model '{model_path}' uses an auto-increment integer PK ('{pk_type}'). "
-            f"For write-heavy or distributed workloads, consider a UUIDv7 PK instead — "
-            f"it's sortable (unlike UUIDv4) and avoids sequential-ID contention/enumeration issues."
+
+# Canonical List of Best-Practice Schema Guidelines
+SCHEMA_GUIDELINES: list[SchemaGuideline] = [
+    SchemaGuideline(
+        id="G-001",
+        title="Add `db_index=True` on fields frequently used in `.filter()` or `.exclude()`",
+        severity="recommendation",
+        rationale=(
+            "Filtering or querying non-indexed columns forces a full table scan in SQL. "
+            "Adding an index drastically improves read lookup times for large datasets."
         ),
-        "severity": "low",
-        "model": model_path,
-    }]
+        applies_when="A field is regularly referenced in queryset filters, lookups, or joins, but lacks `db_index=True` or `unique=True`.",
+        remediation="Add `db_index=True` to the field definition or add a single/composite index in `Meta.indexes`.",
+    ),
+    SchemaGuideline(
+        id="G-002",
+        title="Use `Meta.indexes` for multi-column / composite lookups",
+        severity="recommendation",
+        rationale=(
+            "Single-column indexes are inefficient for queries that filter across multiple columns simultaneously "
+            "(e.g., `WHERE status = 'active' AND user_id = 10`). A composite index covers all target fields in one lookup."
+        ),
+        applies_when="Querysets frequently filter or order by two or more columns together.",
+        remediation=(
+            "Define composite indexes in the model Meta class:\n"
+            "class Meta:\n"
+            "    indexes = [\n"
+            "        models.Index(fields=['status', 'created_at']),\n"
+            "    ]"
+        ),
+    ),
+    SchemaGuideline(
+        id="G-003",
+        title="Prefer UUIDv7 for write-heavy or public-facing primary keys",
+        severity="strong-recommendation",
+        rationale=(
+            "Auto-increment integer PKs leak table size and business volume publicly (sequential ID enumeration). "
+            "Unlike random UUIDv4, UUIDv7 is time-sortable, avoiding database index fragmentation on high-volume inserts."
+        ),
+        applies_when="Designing write-heavy models, public-facing API entities, or distributed systems.",
+        remediation="Use a time-sortable UUID field (e.g., UUIDv7) as the primary key instead of AutoField/BigAutoField.",
+    ),
+    SchemaGuideline(
+        id="G-004",
+        title="Avoid `null=True` on string-based fields (`CharField` / `TextField`)",
+        severity="recommendation",
+        rationale=(
+            "Allowing `null=True` on string fields creates two possible 'empty' states in the DB: `NULL` and `''` (empty string). "
+            "Django convention uses the empty string exclusively for empty text fields."
+        ),
+        applies_when="A `CharField` or `TextField` is optional.",
+        remediation="Set `blank=True` and omit `null=True` (use default `null=False`).",
+    ),
+    SchemaGuideline(
+        id="G-005",
+        title="Use `Meta.constraints` for database-level integrity rules",
+        severity="recommendation",
+        rationale=(
+            "Application-level python validation (`clean()` or serializer checks) can be bypassed by concurrent writes or raw SQL. "
+            "Database constraints enforce invariants at the DB driver level."
+        ),
+        applies_when="Enforcing multi-column uniqueness, positive value ranges, or conditional conditional uniqueness.",
+        remediation=(
+            "Add `UniqueConstraint` or `CheckConstraint` to `Meta.constraints`:\n"
+            "class Meta:\n"
+            "    constraints = [\n"
+            "        models.UniqueConstraint(fields=['tenant', 'slug'], name='unique_tenant_slug')\n"
+            "    ]"
+        ),
+    ),
+    SchemaGuideline(
+        id="G-006",
+        title="Use `select_related` or `prefetch_related` for ForeignKeys accessed in loops",
+        severity="recommendation",
+        rationale=(
+            "Accessing related model attributes inside a loop triggers a separate SQL query per iteration (N+1 query problem). "
+            "Preloading relationships reduces N+1 queries down to 1 or 2 queries."
+        ),
+        applies_when="A view iterates over a queryset and accesses foreign key or many-to-many relationship fields.",
+        remediation="Append `.select_related('fk_field')` (for 1:1 / 1:N) or `.prefetch_related('m2m_field')` (for N:M / inverse FK) to the base queryset.",
+    ),
+]
 
 
-def check_missing_indexes(model_path: str | None, queried_fields: list[str]) -> list[dict[str, Any]]:
+def get_schema_guidelines(as_dicts: bool = True) -> list[dict[str, Any]] | list[SchemaGuideline]:
     """
-    Cross-reference fields used in `.filter()`/`.exclude()`/`.order_by()` against
-    the model's actual indexes and flag the unindexed ones.
+    Retrieve the full catalog of schema best-practice guidelines.
 
-    ELI5: We get two lists — "fields the code filters on" and "fields the
-    database has indexed" — and emit a warning for every field that's in
-    the first list but not the second. Empty list means everything's fine.
-
-    A field counts as "indexed" if any of these is true:
-    - it has `db_index=True`,
-    - it has `unique=True` (which implicitly creates an index),
-    - it appears in any `Meta.indexes` entry.
-    The primary key is always considered indexed.
+    :param as_dicts: If True, returns serialized dictionaries ready for JSON/MCP transport.
     """
-    if not model_path or not queried_fields:
-        return []
-    try:
-        app_label, model_name = model_path.split(".")
-        model = apps.get_model(app_label, model_name)
-    except Exception:
-        return []
-
-    indexed_field_names: set[str] = set()
-
-    # db_index=True and unique=True both imply an index exists.
-    for field in model._meta.get_fields():
-        if getattr(field, "db_index", False) or getattr(field, "unique", False):
-            indexed_field_names.add(field.name)
-
-    # Meta.indexes lists compound indexes — include every column they touch.
-    for index in getattr(model._meta, "indexes", []):
-        indexed_field_names.update(index.fields)
-
-    # The primary key is always indexed by the database engine itself.
-    indexed_field_names.add(model._meta.pk.name)
-
-    findings: list[dict[str, Any]] = []
-    for field_name in set(queried_fields):
-        # Strip order_by("-") prefix and ORM lookup suffixes ("__gte", etc.).
-        clean_name = field_name.lstrip("-").split("__")[0]
-        if clean_name and clean_name not in indexed_field_names:
-            findings.append({
-                "type": "MISSING_INDEX",
-                "message": (
-                    f"Field '{clean_name}' on model '{model_path}' is queried via filter/exclude/order_by "
-                    f"but has no index (db_index, unique, or Meta.indexes entry). Consider adding one if "
-                    f"this field is queried frequently or the table is large."
-                ),
-                "severity": "medium",
-                "model": model_path,
-                "field": clean_name,
-            })
-    return findings
+    if as_dicts:
+        return [guideline.to_dict() for guideline in SCHEMA_GUIDELINES]
+    return SCHEMA_GUIDELINES

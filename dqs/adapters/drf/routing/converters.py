@@ -89,8 +89,11 @@ class PathConverterResolver:
         if not view:
             return {}
 
-        view_class = view if inspect.isclass(view) else getattr(view, "cls", None)
-        if not view_class:
+        view_class: type | None = view if inspect.isclass(view) else None
+        if view_class is None:
+            # DRF as_view() wraps the class in a callable; get it back.
+            view_class = getattr(view, "view_class", None) or getattr(view, "cls", None)
+        if not view_class or not inspect.isclass(view_class):
             return {}
 
         lookup_field = getattr(view_class, "lookup_field", "pk")

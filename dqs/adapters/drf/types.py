@@ -59,8 +59,8 @@ class Route:
         path: the URL template, e.g. `/api/v1/books/<int:pk>/`.
         methods: accepted HTTP methods as a list of uppercase strings.
         name: the URL name (for `reverse()` lookup), or empty.
-        kind: `"api_view"` (regular DRF APIView) or `"viewset"` (DRF ViewSet).
-        is_drf: True when the view is a DRF subclass.
+    kind: one of `"api_view"`, `"viewset"`, `"django_cbv"`, `"function_view"`.
+    is_drf: True when the view is a DRF APIView, ViewSet, or @api_view FBV.
         executable: True when we trust ourselves to fire this route safely.
         url_params: the `<...>` placeholders to fill before calling.
         model: "app_label.ModelName" (e.g. "books.Book"), if discoverable.
@@ -73,8 +73,8 @@ class Route:
     path: str
     methods: list[str]
     name: str
-    kind: Literal["api_view", "viewset"] = "api_view"
-    is_drf: bool = True
+    kind: Literal["api_view", "viewset", "django_cbv", "function_view"] = "api_view"
+    is_drf: bool = False
     executable: bool = True
     url_params: list[UrlParam] = field(default_factory=list)
     model: str | None = None

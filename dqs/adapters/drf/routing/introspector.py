@@ -8,12 +8,13 @@ needs:
 
 - the URL path itself (e.g. `/api/v1/books/<int:pk>/`),
 - which HTTP methods it accepts,
-- whether it's a regular DRF view or a ViewSet (which has slightly different
-  behavior),
+- what kind of view backs it — a DRF `APIView`, a DRF `ViewSet`, a native
+  Django class-based view (like `TemplateView`), or a plain function-based
+  view (with or without `@api_view`),
 - whether we can safely call it ourselves (some routes are too dynamic and
   we'd rather show them in the UI but refuse to fire them),
-- what database model it cares about (so the workbench can pre-fill path
-  params with real values).
+- the `<...>` path placeholders it has, so the workbench can ask the user
+  to fill them in.
 
 It does all this by reading Django's URL resolver tree (`urlpatterns`) —
 never by hitting the database and never by executing any view code.
@@ -27,17 +28,23 @@ from __future__ import annotations
 import inspect
 import logging
 import re
-from typing import Any, Optional
+from typing import Any
 
-from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.db import models
 from django.urls import URLPattern, URLResolver, get_resolver
 from django.urls.resolvers import RegexPattern, RoutePattern
 
 from dqs.adapters.drf.routing.converters import PathConverterResolver
 from dqs.adapters.drf.types import Route
+
+# Base classes we use to classify a view. Django's `View` is the root of every
+# class-based view (DRF's `APIView` inherits from it). We import both lazily so
+# that a project without DRF still gets native Django CBVs discovered.
+try:
+    from django.views import View as DjangoBaseView
+except ImportError:  # pragma: no cover - Django is a hard dep
+    DjangoBaseView = None
 
 try:
     from rest_framework.views import APIView
@@ -55,7 +62,9 @@ VALID_HTTP_METHODS: set[str] = CORE_HTTP_METHODS | {"HEAD", "OPTIONS"}
 class DjangoIntrospector:
     """
     Walks Django's URL resolver tree and produces a Route object for every
-    DRF-backed URL it finds.
+    URL it finds — DRF APIViews, DRF ViewSets, @api_view function-based views,
+    native Django class-based views (TemplateView, ListView, etc.), and
+    plain Django function-based views.
     """
 
     def __init__(self) -> None:
@@ -253,64 +262,153 @@ class DjangoIntrospector:
     # ------------------------------------------------------------------------
     def _analyze_view(self, pattern: URLPattern, full_path: str) -> Route | None:
         """
-        Pull everything we know about one route into a Route object.
+        Determine what kind of view a URL pattern maps to and return a Route.
+        ELI5: One URL, four possible backings:
 
-        ELI5: We open one URLPattern file from the tree, figure out which
-        Python class backs it, ask the path-param resolver what blanks it
-        has, and ask the model detector what model it cares about. If we
-        can't tell what HTTP methods it handles, we mark it as
-        `executable=False` instead of guessing.
+        * Class-Based View  (DRF or Django)   -- has a `view_class` / `cls`
+        * Function-Based View                 -- plain callable (FBV or @api_view)
+
+        We figure out which one it is, then delegate to the right helper.
+        Views we can't understand at all silently return None.
         """
         callback = pattern.callback
         if not callable(callback):
             return None
 
-        unwrapped_callback = inspect.unwrap(callback)
+        unwrapped = inspect.unwrap(callback)
+
         view_class: type | None = (
             getattr(callback, "view_class", None)
             or getattr(callback, "cls", None)
-            or getattr(unwrapped_callback, "view_class", None)
-            or getattr(unwrapped_callback, "cls", None)
+            or getattr(unwrapped, "view_class", None)
+            or getattr(unwrapped, "cls", None)
         )
 
-        if view_class is None or APIView is None or not issubclass(view_class, APIView):
-            return None
+        # In Django REST Framework, when you write BookListView.as_view(), it returns a wrapper function, but hides the actual Python class reference inside attributes like view_class.If a view_class is found, It's a Class-Based View, so it sends it to _analyze_cbv.
+        if view_class is not None:
+            return self._analyze_cbv(view_class, callback, pattern, full_path)
 
-        # model = self.extract_model_from_view(view_class, pattern)
+        return self._analyze_fbv(callback, unwrapped, pattern, full_path)
+
+    # -------------------------------------------------------------------------
+    # 4a. Class-Based View analysis (DRF APIView / ViewSet, native Django CBV)
+    # -------------------------------------------------------------------------
+    def _analyze_cbv(
+        self,
+        view_class: type,
+        callback: Any,
+        pattern: URLPattern,
+        full_path: str,
+    ) -> Route | None:
+        """
+        Handle every class-based view: DRF APIView/ViewSet and native Django
+        CBV (TemplateView, ListView, etc.).
+        """
+        # Checks if the class inherits from DRF's APIView
+        is_drf = bool(APIView and isinstance(view_class, type) and issubclass(view_class, APIView))
+
         url_params = PathConverterResolver.extract_params_from_pattern(pattern)
         url_kwarg_to_field = PathConverterResolver.build_lookup_map(view_class)
 
-        # ViewSets advertise their methods via the .actions dict; regular
-        # APIViews inherit from APIView and have http_method_names.
         if hasattr(callback, "actions"):
             actions = getattr(callback, "actions", {})
             methods = [m.upper() for m in actions if m.upper() in VALID_HTTP_METHODS]
             executable = bool(methods)
             skip_reason = None if executable else "Could not resolve ViewSet actions mapping."
             kind = "viewset"
-        else:
+        elif is_drf:
             raw_methods = [
                 m.upper()
                 for m in getattr(view_class, "http_method_names", [])
                 if hasattr(view_class, m) and m.upper() in VALID_HTTP_METHODS
             ]
-            # Skip views that only expose HEAD/OPTIONS — they don't have real handlers.
-            has_core_handlers = any(m in CORE_HTTP_METHODS for m in raw_methods)
-            methods = raw_methods if has_core_handlers else []
+            has_core = any(m in CORE_HTTP_METHODS for m in raw_methods)
+            methods = raw_methods if has_core else []
             executable = bool(methods)
-            skip_reason = None if executable else "No core HTTP method handlers (GET, POST, etc.) defined on view class."
+            skip_reason = (
+                None if executable else "No core HTTP method handlers (GET, POST, etc.) defined on DRF view class."
+            )
             kind = "api_view"
+        else:
+            raw_methods = [
+                m.upper()
+                for m in ["get", "post", "put", "delete", "patch"]
+                if hasattr(view_class, m)
+            ]
+            methods = raw_methods
+            executable = bool(methods)
+            skip_reason = (
+                None if executable else "No detectable HTTP method handlers on native Django CBV."
+            )
+            kind = "django_cbv"
+
+        if not executable:
+            methods = []
+
+        return Route(
+            path=full_path,
+            methods=methods,
+            name=pattern.name or view_class.__name__,
+            kind=kind,
+            is_drf=is_drf,
+            executable=executable,
+            url_params=url_params,
+            model=None,
+            skip_reason=skip_reason,
+            view=view_class,
+            url_kwarg_to_field=url_kwarg_to_field,
+        )
+
+    # -------------------------------------------------------------------------
+    # 4b. Function-Based View analysis (plain FBV, DRF @api_view FBV)
+    # -------------------------------------------------------------------------
+    def _analyze_fbv(
+        self,
+        callback: Any,
+        unwrapped: Any,
+        pattern: URLPattern,
+        full_path: str,
+    ) -> Route | None:
+        """
+        Handle function-based views: plain Django FBVs and DRF views
+        decorated with @api_view().
+        """
+        url_params = PathConverterResolver.extract_params_from_pattern(pattern)
+        is_drf_fbv = hasattr(unwrapped, "allowed_methods")
+
+        if is_drf_fbv:
+            methods = [
+                m.upper()
+                for m in getattr(unwrapped, "allowed_methods", [])
+                if m.upper() in VALID_HTTP_METHODS
+            ]
+            name = pattern.name or getattr(unwrapped, "__name__", "unknown_drf_fbv")
+            kind = "api_view"
+        else:
+            methods = [
+                m.upper()
+                for m in getattr(unwrapped, "http_method_names", [])
+                if m.upper() in VALID_HTTP_METHODS
+            ]
+            name = pattern.name or getattr(unwrapped, "__name__", "unknown_fbv")
+            kind = "function_view"
+
+        has_core = any(m in CORE_HTTP_METHODS for m in methods)
+        executable = has_core
+        skip_reason = (
+            None if executable else "No core HTTP method handlers on function-based view; only HEAD/OPTIONS."
+        )
 
         return Route(
             path=full_path,
             methods=methods if executable else [],
-            name=pattern.name or view_class.__name__,
+            name=name,
             kind=kind,
-            is_drf=True,
+            is_drf=is_drf_fbv,
             executable=executable,
             url_params=url_params,
-            model=None,  # model,  # TODO: re-enable model detection once it's more reliable
+            model=None,
             skip_reason=skip_reason,
-            view=view_class,
-            url_kwarg_to_field=url_kwarg_to_field,
+            view=callback,
+            url_kwarg_to_field={},
         )

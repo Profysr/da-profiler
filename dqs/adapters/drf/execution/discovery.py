@@ -28,10 +28,6 @@ from typing import Any
 
 from django.conf import settings
 
-from dqs.adapters.drf.execution.schema_advisor import (
-    check_missing_indexes,
-    check_pk_strategy,
-)
 from dqs.adapters.drf.routing.introspector import DjangoIntrospector
 from dqs.core.static_advisor import StaticASTAdvisor
 from dqs.core.targets import Target
@@ -48,22 +44,20 @@ def serialize_target(target: Target) -> dict[str, Any]:
     dictionaries with display-friendly extra fields (name, path, methods)
     so the UI can show "POST /api/v1/books/" in the sidebar.
     """
-data: dict[str, Any] = {
-    "id": target.id,
-    "kind": target.kind,
-    "can_execute": target.can_execute,
-    "target_details": target.target_details,
-    "static_findings": target.static_findings,
-}
+    data: dict[str, Any] = {
+        "id": target.id,
+        "kind": target.kind,
+        "can_execute": target.can_execute,
+        "target_details": target.target_details,
+        "static_findings": target.static_findings,
+    }
 
-spec = target.target_details or {}
+    spec = target.target_details or {}
 
     if target.kind == "view":
         data["name"] = spec.get("path", target.id.split(":")[-1])
         data["methods"] = spec.get("methods", [])
         data["path"] = spec.get("path", "")
-        # Translate the internal target_details key for the wire — the UI
-        # shouldn't have to know our Python-side field names.
         data["url_params"] = spec.get("url_params", [])
     elif target.kind == "task":
         data["name"] = spec.get("task_name", target.id.split(":")[-1])
@@ -88,6 +82,25 @@ class DjangoTargetDiscovery:
 
     def __init__(self, introspector_routes: list[Any] | None = None) -> None:
         self.introspector_routes = introspector_routes or []
+
+    # ------------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------------
+    @staticmethod
+    def _static_analyze(func: Any) -> list[dict[str, Any]]:
+        """
+        Run the AST advisor on a callable's source. Returns [] if we can't
+        read the source for any reason.
+        """
+        if not callable(func):
+            return []
+        try:
+            source = inspect.getsource(func)
+            filename = inspect.getfile(func)
+            advisor = StaticASTAdvisor(source, filename=filename)
+            return advisor.run()
+        except (TypeError, OSError, Exception):
+            return []
 
     # ------------------------------------------------------------------------
     # The main entry point
@@ -117,37 +130,22 @@ class DjangoTargetDiscovery:
 
         targets: list[Target] = []
         for route in routes:
-            static_findings: list[dict[str, Any]] = []
-            static_findings.extend(check_pk_strategy(route.model))
-
-            # Best-effort: analyze the view's own source for queried fields
-            # so we can flag missing indexes. If introspection can't get
-            # source for the view, we just skip the missing-index check.
-            queried_fields: list[str] = []
             view_callable = getattr(route, "view", None)
-            if view_callable is not None:
-                try:
-                    source = inspect.getsource(view_callable)
-                    advisor = StaticASTAdvisor(source)
-                    advisor.run()
-                    queried_fields = advisor.queried_fields
-                except (TypeError, OSError, Exception):
-                    pass
-
-            static_findings.extend(check_missing_indexes(route.model, queried_fields))
-
-targets.append(Target(
-    id=f"view:{route.path}",
-    kind="view",
-    can_execute=route.executable,
-    target_details={
-        "path": route.path,
-        "methods": route.methods,
-        "url_params": [p.__dict__ for p in route.url_params],
-        "target_model": route.model,
-    },
-    static_findings=static_findings,
-))
+            
+            targets.append(
+                Target(
+                    id=f"view:{route.path}",
+                    kind="view",
+                    can_execute=route.executable,
+                    target_details={
+                        "path": route.path,
+                        "methods": route.methods,
+                        "url_params": [p.__dict__ for p in route.url_params],
+                        "target_model": route.model,
+                    },
+                    static_findings=self._static_analyze(view_callable),
+                )
+            )
         return targets
 
     # ------------------------------------------------------------------------
@@ -165,16 +163,19 @@ targets.append(Target(
         targets: list[Target] = []
         try:
             from celery import current_app
+
             for task_name, task_func in current_app.tasks.items():
                 if task_name.startswith("celery."):
                     continue
-targets.append(Target(
-    id=f"task:{task_name}",
-    kind="task",
-    can_execute=True,
-    target_details={"task_name": task_name},
-    static_findings=self._static_analyze(task_func),
-))
+                targets.append(
+                    Target(
+                        id=f"task:{task_name}",
+                        kind="task",
+                        can_execute=True,
+                        target_details={"task_name": task_name},
+                        static_findings=self._static_analyze(task_func),
+                    )
+                )
         except ImportError:
             # Celery isn't installed — that's fine, no tasks to discover.
             pass
@@ -192,9 +193,9 @@ targets.append(Target(
         ELI5: Django Channels lets you write WebSocket handlers. We can
         list them, but we can't actually trigger them with a request yet —
         triggering a WebSocket needs a fundamentally different mechanism
-than RequestFactory. So consumers appear in the list with
-`can_execute=False` and only their static findings show up in the
-workbench for now. Full consumer execution is genuinely v2.0+ scope.
+        than RequestFactory. So consumers appear in the list with
+        `can_execute=False` and only their static findings show up in the
+        workbench for now. Full consumer execution is genuinely v2.0+ scope.
         """
         targets: list[Target] = []
         try:
@@ -208,44 +209,35 @@ workbench for now. Full consumer execution is genuinely v2.0+ scope.
             if asgi_app is None:
                 return targets
 
-            websocket_router = getattr(asgi_app, "application_mapping", {}).get("websocket")
+            websocket_router = getattr(asgi_app, "application_mapping", {}).get(
+                "websocket"
+            )
             routes = getattr(websocket_router, "routes", [])
 
             for route in routes:
                 callback = getattr(route, "callback", None)
-                consumer_class = getattr(callback, "consumer_class", None) or callback
+                consumer_class = (
+                    getattr(callback, "consumer_class", None) or callback
+                )
                 if consumer_class is None:
                     continue
                 name = getattr(consumer_class, "__name__", "UnknownConsumer")
-targets.append(Target(
-    id=f"consumer:{name}",
-    kind="consumer",
-    can_execute=False,
-    target_details={
-        "consumer": name,
-        "path": str(getattr(route, "pattern", "")),
-    },
-    static_findings=self._static_analyze(consumer_class),
-))
+                targets.append(
+                    Target(
+                        id=f"consumer:{name}",
+                        kind="consumer",
+                        can_execute=False,
+                        target_details={
+                            "consumer": name,
+                            "path": str(getattr(route, "pattern", "")),
+                        },
+                        static_findings=self._static_analyze(consumer_class),
+                    )
+                )
         except Exception as exc:
             logger.debug("Could not discover Channels consumers: %s", exc)
         return targets
 
     # ------------------------------------------------------------------------
-    # Helpers
+    # 4. TODO Signals
     # ------------------------------------------------------------------------
-    @staticmethod
-    def _static_analyze(func: Any) -> list[dict[str, Any]]:
-        """
-        Run the AST advisor on a callable's source. Returns [] if we can't
-        read the source for any reason.
-        """
-        if not callable(func):
-            return []
-        try:
-            source = inspect.getsource(func)
-            filename = inspect.getfile(func)
-            advisor = StaticASTAdvisor(source, filename=filename)
-            return advisor.run()
-        except (TypeError, OSError, Exception):
-            return []
