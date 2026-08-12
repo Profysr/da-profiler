@@ -24,7 +24,7 @@ export function Workbench({
   "data-label": testId = 'workbench',
 }) {
   const { fetchTargets, selectedTarget, selectTarget } = useRoutesStore()
-  const { profileTarget, runProfile, loading: profiling, result: profileResult } = useProfileStore()
+  const { profileTarget, loading: profiling, result: profileResult } = useProfileStore()
   const { activeConnectionId } = useConnectionsStore()
 
   const [activeSidebarNav, setActiveSidebarNav] = useState('collections')
@@ -110,8 +110,6 @@ const targetPath = selectedTarget.target_details?.path || selectedTarget.name ||
   const handleSend = async () => {
     if (selectedTarget) {
       await profileTarget(selectedTarget, { method, path: computedUrl, params: queryParams, headers, bodyContent })
-    } else {
-      runProfile(computedUrl, method, { params: queryParams, headers, bodyContent })
     }
   }
 

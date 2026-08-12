@@ -6,7 +6,7 @@ import { Loader2, Send } from 'lucide-react'
 export function UrlBar({
   method = 'GET',
   onMethodChange,
-  path = '/api/v1/books/',
+  path = '/api/testing/choose-from-sidebar/', //TODO: We can replace it with a good message as npm has
   onSend,
   loading = false,
   "data-label": testId = 'url-bar',

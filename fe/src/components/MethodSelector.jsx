@@ -3,8 +3,6 @@ import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Check } from 'lucide-react'
 import { HTTP_METHODS, getMethodBadgeClass } from '../utils/constants.js'
 
-
-
 export function MethodSelector({
   value = 'GET',
   onChange,
@@ -13,9 +11,9 @@ export function MethodSelector({
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef(null)
-
   const currentBadgeClass = getMethodBadgeClass(value)
 
+  // Close the dropdown if open
   useEffect(() => {
     function handleClickOutside(event) {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
@@ -26,6 +24,7 @@ export function MethodSelector({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Keyboard Events
   function handleKeyDown(e) {
     if (e.key === 'Escape') {
       setIsOpen(false)

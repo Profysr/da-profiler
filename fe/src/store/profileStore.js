@@ -1,10 +1,3 @@
-// store/profileStore.js
-//
-// Zustand store for the workbench's profile execution state. Holds:
-//   - the last ProfileReport returned by the engine,
-//   - loading + error flags,
-//   - the last payload (so the UI can re-run with one click),
-//   - actions: runProfile, clearResult, clearError, setResult.
 import { create } from 'zustand'
 import { getApiClient } from '../api/client.js'
 import { useConnectionsStore } from './connectionsStore.js'
@@ -17,6 +10,16 @@ export const useProfileStore = create((set, get) => ({
   lastPayload: null,
 
   // Actions
+  /**
+   * Profile a selected target from the routes sidebar.
+   * Automatically builds the payload from target.id, target.kind,
+   * target.target_details.methods, target.target_details.path, etc.
+   * Posts to /profiler/execute and stores the result.
+   *
+   * @param target - The selected target object from useRoutesStore
+   * @param extraPayload - Optional overrides for method, path, params, headers, bodyContent
+   * @returns The ProfileResult from the backend
+   */
   profileTarget: async (target, extraPayload = {}) => {
     const { getActiveConnection } = useConnectionsStore.getState()
     const connection = getActiveConnection()
@@ -24,17 +27,16 @@ export const useProfileStore = create((set, get) => ({
       throw new Error('No active connection')
     }
 
-    const { target_details } = target
     const payload = {
       target_id: target.id,
       kind: target.kind,
-      method: extraPayload.method || (target_details?.methods ? target_details.methods[0] : 'GET'),
-      path: extraPayload.path || (target_details?.path || ''),
-      path_params: target_details?.path_params || {},
+
+      method: extraPayload.method,
+      path: extraPayload.path,
+      path_params: extraPayload.path_params || {},
       query_params: extraPayload.params || {},
       headers: extraPayload.headers || {},
       body: extraPayload.bodyContent,
-      sandbox: true,
     }
 
     set({ loading: true, error: null, lastPayload: payload })
@@ -55,6 +57,16 @@ export const useProfileStore = create((set, get) => ({
     }
   },
 
+  /**
+   * ⚠️ DEPRECATED: Use profileTarget() instead.
+   * This function exists for backward compatibility only.
+   * profileTarget(target) automatically extracts target_id, kind,
+   * method, path, etc. from a discovered target object, whereas
+   * runProfile() expects a fully-constructed payload.
+   *
+   * Kept in the store for legacy support — will be removed in v0.4.0.
+   * @deprecated Use profileTarget(target, extraPayload) for new code
+   */
   runProfile: async (payload) => {
     const { getActiveConnection } = useConnectionsStore.getState();
     const connection = getActiveConnection();
