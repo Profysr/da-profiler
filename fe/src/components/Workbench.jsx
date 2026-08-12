@@ -8,6 +8,8 @@ import { ResponseWorkbench } from './ResponseWorkbench.jsx'
 import { useRoutesStore } from '../store/routesStore.js'
 import { useProfileStore } from '../store/profileStore.js'
 import { useConnectionsStore } from '../store/connectionsStore.js'
+import { useRequestStore } from '../store/requestStore.js'
+import { useUiStore } from '../store/uiStore.js'
 
 function PaneResizer({ onResize }) {
   return (
@@ -27,41 +29,25 @@ export function Workbench({
   const { profileTarget, loading: profiling, result: profileResult } = useProfileStore()
   const { activeConnectionId } = useConnectionsStore()
 
-  const [activeSidebarNav, setActiveSidebarNav] = useState('collections')
+  const { pathParams, queryParams } = useRequestStore()
+
   const [method, setMethod] = useState('GET')
   const [basePathPattern, setBasePathPattern] = useState('/api/v1/books/')
   const [computedUrl, setComputedUrl] = useState('/api/v1/books/')
-  const [sidebarWidth, setSidebarWidth] = useState(280)
 
-  // Separate Path Params & Query Params state
-  const [requestTab, setRequestTab] = useState('queryParams')
-  const [pathParams, setPathParams] = useState([
-    { enabled: true, key: 'id', value: '1', description: 'Resource ID' },
-  ])
-  const [queryParams, setQueryParams] = useState([
-    { enabled: true, key: 'page', value: '1', description: 'Page number' },
-    { enabled: true, key: 'page_size', value: '10', description: 'Page size' },
-  ])
-  const [headers, setHeaders] = useState([
-    { enabled: true, key: 'Accept', value: 'application/json', description: 'Accept format' },
-    { enabled: true, key: 'Content-Type', value: 'application/json', description: 'Content format' },
-  ])
-  const [bodyType, setBodyType] = useState('json')
-  const [bodyContent, setBodyContent] = useState('{\n  "title": "New Book",\n  "author_id": 1\n}')
-  const [formData, setFormData] = useState([
-    { enabled: true, key: 'title', value: 'New Book', type: 'text', description: 'Book title' },
-    { enabled: true, key: 'author_id', value: '1', type: 'text', description: 'Author foreign key' },
-    { enabled: false, key: 'cover_image', value: '', type: 'file', file: null, description: 'Cover image upload' },
-  ])
-  const [urlencodedData, setUrlencodedData] = useState([
-    { enabled: true, key: 'format', value: 'json', description: 'Response format' },
-  ])
+  const {
+    activeSidebarNav,
+    sidebarWidth,
+    activeRequestTab,
+    activeResponseTab,
+    topHeight,
+    setActiveSidebarNav,
+    setSidebarWidth,
+    setActiveRequestTab,
+    setActiveResponseTab,
+    setTopHeight,
+  } = useUiStore()
 
-  // Response Tab state
-  const [responseTab, setResponseTab] = useState('response')
-
-  // Split pane sizing
-  const [topHeight, setTopHeight] = useState(null)
   const isResizingRef = useRef(false)
   const dragStartYRef = useRef(0)
   const dragStartHeightRef = useRef(0)
@@ -75,9 +61,9 @@ export function Workbench({
   // Sync selected target into URL bar pattern
   useEffect(() => {
     if (selectedTarget) {
-const methods = selectedTarget.target_details?.methods || ['GET']
-setMethod(methods[0] || 'GET')
-const targetPath = selectedTarget.target_details?.path || selectedTarget.name || '/api/v1/books/'
+      const methods = selectedTarget.target_details?.methods || ['GET']
+      setMethod(methods[0] || 'GET')
+      const targetPath = selectedTarget.target_details?.path || selectedTarget.name || '/api/v1/books/'
       setBasePathPattern(targetPath)
     }
   }, [selectedTarget])
@@ -109,7 +95,8 @@ const targetPath = selectedTarget.target_details?.path || selectedTarget.name ||
 
   const handleSend = async () => {
     if (selectedTarget) {
-      await profileTarget(selectedTarget, { method, path: computedUrl, params: queryParams, headers, bodyContent })
+      const { headers, bodyType, bodyContent, formData, urlencodedData } = useRequestStore.getState()
+      await profileTarget(selectedTarget, { method, path: computedUrl, params: queryParams, headers, bodyContent, bodyType, formData, urlencodedData })
     }
   }
 
@@ -136,7 +123,7 @@ const targetPath = selectedTarget.target_details?.path || selectedTarget.name ||
 
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
-  }, [])
+  }, [setTopHeight])
 
   const topStyle = topHeight !== null ? { height: `${topHeight}px` } : undefined
   const topClass = topHeight !== null ? 'shrink-0' : 'flex-1 h-1/2'
@@ -156,8 +143,6 @@ const targetPath = selectedTarget.target_details?.path || selectedTarget.name ||
           onNavSelect={setActiveSidebarNav}
           selectedTarget={selectedTarget}
           onSelectTarget={selectTarget}
-          width={sidebarWidth}
-          onWidthChange={setSidebarWidth}
           data-label={`${testId}-sidebar`}
         />
 
@@ -189,22 +174,8 @@ const targetPath = selectedTarget.target_details?.path || selectedTarget.name ||
               data-label={`${testId}-request`}
             >
               <RequestWorkbench
-                activeTabId={requestTab}
-                onTabChange={setRequestTab}
-                pathParams={pathParams}
-                onPathParamsChange={setPathParams}
-                queryParams={queryParams}
-                onQueryParamsChange={setQueryParams}
-                headers={headers}
-                onHeadersChange={setHeaders}
-                bodyType={bodyType}
-                onBodyTypeChange={setBodyType}
-                bodyContent={bodyContent}
-                onBodyContentChange={setBodyContent}
-                formData={formData}
-                onFormDataChange={setFormData}
-                urlencodedData={urlencodedData}
-                onUrlencodedDataChange={setUrlencodedData}
+                activeTabId={activeRequestTab}
+                onTabChange={setActiveRequestTab}
                 data-label={`${testId}-request-pane`}
               />
             </div>
@@ -218,8 +189,8 @@ const targetPath = selectedTarget.target_details?.path || selectedTarget.name ||
               data-label={`${testId}-response`}
             >
               <ResponseWorkbench
-                activeTabId={responseTab}
-                onTabChange={setResponseTab}
+                activeTabId={activeResponseTab}
+                onTabChange={setActiveResponseTab}
                 profileResult={profileResult}
                 loading={profiling}
                 metrics={{

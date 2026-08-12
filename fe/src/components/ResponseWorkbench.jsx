@@ -6,6 +6,7 @@ import { PaneTabs } from './PaneTabs.jsx'
 import { ResponseMetrics } from './ResponseMetrics.jsx'
 import { CopyButton } from './ui/CopyButton.jsx'
 import { Loader2, ChevronsUpDown, ChevronsDownUp, TriangleAlert, CheckCircle, Info } from 'lucide-react'
+import { useUiStore } from '../store/uiStore.js'
 
 // ─── Dark-themed JSON viewer styles ─────────────────────────────────────────
 const darkJsonStyles = {
@@ -63,36 +64,41 @@ function ViewToggle({ mode, onChange }) {
 
 // ─── ResponseWorkbench ────────────────────────────────────────────────────────
 export function ResponseWorkbench({
-  activeTabId = 'response',
-  onTabChange,
-  metrics,
   profileResult,
   loading = false,
   'data-label': testId = 'response-workbench',
 }) {
+  // Read active response tab from UI store
+  const {
+    activeResponseTab,
+    setActiveResponseTab,
+  } = useUiStore()
+
   const [viewMode, setViewMode] = useState('pretty')
   // null = default (collapsed top-level only), true = all expanded, false = all collapsed
-  const [expandState, setExpandState] = useState(null)
 
   const expandFn = useCallback(
-    expandState === true
-      ? allExpanded
-      : expandState === false
-        ? collapseAllNested
-        : (level) => level < 1,   // default: top-level open
-    [expandState]
+    (expandState) => {
+      // null = default (collapsed top-level only), true = all expanded, false = all collapsed
+      return expandState === true
+        ? allExpanded
+        : expandState === false
+          ? collapseAllNested
+          : (level) => level < 1 // default: top-level open
+    },
+    []
   )
 
   const responseTabs = [
-    { id: 'response',    label: 'Response' },
-    { id: 'headers',     label: 'Headers' },
-    { id: 'queries',     label: 'SQL Queries', count: profileResult?.sql_queries?.length || EMPTY_SQL_QUERIES.length },
-    { id: 'summary',     label: 'Summary' },
+    { id: 'response', label: 'Response' },
+    { id: 'headers', label: 'Headers' },
+    { id: 'queries', label: 'SQL Queries', count: profileResult?.sql_queries?.length || EMPTY_SQL_QUERIES.length },
+    { id: 'summary', label: 'Summary' },
     { id: 'sideEffects', label: 'Side Effects' },
-    { id: 'logs',        label: 'Logs' },
+    { id: 'logs', label: 'Logs' },
   ]
 
-  const jsonData   = profileResult?.response?.data || profileResult?.data || EMPTY_RESPONSE
+  const jsonData = profileResult?.response?.data || profileResult?.data || EMPTY_RESPONSE
   const jsonString = JSON.stringify(jsonData, null, 2)
 
   return (
@@ -101,12 +107,17 @@ export function ResponseWorkbench({
       data-label={testId}
     >
       {/* Metrics strip */}
-      <ResponseMetrics {...metrics} testId={`${testId}-metrics`} />
+      <ResponseMetrics
+        status={'200 OK'}
+        time={'14.2 ms'}
+        size={'1.2 KB'}
+        testId={`${testId}-metrics`}
+      />
 
       <PaneTabs
         tabs={responseTabs}
-        activeId={activeTabId}
-        onChange={onTabChange}
+        activeId={activeResponseTab}
+        onChange={setActiveResponseTab}
         testId={`${testId}-tabs`}
       />
 
@@ -118,12 +129,12 @@ export function ResponseWorkbench({
         {loading ? (
           <div className="flex items-center justify-center h-full gap-2 text-on-surface-variant">
             <Loader2 size={20} className="animate-spin" />
-            <span className="text-xs">Executing target &amp; profiling execution...</span>
+            <span className="text-xs">Executing target & profiling execution...</span>
           </div>
         ) : (
           <>
             {/* ── 1. Response ─────────────────────────────────────── */}
-            {activeTabId === 'response' && (
+            {activeResponseTab === 'response' && (
               <div className="space-y-2">
                 {/* Toolbar */}
                 <div className="flex items-center gap-2 mb-2">
@@ -177,7 +188,7 @@ export function ResponseWorkbench({
             )}
 
             {/* ── 2. Response Headers ──────────────────────────────── */}
-            {activeTabId === 'headers' && (
+            {activeResponseTab === 'headers' && (
               <div className="border border-outline-variant rounded overflow-hidden">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
@@ -203,7 +214,7 @@ export function ResponseWorkbench({
             )}
 
             {/* ── 3. SQL Queries ───────────────────────────────────── */}
-            {activeTabId === 'queries' && (
+            {activeResponseTab === 'queries' && (
               <div className="space-y-3">
                 <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs flex items-center gap-2">
                   <TriangleAlert size={14} />
@@ -238,13 +249,14 @@ export function ResponseWorkbench({
             )}
 
             {/* ── 4. Summary ──────────────────────────────────────── */}
-            {activeTabId === 'summary' && (
+            {activeResponseTab === 'summary' && (
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { label: 'Queries Executed',  value: '4',        color: 'text-primary' },
-                    { label: 'Duplicate Queries',  value: '3 (N+1)',  color: 'text-amber-400' },
-                    { label: 'Total Duration',     value: '14.2 ms',  color: 'text-emerald-400' },
+
+                    { label: 'Queries Executed', value: '4', color: 'text-primary' },
+                    { label: 'Duplicate Queries', value: '3 (N+1)', color: 'text-amber-400' },
+                    { label: 'Total Duration', value: '14.2 ms', color: 'text-emerald-400' },
                   ].map(({ label, value, color }) => (
                     <div key={label} className="p-3 rounded-lg border border-outline-variant bg-surface">
                       <span className="text-[10px] font-label-caps uppercase text-on-surface-variant tracking-wider">{label}</span>
@@ -264,15 +276,16 @@ export function ResponseWorkbench({
             )}
 
             {/* ── 5. Side Effects ──────────────────────────────────── */}
-            {activeTabId === 'sideEffects' && (
+            {activeResponseTab === 'sideEffects' && (
               <div className="space-y-3 text-xs">
                 <p className="font-semibold text-on-surface">Database Mutations / Side Effects</p>
                 <div className="divide-y divide-outline-variant/30 border border-outline-variant rounded-lg overflow-hidden">
                   {[
+
                     { Icon: CheckCircle, color: 'text-emerald-400', label: 'No database writes (INSERT/UPDATE/DELETE) detected.' },
                     { Icon: CheckCircle, color: 'text-emerald-400', label: 'No Celery tasks spawned during request cycle.' },
-                    { Icon: Info,        color: 'text-sky-400',     label: 'Signal listeners triggered: post_init (×4).' },
-                    { Icon: Info,        color: 'text-sky-400',     label: 'Middleware: SessionMiddleware, CsrfViewMiddleware, AuthenticationMiddleware.' },
+                    { Icon: Info, color: 'text-sky-400', label: 'Signal listeners triggered: post_init (×4).' },
+                    { Icon: Info, color: 'text-sky-400', label: 'Middleware: SessionMiddleware, CsrfViewMiddleware, AuthenticationMiddleware.' },
                   ].map(({ Icon: RowIcon, color, label }) => (
                     <div key={label} className="flex items-start gap-2.5 px-3 py-2.5 bg-surface hover:bg-surface-container/40 transition-colors">
                       <RowIcon size={14} className={color} />
@@ -284,14 +297,15 @@ export function ResponseWorkbench({
             )}
 
             {/* ── 6. Logs ──────────────────────────────────────────── */}
-            {activeTabId === 'logs' && (
+            {activeResponseTab === 'logs' && (
               <div className="p-3 rounded-lg bg-surface border border-outline-variant font-mono text-[11px] space-y-1.5 overflow-x-auto">
                 {[
-                  { level: 'INFO',  color: 'text-emerald-400', msg: '2026-08-11 23:00:01 - Processing GET /api/v1/books/' },
-                  { level: 'DEBUG', color: 'text-zinc-400',    msg: '2026-08-11 23:00:01 - Authenticated user: Anonymous' },
-                  { level: 'DEBUG', color: 'text-zinc-400',    msg: '2026-08-11 23:00:01 - QuerySet evaluated: Book.objects.all()' },
-                  { level: 'WARN',  color: 'text-amber-400',   msg: '2026-08-11 23:00:01 - N+1 query issue detected in BookSerializer' },
-                  { level: 'INFO',  color: 'text-emerald-400', msg: '2026-08-11 23:00:01 - Completed 200 OK in 14.2ms (4 queries)' },
+
+                  { level: 'INFO', color: 'text-emerald-400', msg: '2026-08-11 23:00:01 - Processing GET /api/v1/books/' },
+                  { level: 'DEBUG', color: 'text-zinc-400', msg: '2026-08-11 23:00:01 - Authenticated user: Anonymous' },
+                  { level: 'DEBUG', color: 'text-zinc-400', msg: '2026-08-11 23:00:01 - QuerySet evaluated: Book.objects.all()' },
+                  { level: 'WARN', color: 'text-amber-400', msg: '2026-08-11 23:00:01 - N+1 query issue detected in BookSerializer' },
+                  { level: 'INFO', color: 'text-emerald-400', msg: '2026-08-11 23:00:01 - Completed 200 OK in 14.2ms (4 queries)' },
                 ].map(({ level, color, msg }, i) => (
                   <p key={i} className={color}>
                     <span className="opacity-60">[{level}]</span> {msg}

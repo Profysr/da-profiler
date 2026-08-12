@@ -1,11 +1,12 @@
 // src/components/RequestWorkbench.jsx
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { JsonView, allExpanded, collapseAllNested, darkStyles } from 'react-json-view-lite'
 import 'react-json-view-lite/dist/index.css'
 import { PaneTabs } from './PaneTabs.jsx'
 import { KeyValueEditor } from './KeyValueEditor.jsx'
 import { DjangoRibbon } from './DjangoRibbon.jsx'
 import { Trash2, Upload, Plus, ChevronsUpDown, ChevronsDownUp, CircleAlert } from 'lucide-react'
+import { useRequestStore } from '../store/requestStore.js'
 
 // ─── Form Data Editor ─────────────────────────────────────────────────────────
 // Supports both text fields and file upload fields (multipart/form-data)
@@ -126,37 +127,8 @@ function FormDataEditor({ fields = [], onChange }) {
                 </td>
               </tr>
             ))}
-
-            {fields.length === 0 && (
-              <tr>
-                <td colSpan={6} className="p-4 text-center text-on-surface-variant italic">
-                  No form fields. Add a text field or a file.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
-      </div>
-
-      {/* Add buttons */}
-      <div className="flex items-center gap-3 pt-1">
-        <button
-          type="button"
-          onClick={() => add('text')}
-          className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-        >
-          <Plus size={13} />
-          Add Text Field
-        </button>
-        <span className="text-outline-variant">·</span>
-        <button
-          type="button"
-          onClick={() => add('file')}
-          className="flex items-center gap-1 text-xs text-secondary font-medium hover:underline"
-        >
-          <Upload className="w-3.5 h-3.5" />
-          Add File Field
-        </button>
       </div>
     </div>
   )
@@ -189,24 +161,27 @@ const BODY_TYPES = [
 
 // ─── RequestWorkbench ─────────────────────────────────────────────────────────
 export function RequestWorkbench({
-  activeTabId = 'queryParams',
-  onTabChange,
-  pathParams = [],
-  onPathParamsChange,
-  queryParams = [],
-  onQueryParamsChange,
-  headers = [],
-  onHeadersChange,
-  bodyType = 'json',
-  onBodyTypeChange,
-  bodyContent = '{\n  "name": "The Great Gatsby",\n  "author_id": 1\n}',
-  onBodyContentChange,
-  formData = [],
-  onFormDataChange,
-  urlencodedData = [],
-  onUrlencodedDataChange,
   'data-label': testId = 'request-workbench',
 }) {
+  // Read all request state from the shared store
+  const {
+    pathParams,
+    queryParams,
+    headers,
+    bodyType,
+    bodyContent,
+    formData,
+    urlencodedData,
+    // Callbacks to update the store
+    setPathParams,
+    setQueryParams,
+    setHeaders,
+    setBodyType,
+    setBodyContent,
+    setFormData,
+    setUrlencodedData,
+  } = useRequestStore()
+
   // Body JSON view state
   const [bodyViewMode, setBodyViewMode] = useState('raw')   // 'raw' | 'pretty'
   const [bodyExpandState, setBodyExpandState] = useState(null) // null | true | false
@@ -232,6 +207,11 @@ export function RequestWorkbench({
     { id: 'auth',        label: 'Auth & Context' },
   ]
 
+  // Expose update callbacks so children can call them
+  const updateRequestState = (updates) => {
+    useRequestStore.setState(updates)
+  }
+
   return (
     <section
       className="flex-1 flex flex-col bg-surface-container-low overflow-hidden"
@@ -241,8 +221,8 @@ export function RequestWorkbench({
       <div className="flex items-center justify-between border-b border-outline-variant bg-surface-container shrink-0">
         <PaneTabs
           tabs={requestTabs}
-          activeId={activeTabId}
-          onChange={onTabChange}
+          activeId={activeRequestTab}
+          onChange={setActiveRequestTab}
           testId={`${testId}-tabs`}
         />
         <div className="pr-3 shrink-0">
@@ -254,7 +234,7 @@ export function RequestWorkbench({
       <div className="flex-1 p-4 overflow-y-auto" data-label={`${testId}-content`}>
 
         {/* ── Path Params ─────────────────────────────────────────── */}
-        {activeTabId === 'pathParams' && (
+        {activeRequestTab === 'pathParams' && (
           <div className="space-y-3">
             <p className="text-xs text-on-surface-variant font-medium">
               URL Path Variables (e.g.{' '}
@@ -263,7 +243,7 @@ export function RequestWorkbench({
             </p>
             <KeyValueEditor
               pairs={pathParams}
-              onChange={onPathParamsChange}
+              onChange={setPathParams}
               keyPlaceholder="Path Variable (e.g. id)"
               valuePlaceholder="Value (e.g. 42)"
               descriptionPlaceholder="Description"
@@ -272,15 +252,15 @@ export function RequestWorkbench({
         )}
 
         {/* ── Query Params ─────────────────────────────────────────── */}
-        {activeTabId === 'queryParams' && (
+        {activeRequestTab === 'queryParams' && (
           <div className="space-y-3">
             <p className="text-xs text-on-surface-variant font-medium">
               URL Query String Parameters (e.g.{' '}
-              <code className="text-primary font-mono">?page=1&amp;size=10</code>)
+              <code className="text-primary font-mono">?page=1&size=10</code>)
             </p>
             <KeyValueEditor
               pairs={queryParams}
-              onChange={onQueryParamsChange}
+              onChange={setQueryParams}
               keyPlaceholder="Parameter Key"
               valuePlaceholder="Value"
               descriptionPlaceholder="Description"
@@ -289,14 +269,14 @@ export function RequestWorkbench({
         )}
 
         {/* ── Headers ─────────────────────────────────────────────── */}
-        {activeTabId === 'headers' && (
+        {activeRequestTab === 'headers' && (
           <div className="space-y-3">
             <p className="text-xs text-on-surface-variant font-medium">
               HTTP Request Headers — start typing to autocomplete common headers
             </p>
             <KeyValueEditor
               pairs={headers}
-              onChange={onHeadersChange}
+              onChange={setHeaders}
               keyPlaceholder="Header Name"
               valuePlaceholder="Header Value"
               descriptionPlaceholder="Description"
@@ -306,7 +286,7 @@ export function RequestWorkbench({
         )}
 
         {/* ── Body ────────────────────────────────────────────────── */}
-        {activeTabId === 'body' && (
+        {activeRequestTab === 'body' && (
           <div className="space-y-4 flex flex-col h-full">
 
             {/* Body type selector */}
@@ -321,7 +301,7 @@ export function RequestWorkbench({
                     name="bodyType"
                     value={id}
                     checked={bodyType === id}
-                    onChange={(e) => onBodyTypeChange?.(e.target.value)}
+                    onChange={(e) => setBodyType?.(e.target.value)}
                     className="accent-primary"
                   />
                   <span className="font-mono text-[11px] font-semibold">{label}</span>
@@ -391,7 +371,9 @@ export function RequestWorkbench({
                       type="button"
                       onClick={() => {
                         try {
-                          onBodyContentChange?.(JSON.stringify(JSON.parse(bodyContent), null, 2))
+                          updateRequestState({
+                            bodyContent: JSON.stringify(JSON.parse(bodyContent), null, 2),
+                          })
                         } catch { /* invalid JSON */ }
                       }}
                       className="ml-auto text-[10px] text-primary hover:underline"
@@ -405,7 +387,7 @@ export function RequestWorkbench({
                 {bodyViewMode === 'raw' && (
                   <textarea
                     value={bodyContent}
-                    onChange={(e) => onBodyContentChange?.(e.target.value)}
+                    onChange={(e) => updateRequestState({ bodyContent: e.target.value })}
                     placeholder={'{\n  "key": "value"\n}'}
                     spellCheck={false}
                     className="flex-1 w-full bg-transparent text-on-surface focus:outline-none resize-none font-mono text-xs p-3 min-h-[140px]"
@@ -440,7 +422,7 @@ export function RequestWorkbench({
                 <p className="text-xs text-on-surface-variant font-medium">
                   <code className="text-primary font-mono">multipart/form-data</code> — supports text fields and file uploads
                 </p>
-                <FormDataEditor fields={formData} onChange={onFormDataChange} />
+                <FormDataEditor fields={formData} onChange={setFormData} />
               </div>
             )}
 
@@ -452,7 +434,7 @@ export function RequestWorkbench({
                 </p>
                 <KeyValueEditor
                   pairs={urlencodedData}
-                  onChange={onUrlencodedDataChange}
+                  onChange={setUrlencodedData}
                   keyPlaceholder="Field Name"
                   valuePlaceholder="Value"
                   descriptionPlaceholder="Description"
@@ -468,7 +450,7 @@ export function RequestWorkbench({
                 </div>
                 <textarea
                   value={bodyContent}
-                  onChange={(e) => onBodyContentChange?.(e.target.value)}
+                  onChange={(e) => updateRequestState({ bodyContent: e.target.value })}
                   placeholder="Enter raw body..."
                   spellCheck={false}
                   className="flex-1 w-full bg-transparent text-on-surface focus:outline-none resize-none font-mono text-xs p-3 min-h-[140px]"
@@ -479,7 +461,7 @@ export function RequestWorkbench({
         )}
 
         {/* ── Auth & Context ───────────────────────────────────────── */}
-        {activeTabId === 'auth' && (
+        {activeRequestTab === 'auth' && (
           <div className="space-y-4 max-w-lg">
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-on-surface">Authorization Type</label>

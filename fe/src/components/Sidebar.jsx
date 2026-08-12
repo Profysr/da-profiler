@@ -1,6 +1,7 @@
 // src/components/Sidebar.jsx
 import { useState, useRef, useCallback } from 'react'
 import { useRoutesStore } from '../store/routesStore.js'
+import { useUiStore } from '../store/uiStore.js'
 import { TARGET_KINDS, TARGET_KIND_ORDER, ROUTE_FILTERS, getMethodBadgeClass } from '../utils/constants.js'
 import { ProjectSelector, ConnectionManager } from './ConnectionManager.jsx'
 import { Search, X, Loader2, ChevronDown, ChevronRight, Folder, Link as LinkIcon } from 'lucide-react'
@@ -223,11 +224,15 @@ function SidebarFooter({ onOpenConnManager }) {
 export function Sidebar({
   onSelectTarget,
   selectedTarget,
-  width = 280,
-  onWidthChange,
   "data-label": testId = 'sidebar-navigator',
 }) {
   const { filteredTargets, searchQuery, setSearchQuery, activeFilter, setActiveFilter, loading } = useRoutesStore()
+  const {
+    activeSidebarNav,
+    sidebarWidth,
+    setActiveSidebarNav,
+    setSidebarWidth,
+  } = useUiStore()
   const [isConnManagerOpen, setIsConnManagerOpen] = useState(false)
   const [expandedFolders, setExpandedFolders] = useState({
     view: true,
@@ -249,7 +254,7 @@ export function Sidebar({
       e.preventDefault()
       isResizingRef.current = true
       startXRef.current = e.clientX
-      startWidthRef.current = width
+      startWidthRef.current = sidebarWidth
       document.body.style.cursor = 'col-resize'
       document.body.style.userSelect = 'none'
 
@@ -257,7 +262,7 @@ export function Sidebar({
         if (!isResizingRef.current) return
         const delta = e.clientX - startXRef.current
         const newWidth = Math.max(220, Math.min(480, startWidthRef.current + delta))
-        onWidthChange?.(newWidth)
+        setSidebarWidth(newWidth)
       }
 
       const onMouseUp = () => {
@@ -271,7 +276,7 @@ export function Sidebar({
       document.addEventListener('mousemove', onMouseMove)
       document.addEventListener('mouseup', onMouseUp)
     },
-    [width, onWidthChange]
+    [sidebarWidth, setSidebarWidth]
   )
 
   const groupedTargets = TARGET_KIND_ORDER.reduce((acc, kind) => {
@@ -283,7 +288,7 @@ export function Sidebar({
     <>
       <aside
         className="flex flex-col h-full z-40 bg-surface-container-low border-r-2 border-primary/40 shrink-0 select-none relative shadow-xl"
-        style={{ width: `${width}px` }}
+        style={{ width: `${sidebarWidth}px` }}
         data-label={testId}
         aria-label="Sidebar navigation"
       >
