@@ -76,8 +76,9 @@ class PathConverterResolver:
     @classmethod
     def build_lookup_map(cls, view: Any | None) -> dict[str, str]:
         """
-        Build the mapping from "URL kwarg name" to "model field name".
+        Deprecated: Model Fallback
 
+        Build the mapping from "URL kwarg name" to "model field name".
         ELI5: A URL might say `<hash>` but the model field is actually called
         `sha_256`. DRF lets views declare this mapping with `lookup_field` and
         `lookup_url_kwarg`. We read those attributes so we know which field to
@@ -108,8 +109,9 @@ class PathConverterResolver:
         lookup_map: dict[str, str] | None = None,
     ) -> Any | None:
         """
+        Deprecated: Model Fallback
+        
         Pull the right field value out of a model instance for one placeholder.
-
         ELI5: We have a real Book row and a blank labeled "pk". We look up
         what model field "pk" maps to (usually just `pk`, sometimes a
         custom field like `sha_256`) and return its value. Returns None
@@ -142,14 +144,8 @@ class PathConverterResolver:
 
         Resolution order for each missing parameter:
         1. Use an explicit value the caller provided (highest priority).
-        2. Pull a real value from the first matching row in the database.
+        2. Pull a real value from the first matching row in the database (Deprecated: Model Fallback).
         3. Give up with a clear reason — NEVER invent data.
-
-        ELI5: For every blank in the URL, we try in this order: "did the
-        caller already tell us what to put here?", then "is there a real
-        row in the database we can copy a value from?", then "we have no
-        idea, please tell us what to use." That last case returns a
-        ResolvedPath with `url=None` and `reason="no_record_found"`.
         """
         resolved: dict[str, Any] = dict(explicit_params or {})
 
@@ -166,48 +162,54 @@ class PathConverterResolver:
                 params=resolved,
             )
 
-        model_class = cls._resolve_target_model(route.model)
-        if model_class is None:
-            return ResolvedPath(
-                url=None,
-                params=resolved,
-                reason=(
-                    f"Route '{route.path}' has path parameter(s) "
-                    f"{missing!r} but no resolvable target model "
-                    f"('{route.model}'). Provide explicit values."
-                ),
-            )
+        # ====================================================================
+        # START DEPRECATED: Model Fallback [Attempting automatic database model resolution for missing parameters]
+        # ====================================================================
 
-        instance = cls._find_first_instance(model_class)
-        if instance is None:
-            return ResolvedPath(
-                url=None,
-                params=resolved,
-                reason=(
-                    f"Route '{route.path}' needs values for {missing!r} but "
-                    f"model '{route.model}' has no rows in the database. "
-                    f"Pick an existing record or enter a value."
-                ),
-            )
+        # model_class = cls._resolve_target_model(route.model)
+        # if model_class is None:
+        #     return ResolvedPath(
+        #         url=None,
+        #         params=resolved,
+        #         reason=(
+        #             f"Route '{route.path}' has path parameter(s) "
+        #             f"{missing!r} but no resolvable target model "
+        #             f"('{route.model}'). Provide explicit values."
+        #         ),
+        #     )
 
-        effective_lookup_map = cls.build_lookup_map(getattr(route, "view", None))
-        if getattr(route, "url_kwarg_to_field", None):
-            effective_lookup_map.update(route.url_kwarg_to_field)
-        if lookup_map:
-            effective_lookup_map.update(lookup_map)
+        # instance = cls._find_first_instance(model_class)
+        # if instance is None:
+        #     return ResolvedPath(
+        #         url=None,
+        #         params=resolved,
+        #         reason=(
+        #             f"Route '{route.path}' needs values for {missing!r} but "
+        #             f"model '{route.model}' has no rows in the database. "
+        #             f"Pick an existing record or enter a value."
+        #         ),
+        #     )
 
-        for p in route.url_params:
-            if p.name in resolved:
-                continue
-            value = cls.extract_from_model_instance(instance, p.name, effective_lookup_map)
-            if value is not None:
-                resolved[p.name] = value
-            else:
-                logger.debug(
-                    "Parameter '%s' could not be extracted from %s instance for route %s.",
-                    p.name, model_class.__name__, route.path,
-                )
+        # effective_lookup_map = cls.build_lookup_map(getattr(route, "view", None))
+        # if getattr(route, "url_kwarg_to_field", None):
+        #     effective_lookup_map.update(route.url_kwarg_to_field)
+        # if lookup_map:
+        #     effective_lookup_map.update(lookup_map)
 
+        # for p in route.url_params:
+        #     if p.name in resolved:
+        #         continue
+        #     value = cls.extract_from_model_instance(instance, p.name, effective_lookup_map)
+        #     if value is not None:
+        #         resolved[p.name] = value
+        #     else:
+        #         logger.debug(
+        #             "Parameter '%s' could not be extracted from %s instance for route %s.",
+        #             p.name, model_class.__name__, route.path,
+        #         )
+        # ====================================================================
+        # END DEPRECATED: Model Fallback
+        # ====================================================================
         still_missing = [p.name for p in route.url_params if p.name not in resolved]
         if still_missing:
             return ResolvedPath(
@@ -243,7 +245,10 @@ class PathConverterResolver:
     # ------------------------------------------------------------------------
     @classmethod
     def _resolve_target_model(cls, target_model: Any) -> type | None:
-        """Turn a "app_label.ModelName" string into the actual Django Model class."""
+        """
+        Deprecated: Model Fallback
+        Turn a "app_label.ModelName" string into the actual Django Model class.
+        """
         if not target_model or not isinstance(target_model, str) or target_model.count(".") != 1:
             return None
         try:
@@ -255,7 +260,10 @@ class PathConverterResolver:
 
     @classmethod
     def _find_first_instance(cls, model_class: type) -> Any | None:
-        """Return the first row of a model, or None if the table is empty."""
+        """
+        Deprecated: Model Fallback
+        Return the first row of a model, or None if the table is empty.
+        """
         try:
             return model_class.objects.first()
         except Exception:
@@ -266,7 +274,6 @@ class PathConverterResolver:
     def _render_url(cls, route: Route, params: dict[str, Any]) -> str:
         """
         Build the final URL string from a route template and resolved values.
-
         Tries Django's `reverse()` first (uses the URL name when available);
         falls back to literal placeholder substitution if reverse() can't
         resolve the URL name.
