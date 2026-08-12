@@ -1,4 +1,3 @@
-// components/ConnectionManager.jsx
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useConnectionsStore } from "../store/connectionsStore.js";
 import {

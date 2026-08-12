@@ -109,7 +109,7 @@ const targetPath = selectedTarget.target_details?.path || selectedTarget.name ||
 
   const handleSend = async () => {
     if (selectedTarget) {
-      profileTarget(selectedTarget, { method, path: computedUrl, params: queryParams, headers, bodyContent })
+      await profileTarget(selectedTarget, { method, path: computedUrl, params: queryParams, headers, bodyContent })
     } else {
       runProfile(computedUrl, method, { params: queryParams, headers, bodyContent })
     }

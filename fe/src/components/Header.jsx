@@ -21,7 +21,7 @@ export function Header({
             <Globe size={14} />
           </div>
           <span className="font-bold text-sm text-on-surface tracking-tight">
-            Postman <span className="text-primary font-mono text-xs uppercase ml-0.5">Profiler</span>
+            Workbench <span className="text-primary font-mono text-xs uppercase ml-0.5">UI</span>
           </span>
         </div>
 

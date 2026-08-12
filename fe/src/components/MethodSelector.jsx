@@ -1,24 +1,9 @@
 // src/components/MethodSelector.jsx
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Check } from 'lucide-react'
-import { HTTP_METHODS } from '../utils/constants.js'
+import { HTTP_METHODS, getMethodBadgeClass } from '../utils/constants.js'
 
-function getMethodBadgeClass(method) {
-  switch (method) {
-    case 'GET':
-      return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-    case 'POST':
-      return 'bg-orange-500/15 text-orange-400 border-orange-500/30'
-    case 'PUT':
-      return 'bg-blue-500/15 text-blue-400 border-blue-500/30'
-    case 'PATCH':
-      return 'bg-teal-500/15 text-teal-400 border-teal-500/30'
-    case 'DELETE':
-      return 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-    default:
-      return 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30'
-  }
-}
+
 
 export function MethodSelector({
   value = 'GET',

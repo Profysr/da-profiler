@@ -47,12 +47,33 @@ export const HTTP_METHODS = [
 ]
 
 /**
+ * Shared method badge styling for consistent UI across components.
+ * Returns: full class string including typography + method-specific colors.
+ */
+export function getMethodBadgeClass(method) {
+  const base = 'text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase shrink-0'
+  switch (method) {
+    case 'GET':
+      return `${base} bg-emerald-500/20 text-emerald-400 border-emerald-500/30`
+    case 'POST':
+      return `${base} bg-orange-500/20 text-orange-400 border-orange-500/30`
+    case 'PUT':
+    case 'PATCH':
+      return `${base} bg-blue-500/20 text-blue-400 border-blue-500/30`
+    case 'DELETE':
+      return `${base} bg-rose-500/20 text-rose-400 border-rose-500/30`
+    default:
+      return `${base} bg-zinc-500/20 text-zinc-400 border-zinc-500/30`
+  }
+}
+
+/**
  * Icon buttons rendered in the global header
  */
 export const HEADER_ICON_BUTTONS = [
-  { id: 'settings', icon: Settings, title: 'Settings' },
-  { id: 'help', icon: HelpCircle, title: 'Help' },
-  { id: 'notifications', icon: Bell, title: 'Notifications' },
+  // { id: 'settings', icon: Settings, title: 'Settings' },
+  // { id: 'help', icon: HelpCircle, title: 'Help' },
+  // { id: 'notifications', icon: Bell, title: 'Notifications' },
 ]
 
 /**
