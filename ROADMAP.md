@@ -89,7 +89,7 @@
 > Status: COMPLETED ✅
 
 ### Core (`dqs/core/`)
-- [x] `targets.py` — new `Target` dataclass: `id`, `kind` (`"view" | "signal" | "task" | "consumer" | "static_only"`), `triggerable: bool`, `trigger_spec: dict | None`, `static_findings: list`.
+- [x] `targets.py` — new `Target` dataclass: `id`, `kind` (`"view" | "signal" | "task" | "consumer" | "static_only"`), `can_execute: bool`, `target_details: dict | None`, `static_findings: list`.
 - [x] `static_advisor.py` — whole-project AST scanner (framework-agnostic, no execution, no DB connection required):
   - [x] ORM-call-inside-loop detection.
   - [ ] Schema-level checks (*deferred to future phase as noted in known limitations*).
@@ -135,7 +135,7 @@ The v0.3 deliverables above were **deleted or repurposed** as part of the v0.35 
 - [x] **Delete** `dqs/adapters/drf/mocking/` directory (`generator.py`, `__init__.py`, any related test fixtures).
 - [x] **Delete** `dqs/adapters/drf/body_inferrer.py` — payloads are now caller-supplied via `POST /profiler/execute`.
 - [x] **Delete** `dqs/adapters/drf/process_log.py` — the noisy step-by-step logger; the runner's flow is now linear and self-explanatory.
-- [x] **Delete** the auto-seeding `setup` parameter from `runner.profile_callable()`; replace with a clean `sandbox: bool = True` toggle.
+- [x] **Delete** the auto-seeding `setup` parameter from `runner.profile_callable()`; replace with a clean `sandbox: bool = False` toggle.
 - [x] **`PathConverterResolver.resolve()`** — returns `ResolvedPath(url=None, reason="no_record_found")` instead of auto-seeding when no record exists and no explicit value was provided.
 - [x] **Rename** all stale types in `dqs/adapters/drf/types.py` — `RouteMetadata` → `Route`, `PathParam` → `UrlParam`, `PathResolution` → `ResolvedPath`, `ProfileReport` → `ProfileResult`, `SeedDataRequiredError` → `UnresolvablePathError`.
 - [x] **Rename** HTTP endpoints from `/dqs/*` to `/profiler/*` (`/profiler/manage/routes`, `/profiler/execute`, `/profiler/connection/health`).
@@ -175,7 +175,7 @@ The v0.3 deliverables above were **deleted or repurposed** as part of the v0.35 
 ### MCP Layer (`dqs/mcp/`)
 - [ ] `server.py` — native MCP server (`mcp` SDK, stdio and/or SSE transport).
 - [ ] **MCP Tools** (the agent's interface to the engine):
-  - `list_targets` — returns all discovered `Target` records with their kinds, static findings, and trigger specs. *(unchanged from prior plan)*
+  - `list_targets` — returns all discovered `Target` records with their kinds, static findings, and **target_details**. *(unchanged from prior plan)*
   - `get_static_findings` — returns the static AST findings for a target or for the whole project. *(unchanged)*
   - `suggest_payload(target_id)` — calls the v0.35 payload suggester. Lets the agent ask "what would a sensible JSON body look like for this endpoint?" without writing to the DB.
   - `execute_request(target_id, payload, headers, query_params, path_params, user_context, sandbox)` — runs a request through the engine. Returns HTTP response + SQL trace + N+1 flags. **Replaces** the old `profile_target` tool — the agent now builds its own payloads instead of having the engine synthesize them.
@@ -279,5 +279,5 @@ The v0.3 deliverables above were **deleted or repurposed** as part of the v0.35 
 - **Terminal CLI linter** — `dqs scan` / `dqs check --max-queries-per-route=N` for CI gating. Uses the same proxy under the hood but with no UI.
 - **Schema-level static advisor checks** — cross-reference `Meta.indexes`/`db_index` against `.filter()`/`.exclude()`/`.order_by()` call sites (deferred from v0.25).
 - **PK strategy advice** — flag auto-increment integer PKs on write-heavy models, suggest UUIDv7 (deferred from v0.25).
-- **WebSocket / Channels execution support** — discovery exists as of v0.25 (`Target(kind="consumer", triggerable=False)`), but no execution path. A fundamentally different trigger mechanism than `RequestFactory`/direct-call is needed — genuinely v2 scope.
-- **Signal & Celery task execution paths** — `trigger_spec` from v0.25 lets us synthesize signal-firing events and invoke tasks by name, but the actual invocation code is not built. Needed for the workbench to support non-view targets beyond static analysis.
+- **WebSocket / Channels execution support** — discovery exists as of v0.25 (`Target(kind="consumer", can_execute=False)`), but no execution path. A fundamentally different trigger mechanism than `RequestFactory`/direct-call is needed — genuinely v2 scope.
+- **Signal & Celery task execution paths** — `target_details` from v0.25 lets us synthesize signal-firing events and invoke tasks by name, but the actual invocation code is not built. Needed for the workbench to support non-view targets beyond static analysis.

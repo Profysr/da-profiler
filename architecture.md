@@ -656,7 +656,7 @@ sequenceDiagram
     Channels-->>Discovery: Consumer routes
     loop For each consumer
         Discovery->>StaticAdv: _analyze_callable_statically(consumer_class)
-        Discovery->>Target: Create Target(id="consumer:name", kind="consumer", triggerable=False)
+        Discovery->>Target: Create Target(id="consumer:name", kind="consumer", can_execute=False)
     end
 
     Discovery-->>Client: List[Target]

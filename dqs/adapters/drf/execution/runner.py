@@ -44,7 +44,7 @@ from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory
 
 from dqs.adapters.drf.database.db_manager import ShadowDatabaseManager
-from dqs.adapters.drf.routing.introspector import DjangoIntrospector
+from dqs.adapters.drf.routing.introspector import DjangoIntrospector, CORE_HTTP_METHODS
 from dqs.adapters.drf.routing.converters import PathConverterResolver
 from dqs.adapters.drf.types import (
     ProfileResult,
@@ -82,22 +82,6 @@ class DjangoSandboxRunner:
     ) -> tuple[Any, list[dict[str, Any]], float]:
         """
         Run any Python callable and capture every SQL query it issues.
-
-        ELI5: Wrap `func` in a "transparent box" that lets us see every SQL
-        statement while the function runs, then throw away all the box's
-        contents so the real DB isn't affected.
-
-        Args:
-            func: any callable. The runner doesn't care what it does —
-                views, signals, Celery tasks, raw functions all work.
-            *args, **kwargs: passed through to `func`.
-            sandbox: when True (default), all DB writes inside `func` are
-                rolled back. When False, writes persist — use this when the
-                caller wants to verify a POST actually created a row.
-
-        Returns:
-            A 3-tuple: (func's return value, list of captured queries with
-            file:line origins, total DB time in milliseconds).
         """
         queries_captured: list[dict[str, Any]] = []
         result: Any = None
@@ -177,12 +161,14 @@ class DjangoSandboxRunner:
             query with file:line origins, and any N+1 flags with fixes.
             When `sandbox=False` (default), any DB writes from the view
             will persist and be visible to subsequent requests.
+        """
+        
         method = method.upper()
         path_params = path_params or {}
         query_params = query_params or {}
         headers = headers or {}
 
-        if method not in {"GET", "POST", "PUT", "PATCH", "DELETE"}:
+        if method not in CORE_HTTP_METHODS:
             return ProfileResult(
                 path=url_name_or_path,
                 status_code=400,
@@ -223,7 +209,7 @@ class DjangoSandboxRunner:
         side_effect_warnings = _detect_blocking_calls(view_func)
 
         # Build and dispatch the request under observation.
-        request = self._build_request(
+        request = self._build_request_payload(
             concrete_url, method, query_params, headers, body, user, match
         )
 
@@ -289,7 +275,7 @@ class DjangoSandboxRunner:
             kind="api_view",
         )
 
-    def _build_request(
+    def _build_request_payload(
         self,
         concrete_url: str,
         method: str,
