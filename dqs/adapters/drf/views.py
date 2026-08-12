@@ -122,7 +122,8 @@ class ExecuteView(CORSEnabledAPIView):
 
         if not target_id:
             return Response({"error": "'target_id' is required."}, status=status.HTTP_400_BAD_REQUEST)
-
+        
+        # if the target is a Celery task, Channels consumer, or Django signal, we don't execute it via HTTP; we just return static analysis. TODO: in the future, we might support executing tasks via Celery and signals via a test harness, but for now we only support HTTP views.
         if kind in ("task", "consumer", "signal"):
             return _static_analysis_response(target_id, kind)
 

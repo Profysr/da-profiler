@@ -140,7 +140,7 @@ class QueryAnalysisEngine:
             return None
 
     @classmethod
-    def build_result(
+    def build_execution_result(
         cls,
         path: str,
         status_code: int,
@@ -174,6 +174,7 @@ class QueryAnalysisEngine:
             threshold=n_plus_one_threshold,
             target_model=target_model,
         )
+
         analysis_payload = [
             {
                 "fingerprint": group["fingerprint"],
@@ -187,6 +188,7 @@ class QueryAnalysisEngine:
         ]
 
         unique_fingerprints = {q["fingerprint"] for q in formatted_queries}
+        
         metrics = {
             "total_queries": len(queries_captured),
             "unique_fingerprints": len(unique_fingerprints),

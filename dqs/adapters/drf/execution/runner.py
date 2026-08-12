@@ -52,7 +52,6 @@ from dqs.adapters.drf.types import (
     UnresolvablePathError,
 )
 from dqs.core.static_advisor import StaticASTAdvisor
-
 from .query_interceptor import QueryAnalysisEngine, QueryInterceptor
 
 
@@ -138,7 +137,7 @@ class DjangoSandboxRunner:
         headers: dict[str, str] | None = None,
         body: dict[str, Any] | None = None,
         user: Any | None = None,
-        sandbox: bool = True,
+        sandbox: bool = False,
     ) -> ProfileResult:
         """
         Execute one HTTP request against a discovered route, under observation.
@@ -149,7 +148,10 @@ class DjangoSandboxRunner:
            real DB row).
         3. Build an HTTP request with your headers/body/user attached.
         4. Hand it to the view, watching every SQL query.
-        5. Roll back the transaction (unless sandbox=False).
+        5. By default, writes DO NOT roll back — data persists so you can
+           run full CRUD cycles (POST → PUT → GET, for example). Set
+           sandbox=True if you want strict rollback so the caller's real
+           DB is untouched.
         6. Package up the response and the query trace into a ProfileResult.
 
         Args:
@@ -166,13 +168,15 @@ class DjangoSandboxRunner:
             user: a Django User instance (or None for AnonymousUser). The
                 runner doesn't authenticate it — that's the impersonation
                 layer's job in v0.5; here we just attach it to request.user.
-            sandbox: when True (default), writes roll back. Set False when
-                the caller wants to verify a write actually persisted.
+            sandbox: when True, writes roll back. Set False (default) when
+                the caller wants to persist data and run full CRUD cycles
+                (POST → PUT → GET, for example).
 
         Returns:
             A ProfileResult containing the HTTP response, every captured
             query with file:line origins, and any N+1 flags with fixes.
-        """
+            When `sandbox=False` (default), any DB writes from the view
+            will persist and be visible to subsequent requests.
         method = method.upper()
         path_params = path_params or {}
         query_params = query_params or {}
@@ -251,7 +255,7 @@ class DjangoSandboxRunner:
             "sandbox": sandbox,
         }
 
-        return QueryAnalysisEngine.build_result(
+        return QueryAnalysisEngine.build_execution_result(
             path=concrete_url,
             status_code=status_code,
             queries_captured=queries_captured,
