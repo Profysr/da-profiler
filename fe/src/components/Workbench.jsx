@@ -1,4 +1,3 @@
-// src/components/Workbench.jsx
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Header } from './Header.jsx'
 import { Sidebar } from './Sidebar.jsx'
@@ -10,6 +9,7 @@ import { useProfileStore } from '../store/profileStore.js'
 import { useConnectionsStore } from '../store/connectionsStore.js'
 import { useRequestStore } from '../store/requestStore.js'
 import { useUiStore } from '../store/uiStore.js'
+import { useToast } from './ui/toast.jsx'
 
 function PaneResizer({ onResize }) {
   return (
@@ -25,24 +25,21 @@ function PaneResizer({ onResize }) {
 export function Workbench({
   "data-label": testId = 'workbench',
 }) {
+  const { toast } = useToast()
   const { fetchTargets, selectedTarget, selectTarget } = useRoutesStore()
   const { profileTarget, loading: profiling, result: profileResult } = useProfileStore()
   const { activeConnectionId } = useConnectionsStore()
-
   const { pathParams, queryParams } = useRequestStore()
 
   const [method, setMethod] = useState('GET')
-  const [basePathPattern, setBasePathPattern] = useState('/api/v1/books/')
-  const [computedUrl, setComputedUrl] = useState('/api/v1/books/')
+  const [basePathPattern] = useState('/api/v1/books/')
 
   const {
     activeSidebarNav,
-    sidebarWidth,
     activeRequestTab,
     activeResponseTab,
     topHeight,
     setActiveSidebarNav,
-    setSidebarWidth,
     setActiveRequestTab,
     setActiveResponseTab,
     setTopHeight,
@@ -53,53 +50,91 @@ export function Workbench({
   const dragStartHeightRef = useRef(0)
   const topRef = useRef(null)
 
-  // Fetch targets on initial load & connection changes
   useEffect(() => {
     fetchTargets()
   }, [fetchTargets, activeConnectionId])
 
-  // Sync selected target into URL bar pattern
+  // ================================================
+  // ── Seed path params from selected target ───────
+  // ================================================
+  const { setPathParams } = useRequestStore()
+
   useEffect(() => {
-    if (selectedTarget) {
-      const methods = selectedTarget.target_details?.methods || ['GET']
-      setMethod(methods[0] || 'GET')
-      const targetPath = selectedTarget.target_details?.path || selectedTarget.name || '/api/v1/books/'
-      setBasePathPattern(targetPath)
-    }
-  }, [selectedTarget])
+    if (!selectedTarget) return
 
-  // Dynamic URL construction: pathParams + queryParams -> computed static URL
-  useEffect(() => {
-    let rawPath = basePathPattern.split('?')[0]
+    const urlParams = selectedTarget.target_details?.url_params ?? []
 
-    // Substitute path params (e.g. :id or {id})
-    pathParams.forEach((p) => {
-      if (p.enabled && p.key.trim() !== '') {
-        const paramKey = p.key.trim()
-        rawPath = rawPath.replace(`:${paramKey}`, encodeURIComponent(p.value))
-        rawPath = rawPath.replace(`{${paramKey}}`, encodeURIComponent(p.value))
-      }
-    })
+    // Build one row per path segment. The converter tells the user what type of value is expected (e.g. 'int' → must be a number, 'slug' → slug string).
+    const seeded = urlParams.map(({ name, converter }) => ({
+      enabled: true,
+      key: name,
+      value: '',
+      description: converter ?? 'str',
+    }))
 
-    // Append active query parameters
-    const activeQueries = queryParams.filter((q) => q.enabled && q.key.trim() !== '')
-    if (activeQueries.length > 0) {
-      const queryString = activeQueries
-        .map((q) => `${encodeURIComponent(q.key)}=${encodeURIComponent(q.value)}`)
-        .join('&')
-      setComputedUrl(`${rawPath}?${queryString}`)
-    } else {
-      setComputedUrl(rawPath)
-    }
-  }, [basePathPattern, pathParams, queryParams])
+    setPathParams(seeded)
+  }, [selectedTarget, setPathParams])
+
+  // Derive effective method & base path from selectedTarget or local state
+  const effectiveMethod = selectedTarget?.target_details?.methods?.[0] || method
+  const effectiveBasePath = selectedTarget?.target_details?.path || selectedTarget?.name || basePathPattern
 
   const handleSend = async () => {
-    if (selectedTarget) {
-      const { headers, bodyType, bodyContent, formData, urlencodedData } = useRequestStore.getState()
-      await profileTarget(selectedTarget, { method, path: computedUrl, params: queryParams, headers, bodyContent, bodyType, formData, urlencodedData })
+    if (!selectedTarget) return
+
+    // All path params are required — the backend cannot resolve the URL without them.
+    // Block execution and surface the missing fields to the user.
+    const missingParams = pathParams.filter((p) => p.enabled && p.value.trim() === '')
+    if (missingParams.length > 0) {
+      const names = missingParams.map((p) => p.key).join(', ')
+      toast.error('Missing Path Parameters', `Required path param${missingParams.length > 1 ? 's' : ''} missing: ${names}`)
+      return
+    }
+
+    const { headers, bodyContent, bodyType } = useRequestStore.getState()
+
+    // Validate JSON body if JSON body type is active
+    let parsedBody = null
+    if (bodyType === 'json' && bodyContent && bodyContent.trim() !== '') {
+      try {
+        parsedBody = JSON.parse(bodyContent)
+      } catch (err) {
+        toast.error('Invalid JSON Body', err.message || 'Syntax error in JSON request body')
+        return
+      }
+    }
+
+    // profileStore expects plain objects, not the row-array format the UI uses internally.
+    //   path_params:  {id: 42, no: 3}          ← positional path segments
+    //   query_params: {page: '1', size: '10'}  ← query string key=value pairs
+    const path_params = Object.fromEntries(
+      pathParams
+        .filter((p) => p.enabled && p.key.trim() !== '')
+        .map((p) => [p.key.trim(), p.value])
+    )
+    const query_params = Object.fromEntries(
+      queryParams
+        .filter((q) => q.enabled && q.key.trim() !== '')
+        .map((q) => [q.key.trim(), q.value])
+    )
+
+    try {
+      await profileTarget(selectedTarget, {
+        method: effectiveMethod,
+        path: effectiveBasePath,
+        path_params,
+        query_params,
+        headers,
+        body: parsedBody,
+      })
+    } catch (err) {
+      toast.error('Request Failed', err.message || 'Failed to execute profile target')
     }
   }
 
+  // ================================================
+  // ── Resize SplitPane ────────────────────────────
+  // ================================================
   const handleResizeMouseDown = useCallback((e) => {
     e.preventDefault()
     isResizingRef.current = true
@@ -158,7 +193,7 @@ export function Workbench({
             <UrlBar
               method={method}
               onMethodChange={setMethod}
-              path={computedUrl}
+              path={effectiveBasePath}
               onSend={handleSend}
               loading={profiling}
               data-label={`${testId}-url-bar`}
@@ -183,9 +218,8 @@ export function Workbench({
             <PaneResizer onResize={handleResizeMouseDown} />
 
             <div
-              className={`flex flex-col bg-surface-container-low overflow-hidden relative ${
-                topHeight !== null ? 'flex-1' : 'flex-1 h-1/2'
-              }`}
+              className={`flex flex-col bg-surface-container-low overflow-hidden relative ${topHeight !== null ? 'flex-1' : 'flex-1 h-1/2'
+                }`}
               data-label={`${testId}-response`}
             >
               <ResponseWorkbench

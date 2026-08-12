@@ -41,7 +41,7 @@ def serialize_target(target: Target) -> dict[str, Any]:
 
     ELI5: Target objects are nice Python dataclasses but they can't be
     sent over the wire as-is. This function turns them into plain
-    dictionaries with display-friendly extra fields (name, path, methods)
+    dictionaries with display-friendly extra fields (name)
     so the UI can show "POST /api/v1/books/" in the sidebar.
     """
     data: dict[str, Any] = {
@@ -56,9 +56,6 @@ def serialize_target(target: Target) -> dict[str, Any]:
 
     if target.kind == "view":
         data["name"] = spec.get("path", target.id.split(":")[-1])
-        data["methods"] = spec.get("methods", [])
-        data["path"] = spec.get("path", "")
-        data["url_params"] = spec.get("url_params", [])
     elif target.kind == "task":
         data["name"] = spec.get("task_name", target.id.split(":")[-1])
     elif target.kind == "consumer":

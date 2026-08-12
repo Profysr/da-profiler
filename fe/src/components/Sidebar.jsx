@@ -228,9 +228,7 @@ export function Sidebar({
 }) {
   const { filteredTargets, searchQuery, setSearchQuery, activeFilter, setActiveFilter, loading } = useRoutesStore()
   const {
-    activeSidebarNav,
     sidebarWidth,
-    setActiveSidebarNav,
     setSidebarWidth,
   } = useUiStore()
   const [isConnManagerOpen, setIsConnManagerOpen] = useState(false)

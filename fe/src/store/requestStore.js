@@ -15,7 +15,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 const DEFAULT_PATH_PARAMS = [
-  { enabled: true, key: 'id', value: '1', description: 'Resource ID' },
+  // { enabled: true, key: 'id', value: '1', description: 'Resource ID' },
 ]
 
 const DEFAULT_QUERY_PARAMS = [
@@ -33,8 +33,8 @@ const DEFAULT_BODY_CONTENT = '{\n  "title": "New Book",\n  "author_id": 1\n}'
 
 const DEFAULT_FORM_DATA = [
   { enabled: true, key: 'title', value: 'New Book', type: 'text', description: 'Book title' },
-  { enabled: true, key: 'author_id', value: '1', type: 'text', description: 'Author foreign key' },
-  { enabled: false, key: 'cover_image', value: '', type: 'file', file: null, description: 'Cover image upload' },
+  // { enabled: true, key: 'author_id', value: '1', type: 'text', description: 'Author foreign key' },
+  // { enabled: false, key: 'cover_image', value: '', type: 'file', file: null, description: 'Cover image upload' },
 ]
 
 const DEFAULT_URLENCODED_DATA = [

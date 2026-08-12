@@ -1,5 +1,11 @@
 import { Workbench } from './components/Workbench.jsx'
+import { ToastProvider } from './components/ui/toast.jsx'
 
 export default function App() {
-  return <Workbench />
+  return (
+    <ToastProvider>
+      <Workbench />
+    </ToastProvider>
+  )
 }
+

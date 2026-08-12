@@ -127,7 +127,7 @@ class ExecuteView(CORSEnabledAPIView):
         if kind in ("task", "consumer", "signal"):
             return _static_analysis_response(target_id, kind)
 
-        route_path = body.get("route") or target_id.replace("view:", "", 1)
+        route_path = body.get("path") or target_id.replace("view:", "", 1)
 
         try:
             result = DjangoSandboxRunner().execute_request(

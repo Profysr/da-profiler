@@ -31,12 +31,14 @@ export const useProfileStore = create((set, get) => ({
       target_id: target.id,
       kind: target.kind,
 
-      method: extraPayload.method,
       path: extraPayload.path,
+      method: extraPayload.method,
       path_params: extraPayload.path_params || {},
-      query_params: extraPayload.params || {},
+      query_params: extraPayload.query_params || {},
       headers: extraPayload.headers || {},
-      body: extraPayload.bodyContent,
+      body: extraPayload.body ?? null,
+
+      sandbox: extraPayload.sandbox ?? false,  // isolate execution in a DB sandbox session
     }
 
     set({ loading: true, error: null, lastPayload: payload })

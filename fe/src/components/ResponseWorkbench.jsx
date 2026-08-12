@@ -75,7 +75,7 @@ export function ResponseWorkbench({
   } = useUiStore()
 
   const [viewMode, setViewMode] = useState('pretty')
-  // null = default (collapsed top-level only), true = all expanded, false = all collapsed
+  const [expandState, setExpandState] = useState(null) // null | true | false
 
   const expandFn = useCallback(
     (expandState) => {

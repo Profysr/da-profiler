@@ -1,12 +1,13 @@
 // src/components/RequestWorkbench.jsx
-import { useState, useCallback, useEffect } from 'react'
-import { JsonView, allExpanded, collapseAllNested, darkStyles } from 'react-json-view-lite'
+import { useState, useCallback } from 'react'
+import { JsonView, darkStyles } from 'react-json-view-lite'
 import 'react-json-view-lite/dist/index.css'
 import { PaneTabs } from './PaneTabs.jsx'
 import { KeyValueEditor } from './KeyValueEditor.jsx'
 import { DjangoRibbon } from './DjangoRibbon.jsx'
-import { Trash2, Upload, Plus, ChevronsUpDown, ChevronsDownUp, CircleAlert } from 'lucide-react'
+import { Trash2, Upload, ChevronsUpDown, ChevronsDownUp, CircleAlert } from 'lucide-react'
 import { useRequestStore } from '../store/requestStore.js'
+import { useUiStore } from '../store/uiStore.js'
 
 // ─── Form Data Editor ─────────────────────────────────────────────────────────
 // Supports both text fields and file upload fields (multipart/form-data)
@@ -18,10 +19,6 @@ function FormDataEditor({ fields = [], onChange }) {
   }
 
   const remove = (idx) => onChange?.(fields.filter((_, i) => i !== idx))
-
-  const add = (type = 'text') => {
-    onChange?.([...fields, { enabled: true, key: '', value: '', type, description: '', file: null }])
-  }
 
   const inputBase =
     'w-full bg-transparent px-1.5 py-0.5 focus:outline-none focus:bg-surface-container-high rounded font-mono text-[11px] text-on-surface placeholder:text-on-surface-variant/40'
@@ -163,7 +160,13 @@ const BODY_TYPES = [
 export function RequestWorkbench({
   'data-label': testId = 'request-workbench',
 }) {
-  // Read all request state from the shared store
+  // Active tab from UI store
+  const {
+    activeRequestTab,
+    setActiveRequestTab,
+  } = useUiStore()
+
+  // Request state from request store
   const {
     pathParams,
     queryParams,
@@ -172,12 +175,10 @@ export function RequestWorkbench({
     bodyContent,
     formData,
     urlencodedData,
-    // Callbacks to update the store
     setPathParams,
     setQueryParams,
     setHeaders,
     setBodyType,
-    setBodyContent,
     setFormData,
     setUrlencodedData,
   } = useRequestStore()
@@ -187,11 +188,11 @@ export function RequestWorkbench({
   const [bodyExpandState, setBodyExpandState] = useState(null) // null | true | false
 
   const bodyExpandFn = useCallback(
-    bodyExpandState === true
-      ? allExpanded
-      : bodyExpandState === false
-        ? collapseAllNested
-        : (level) => level < 1,
+    (level) => {
+      if (bodyExpandState === true) return true
+      if (bodyExpandState === false) return false
+      return level < 1
+    },
     [bodyExpandState]
   )
 
