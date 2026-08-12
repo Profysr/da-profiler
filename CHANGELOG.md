@@ -219,3 +219,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Completely removed inline script handlers (`onclick`, `oninput`, `javascript:`) for strict Content Security Policy (CSP) compliance.
 - Refactored UI events to use top-level event delegation inside `DOMContentLoaded`.
 ---
+
+## [0.3.3] - 2026-08-12
+
+### Added
+
+- **Field rename**: `triggerable` → `can_execute` and `trigger_spec` → `target_details` across the entire codebase (Python backend, JavaScript frontend, and documentation) for clearer semantics.
+- **FBV/CBV introspection**: Extended `DjangoIntrospector` to support all view types — DRF APIView, DRF ViewSet, native Django class-based views (TemplateView, ListView, etc.), and plain function-based views (including `@api_view` decorated).
+- **Sandbox default change**: `execute_request()` sandbox default changed from `True` to `False`, allowing callers to run full CRUD cycles (POST → PUT → GET) by default, with `sandbox=True` available as opt-in for strict rollback.
+- **HTTP method validation**: Runner now uses shared `CORE_HTTP_METHODS` constant from `introspector.py` instead of duplicate inline set.
+- **`response_size` field**: Added `response_size: int | None` to `ProfileResult` dataclass; runner now calculates response size in bytes from DRF `.data` (JSON-serialized) or Django `.content` (bytes); frontend can access via `result.response_size`.
+- **Helper function**: Extracted `_extract_response_size()` helper in `runner.py` for better readability, following the same pattern as `_extract_response_body()`.
+- **roadmap.md update**: Updated field descriptions, version references, and MCP tool references to match renamed fields.
+- **architecture.md update**: Updated sequence diagram to use `can_execute` field name.
+
+### Changed
+
+- **Route type expansion**: `Route.kind` Literal expanded from `"api_view" | "viewset"` to `"api_view" | "viewset" | "django_cbv" | "function_view"`; `Route.is_drf` default changed from `True` to `False`.
+- **Introspector rewrite**: `DjangoIntrospector._analyze_view()` now dispatches to `_analyze_cbv()` and `_analyze_fbv()` instead of DRF-only branch; removed dead `extract_model_from_view` code; added lazy `DjangoBaseView` import.
+- **Sandbox safety**: `sandbox=False` now truly persists data (no implicit rollback), while `sandbox=True` guarantees rollback — clear opt-in semantics.
+- **roadmap.md**: Updated version references, MCP tool descriptions, and kind descriptions to match renamed fields.
+- **Infrastructure**: Added `json` import to `runner.py`; verified syntax across all modified Python files.
+
+### Fixed
+
+- **Changelog field references**: Updated all `triggerable`/`trigger_spec` references in documentation to `can_execute`/`target_details` where appropriate; kept historical references in CHANGELOG.md, CODEBASE.md, and Developer Onboarding.md to preserve project evolution history.
+
+### Known Limitations (carried forward)
+
+- `model: str | None = None` on `Route` remains the default (model extraction not re-enabled).
+- `sandbox=False` opt-out means writes persist — caller must handle accordingly.
+- Import-alias resolution in `static_advisor.py` remains single-pass and order-dependent.
+
+---
