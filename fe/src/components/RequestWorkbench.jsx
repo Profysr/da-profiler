@@ -1,5 +1,5 @@
 // src/components/RequestWorkbench.jsx
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { JsonView, darkStyles } from 'react-json-view-lite'
 import 'react-json-view-lite/dist/index.css'
 import { PaneTabs } from './PaneTabs.jsx'
@@ -8,9 +8,32 @@ import { DjangoRibbon } from './DjangoRibbon.jsx'
 import { Trash2, Upload, ChevronsUpDown, ChevronsDownUp, CircleAlert } from 'lucide-react'
 import { useRequestStore } from '../store/requestStore.js'
 import { useUiStore } from '../store/uiStore.js'
+import { JsonViewer } from './JsonViewer.jsx'
 
-// ─── Form Data Editor ─────────────────────────────────────────────────────────
-// Supports both text fields and file upload fields (multipart/form-data)
+// ─── Shared Theme / Constants ────────────────────────────────────────────────
+const darkJsonStyles = {
+  ...darkStyles,
+  container: 'bg-transparent text-[12px] font-mono leading-5',
+  basicChildStyle: 'ml-4 border-l border-outline-variant/20 pl-2',
+  label: 'text-sky-300 mr-1 font-semibold',
+  nullValue: 'text-zinc-500 italic',
+  undefinedValue: 'text-zinc-500 italic',
+  numberValue: 'text-amber-300',
+  stringValue: 'text-emerald-300',
+  booleanValue: 'text-violet-400',
+  punctuation: 'text-zinc-400',
+  expandIcon: 'text-zinc-500 hover:text-primary cursor-pointer select-none mr-1 transition-colors',
+  collapseIcon: 'text-zinc-500 hover:text-primary cursor-pointer select-none mr-1 transition-colors',
+}
+
+const BODY_TYPES = [
+  { id: 'none', label: 'none' },
+  { id: 'json', label: 'JSON' },
+  { id: 'form-data', label: 'form-data' },
+  { id: 'urlencoded', label: 'x-www-form-urlencoded' },
+]
+
+// ─── Sub-Component: Form Data Editor ───────────────────────────────────────
 function FormDataEditor({ fields = [], onChange }) {
   const update = (idx, patch) => {
     const next = [...fields]
@@ -43,7 +66,6 @@ function FormDataEditor({ fields = [], onChange }) {
                 key={idx}
                 className={row.enabled ? 'bg-surface' : 'bg-surface-container-low/40 opacity-60'}
               >
-                {/* Enable toggle */}
                 <td className="p-1 text-center border-r border-outline-variant">
                   <input
                     type="checkbox"
@@ -52,21 +74,17 @@ function FormDataEditor({ fields = [], onChange }) {
                     className="rounded accent-primary cursor-pointer"
                   />
                 </td>
-
-                {/* Type toggle: text | file */}
                 <td className="p-1 border-r border-outline-variant">
                   <select
                     value={row.type || 'text'}
                     onChange={(e) => update(idx, { type: e.target.value, value: '', file: null })}
-                    className="w-full bg-surface-container border border-outline-variant/50 rounded px-1.5 py-0.5 text-[11px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
+                    className="w-full bg-surface-container border border-outline-variant/50 rounded px-1.5 py-0.5 text-[11px] text-on-surface focus:outline-none cursor-pointer"
                   >
                     <option value="text">Text</option>
                     <option value="file">File</option>
                   </select>
                 </td>
-
-                {/* Key */}
-                <td className="p-1 border-r border-outline-variant min-w-[130px]">
+                <td className="p-1 border-r border-outline-variant min-w-35">
                   <input
                     type="text"
                     value={row.key || ''}
@@ -75,9 +93,7 @@ function FormDataEditor({ fields = [], onChange }) {
                     className={inputBase}
                   />
                 </td>
-
-                {/* Value or File picker */}
-                <td className="p-1 border-r border-outline-variant min-w-[180px]">
+                <td className="p-1 border-r border-outline-variant min-w-45">
                   {row.type === 'file' ? (
                     <label className="flex items-center gap-1.5 cursor-pointer group">
                       <span className="flex items-center gap-1 px-2 py-0.5 rounded border border-outline-variant bg-surface-container text-[11px] text-on-surface-variant group-hover:border-primary group-hover:text-primary transition-colors">
@@ -100,8 +116,6 @@ function FormDataEditor({ fields = [], onChange }) {
                     />
                   )}
                 </td>
-
-                {/* Description */}
                 <td className="p-1 border-r border-outline-variant min-w-[120px]">
                   <input
                     type="text"
@@ -111,8 +125,6 @@ function FormDataEditor({ fields = [], onChange }) {
                     className={`${inputBase} font-sans`}
                   />
                 </td>
-
-                {/* Remove */}
                 <td className="p-1 text-center">
                   <button
                     type="button"
@@ -131,42 +143,146 @@ function FormDataEditor({ fields = [], onChange }) {
   )
 }
 
-// ─── Shared dark JSON styles (same as ResponseWorkbench) ─────────────────
-const darkJsonStyles = {
-  ...darkStyles,
-  container: 'bg-transparent text-[12px] font-mono leading-5',
-  basicChildStyle: 'ml-4 border-l border-outline-variant/20 pl-2',
-  label: 'text-sky-300 mr-1 font-semibold',
-  nullValue: 'text-zinc-500 italic',
-  undefinedValue: 'text-zinc-500 italic',
-  numberValue: 'text-amber-300',
-  stringValue: 'text-emerald-300',
-  booleanValue: 'text-violet-400',
-  punctuation: 'text-zinc-400',
-  expandIcon: 'text-zinc-500 hover:text-primary cursor-pointer select-none mr-1 transition-colors',
-  collapseIcon: 'text-zinc-500 hover:text-primary cursor-pointer select-none mr-1 transition-colors',
+// ─── Sub-Component: JSON Tree/Raw Editor ────────────────────────────────────
+function JsonEditorView({ bodyContent, onContentChange }) {
+  const [viewMode, setViewMode] = useState('raw')
+  const [expandState, setExpandState] = useState(null)
+
+  const expandFn = useCallback(
+    (level) => {
+      if (expandState === true) return true
+      if (expandState === false) return false
+      return level < 1
+    },
+    [expandState]
+  )
+
+  const parsedBodyJson = useMemo(() => {
+    try {
+      return JSON.parse(bodyContent)
+    } catch {
+      return null
+    }
+  }, [bodyContent])
+
+  const handlePrettify = () => {
+    if (parsedBodyJson) {
+      onContentChange(JSON.stringify(parsedBodyJson, null, 2))
+    }
+  }
+
+  return (
+    <div className="flex-1 border border-outline-variant rounded-lg bg-surface-container-lowest shadow-inner overflow-hidden flex flex-col">
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-outline-variant bg-surface-container shrink-0">
+        <div className="flex items-center gap-0.5 bg-surface-container-high border border-outline-variant/60 rounded p-0.5 text-[10px] font-semibold">
+          {['raw', 'pretty'].map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setViewMode(mode)}
+              className={`px-2.5 py-0.5 rounded transition-colors capitalize ${
+                viewMode === mode
+                  ? 'bg-primary/20 text-primary'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+
+        {viewMode === 'pretty' && (
+          <div className="flex items-center gap-0.5 bg-surface-container-high border border-outline-variant/60 rounded p-0.5">
+            <button
+              type="button"
+              onClick={() => setExpandState(true)}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                expandState === true ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <ChevronsUpDown size={12} /> Expand All
+            </button>
+            <button
+              type="button"
+              onClick={() => setExpandState(false)}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                expandState === false ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <ChevronsDownUp size={12} /> Collapse All
+            </button>
+          </div>
+        )}
+
+        {viewMode === 'raw' && (
+          <button
+            type="button"
+            onClick={handlePrettify}
+            className="ml-auto text-[10px] text-primary hover:underline"
+          >
+            Prettify
+          </button>
+        )}
+      </div>
+
+      {viewMode === 'raw' ? (
+        <textarea
+          value={bodyContent}
+          onChange={(e) => onContentChange(e.target.value)}
+          placeholder={'{\n  "key": "value"\n}'}
+          spellCheck={false}
+          className="flex-1 w-full bg-transparent text-on-surface focus:outline-none resize-none font-mono text-xs p-3 min-h-[140px]"
+        />
+      ) : (
+        <div className="flex-1 p-3 overflow-y-auto">
+          {parsedBodyJson !== null ? (
+            <JsonView
+              data={parsedBodyJson}
+              shouldExpandNode={expandFn}
+              clickToExpandNode
+              style={darkJsonStyles}
+            />
+          ) : (
+            <div className="flex items-center gap-2 py-4 text-xs text-rose-400">
+              <CircleAlert size={14} />
+              <span>Invalid JSON — fix syntax errors in Raw mode to preview the tree.</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
-// ─── Body type radio selector ─────────────────────────────────────────────────
-const BODY_TYPES = [
-  { id: 'none',      label: 'none' },
-  { id: 'json',      label: 'JSON' },
-  { id: 'form-data', label: 'form-data' },
-  { id: 'urlencoded',label: 'x-www-form-urlencoded' },
-  { id: 'raw',       label: 'raw text' },
-]
+// ─── Sub-Component: Auth & Context ───────────────────────────────────────────
+function AuthEditorView() {
+  return (
+    <div className="space-y-4 max-w-lg">
+      <div className="space-y-1.5">
+        <label className="block text-xs font-bold text-on-surface">Authorization Type</label>
+        <select className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-2.5 text-xs text-on-surface focus:outline-none focus:border-primary">
+          <option value="none">No Auth</option>
+          <option value="bearer">Bearer Token</option>
+          <option value="basic">Basic Auth</option>
+          <option value="session">Django Session Cookie</option>
+        </select>
+      </div>
+      <div className="space-y-1.5">
+        <label className="block text-xs font-bold text-on-surface">Token / Value</label>
+        <input
+          type="text"
+          placeholder="Paste your token here..."
+          className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-2.5 font-mono text-xs text-on-surface focus:outline-none focus:border-primary"
+        />
+      </div>
+    </div>
+  )
+}
 
-// ─── RequestWorkbench ─────────────────────────────────────────────────────────
-export function RequestWorkbench({
-  'data-label': testId = 'request-workbench',
-}) {
-  // Active tab from UI store
-  const {
-    activeRequestTab,
-    setActiveRequestTab,
-  } = useUiStore()
+// ─── Main Component: RequestWorkbench ─────────────────────────────────────────
+export function RequestWorkbench({ 'data-label': testId = 'request-workbench' }) {
+  const { activeRequestTab, setActiveRequestTab } = useUiStore()
 
-  // Request state from request store
   const {
     pathParams,
     queryParams,
@@ -183,42 +299,64 @@ export function RequestWorkbench({
     setUrlencodedData,
   } = useRequestStore()
 
-  // Body JSON view state
-  const [bodyViewMode, setBodyViewMode] = useState('raw')   // 'raw' | 'pretty'
-  const [bodyExpandState, setBodyExpandState] = useState(null) // null | true | false
+  const updateRequestState = (updates) => useRequestStore.setState(updates)
 
-  const bodyExpandFn = useCallback(
-    (level) => {
-      if (bodyExpandState === true) return true
-      if (bodyExpandState === false) return false
-      return level < 1
-    },
-    [bodyExpandState]
-  )
+  // Count helper for active items
+  const countEnabled = (items = []) => items.filter((i) => i.enabled && i.key).length
 
-  // Parse body JSON safely for the tree viewer
-  let parsedBodyJson = null
-  try { parsedBodyJson = JSON.parse(bodyContent) } catch { /* invalid — fall back to raw */ }
-
+  // Declarative Tab Configuration for PaneTabs navigation
   const requestTabs = [
-    { id: 'pathParams',  label: 'Path Params',  count: pathParams.filter((p) => p.enabled && p.key).length },
-    { id: 'queryParams', label: 'Query Params',  count: queryParams.filter((q) => q.enabled && q.key).length },
-    { id: 'headers',     label: 'Headers',       count: headers.filter((h) => h.enabled && h.key).length },
-    { id: 'body',        label: 'Body' },
-    { id: 'auth',        label: 'Auth & Context' },
+    { id: 'pathParams', label: 'Path Params', count: countEnabled(pathParams) },
+    { id: 'queryParams', label: 'Query Params', count: countEnabled(queryParams) },
+    { id: 'headers', label: 'Headers', count: countEnabled(headers) },
+    { id: 'body', label: 'Body' },
   ]
 
-  // Expose update callbacks so children can call them
-  const updateRequestState = (updates) => {
-    useRequestStore.setState(updates)
-  }
+  // Config-driven map to render key-value key parameter tabs without JSX duplication
+  const keyValueTabConfigs = [
+    {
+      id: 'pathParams',
+      description: (
+        <>
+          URL Path Variables (e.g. <code className="text-primary font-mono">:id</code> or{' '}
+          <code className="text-primary font-mono">&#123;book_id&#125;</code>)
+        </>
+      ),
+      pairs: pathParams,
+      onChange: setPathParams,
+      keyPlaceholder: 'Path Variable (e.g. id)',
+      valuePlaceholder: 'Value (e.g. 42)',
+    },
+    {
+      id: 'queryParams',
+      description: (
+        <>
+          URL Query String Parameters (e.g.{' '}
+          <code className="text-primary font-mono">?page=1&size=10</code>)
+        </>
+      ),
+      pairs: queryParams,
+      onChange: setQueryParams,
+      keyPlaceholder: 'Parameter Key',
+      valuePlaceholder: 'Value',
+    },
+    {
+      id: 'headers',
+      description: 'HTTP Request Headers — start typing to autocomplete common headers',
+      pairs: headers,
+      onChange: setHeaders,
+      keyPlaceholder: 'Header Name',
+      valuePlaceholder: 'Header Value',
+      headerMode: true,
+    },
+  ]
 
   return (
     <section
       className="flex-1 flex flex-col bg-surface-container-low overflow-hidden"
       data-label={testId}
     >
-      {/* Tab bar + Django ribbon */}
+      {/* Tab bar header */}
       <div className="flex items-center justify-between border-b border-outline-variant bg-surface-container shrink-0">
         <PaneTabs
           tabs={requestTabs}
@@ -226,71 +364,32 @@ export function RequestWorkbench({
           onChange={setActiveRequestTab}
           testId={`${testId}-tabs`}
         />
-        <div className="pr-3 shrink-0">
-          <DjangoRibbon data-label={`${testId}-ribbon`} />
-        </div>
       </div>
 
-      {/* Tab content */}
+      {/* Main Tab Content */}
       <div className="flex-1 p-4 overflow-y-auto" data-label={`${testId}-content`}>
-
-        {/* ── Path Params ─────────────────────────────────────────── */}
-        {activeRequestTab === 'pathParams' && (
-          <div className="space-y-3">
-            <p className="text-xs text-on-surface-variant font-medium">
-              URL Path Variables (e.g.{' '}
-              <code className="text-primary font-mono">:id</code> or{' '}
-              <code className="text-primary font-mono">&#123;book_id&#125;</code>)
-            </p>
-            <KeyValueEditor
-              pairs={pathParams}
-              onChange={setPathParams}
-              keyPlaceholder="Path Variable (e.g. id)"
-              valuePlaceholder="Value (e.g. 42)"
-              descriptionPlaceholder="Description"
-            />
-          </div>
+        {/* Render Key-Value Pair Tabs Dynamically */}
+        {keyValueTabConfigs.map(
+          (tab) =>
+            activeRequestTab === tab.id && (
+              <div key={tab.id} className="space-y-3">
+                <p className="text-xs text-on-surface-variant font-medium">{tab.description}</p>
+                <KeyValueEditor
+                  pairs={tab.pairs}
+                  onChange={tab.onChange}
+                  keyPlaceholder={tab.keyPlaceholder}
+                  valuePlaceholder={tab.valuePlaceholder}
+                  descriptionPlaceholder="Description"
+                  headerMode={tab.headerMode}
+                />
+              </div>
+            )
         )}
 
-        {/* ── Query Params ─────────────────────────────────────────── */}
-        {activeRequestTab === 'queryParams' && (
-          <div className="space-y-3">
-            <p className="text-xs text-on-surface-variant font-medium">
-              URL Query String Parameters (e.g.{' '}
-              <code className="text-primary font-mono">?page=1&size=10</code>)
-            </p>
-            <KeyValueEditor
-              pairs={queryParams}
-              onChange={setQueryParams}
-              keyPlaceholder="Parameter Key"
-              valuePlaceholder="Value"
-              descriptionPlaceholder="Description"
-            />
-          </div>
-        )}
-
-        {/* ── Headers ─────────────────────────────────────────────── */}
-        {activeRequestTab === 'headers' && (
-          <div className="space-y-3">
-            <p className="text-xs text-on-surface-variant font-medium">
-              HTTP Request Headers — start typing to autocomplete common headers
-            </p>
-            <KeyValueEditor
-              pairs={headers}
-              onChange={setHeaders}
-              keyPlaceholder="Header Name"
-              valuePlaceholder="Header Value"
-              descriptionPlaceholder="Description"
-              headerMode
-            />
-          </div>
-        )}
-
-        {/* ── Body ────────────────────────────────────────────────── */}
+        {/* Render Body Tab */}
         {activeRequestTab === 'body' && (
           <div className="space-y-4 flex flex-col h-full">
-
-            {/* Body type selector */}
+            {/* Body Type Radio Controls */}
             <div className="flex items-center gap-4 text-xs shrink-0">
               {BODY_TYPES.map(({ id, label }) => (
                 <label
@@ -310,128 +409,37 @@ export function RequestWorkbench({
               ))}
             </div>
 
-            {/* none */}
+            {/* Body Panels */}
             {bodyType === 'none' && (
               <div className="py-8 text-center text-xs text-on-surface-variant">
                 This request does not send a body payload.
               </div>
             )}
 
-            {/* JSON editor */}
             {bodyType === 'json' && (
-              <div className="flex-1 border border-outline-variant rounded-lg bg-surface-container-lowest shadow-inner overflow-hidden flex flex-col">
-                {/* Toolbar */}
-                <div className="flex items-center gap-2 px-3 py-1.5 border-b border-outline-variant bg-surface-container shrink-0">
-                  {/* Pretty / Raw toggle */}
-                  <div className="flex items-center gap-0.5 bg-surface-container-high border border-outline-variant/60 rounded p-0.5 text-[10px] font-semibold">
-                    {['raw', 'pretty'].map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setBodyViewMode(m)}
-                        className={`px-2.5 py-0.5 rounded transition-colors capitalize ${
-                          bodyViewMode === m
-                            ? 'bg-primary/20 text-primary'
-                            : 'text-on-surface-variant hover:text-on-surface'
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Expand / Collapse (only in pretty mode) */}
-                  {bodyViewMode === 'pretty' && (
-                    <div className="flex items-center gap-0.5 bg-surface-container-high border border-outline-variant/60 rounded p-0.5">
-                      <button
-                        type="button"
-                        onClick={() => setBodyExpandState(true)}
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
-                          bodyExpandState === true ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:text-on-surface'
-                        }`}
-                      >
-                        <ChevronsUpDown size={12} />
-                        Expand All
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setBodyExpandState(false)}
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
-                          bodyExpandState === false ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:text-on-surface'
-                        }`}
-                      >
-                        <ChevronsDownUp size={12} />
-                        Collapse All
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Prettify shortcut in raw mode */}
-                  {bodyViewMode === 'raw' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        try {
-                          updateRequestState({
-                            bodyContent: JSON.stringify(JSON.parse(bodyContent), null, 2),
-                          })
-                        } catch { /* invalid JSON */ }
-                      }}
-                      className="ml-auto text-[10px] text-primary hover:underline"
-                    >
-                      Prettify
-                    </button>
-                  )}
-                </div>
-
-                {/* Raw textarea */}
-                {bodyViewMode === 'raw' && (
-                  <textarea
-                    value={bodyContent}
-                    onChange={(e) => updateRequestState({ bodyContent: e.target.value })}
-                    placeholder={'{\n  "key": "value"\n}'}
-                    spellCheck={false}
-                    className="flex-1 w-full bg-transparent text-on-surface focus:outline-none resize-none font-mono text-xs p-3 min-h-[140px]"
-                  />
-                )}
-
-                {/* Pretty JSON tree */}
-                {bodyViewMode === 'pretty' && (
-                  <div className="flex-1 p-3 overflow-y-auto">
-                    {parsedBodyJson !== null ? (
-                      <JsonView
-                        data={parsedBodyJson}
-                        shouldExpandNode={bodyExpandFn}
-                        clickToExpandNode
-                        style={darkJsonStyles}
-                      />
-                    ) : (
-                      <div className="flex items-center gap-2 py-4 text-xs text-rose-400">
-                        <CircleAlert size={14} />
-                        <span>Invalid JSON — fix syntax errors in Raw mode to preview the tree.</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <JsonViewer
+                data={bodyContent}
+                editable
+                onChange={(val) => updateRequestState({ bodyContent: val })}
+                className="flex-1"
+              />
             )}
 
-
-            {/* form-data */}
             {bodyType === 'form-data' && (
               <div className="space-y-2">
                 <p className="text-xs text-on-surface-variant font-medium">
-                  <code className="text-primary font-mono">multipart/form-data</code> — supports text fields and file uploads
+                  <code className="text-primary font-mono">multipart/form-data</code> — supports text
+                  fields and file uploads
                 </p>
                 <FormDataEditor fields={formData} onChange={setFormData} />
               </div>
             )}
 
-            {/* x-www-form-urlencoded */}
             {bodyType === 'urlencoded' && (
               <div className="space-y-2">
                 <p className="text-xs text-on-surface-variant font-medium">
-                  <code className="text-primary font-mono">application/x-www-form-urlencoded</code> — key-value pairs URL-encoded in body
+                  <code className="text-primary font-mono">application/x-www-form-urlencoded</code>{' '}
+                  — key-value pairs URL-encoded in body
                 </p>
                 <KeyValueEditor
                   pairs={urlencodedData}
@@ -442,47 +450,11 @@ export function RequestWorkbench({
                 />
               </div>
             )}
-
-            {/* raw text */}
-            {bodyType === 'raw' && (
-              <div className="flex-1 border border-outline-variant rounded-lg bg-surface-container-lowest shadow-inner overflow-hidden flex flex-col">
-                <div className="flex items-center px-3 py-1.5 border-b border-outline-variant bg-surface-container shrink-0">
-                  <span className="text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest">Raw Text</span>
-                </div>
-                <textarea
-                  value={bodyContent}
-                  onChange={(e) => updateRequestState({ bodyContent: e.target.value })}
-                  placeholder="Enter raw body..."
-                  spellCheck={false}
-                  className="flex-1 w-full bg-transparent text-on-surface focus:outline-none resize-none font-mono text-xs p-3 min-h-[140px]"
-                />
-              </div>
-            )}
           </div>
         )}
 
-        {/* ── Auth & Context ───────────────────────────────────────── */}
-        {activeRequestTab === 'auth' && (
-          <div className="space-y-4 max-w-lg">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-on-surface">Authorization Type</label>
-              <select className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-2.5 text-xs text-on-surface focus:outline-none focus:border-primary">
-                <option value="none">No Auth</option>
-                <option value="bearer">Bearer Token</option>
-                <option value="basic">Basic Auth</option>
-                <option value="session">Django Session Cookie</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-on-surface">Token / Value</label>
-              <input
-                type="text"
-                placeholder="Paste your token here..."
-                className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-2.5 font-mono text-xs text-on-surface focus:outline-none focus:border-primary"
-              />
-            </div>
-          </div>
-        )}
+        {/* Render Auth Tab */}
+        {activeRequestTab === 'auth' && <AuthEditorView />}
       </div>
     </section>
   )

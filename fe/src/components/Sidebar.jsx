@@ -168,7 +168,7 @@ function TargetFolder({ kind, targets, isExpanded, onToggle, selectedTarget, onS
 function SidebarTree({ loading, filteredTargets, groupedTargets, expandedFolders, onToggleFolder, selectedTarget, onSelectTarget }) {
   if (loading) {
     return (
-      <div className="p-4 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2">
+      <div className="p-4 flex-1 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2">
         <Loader2 size={14} className="animate-spin" />
       </div>
     )

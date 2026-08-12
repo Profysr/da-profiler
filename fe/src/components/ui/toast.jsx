@@ -7,7 +7,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "../../utils/classNames.js";
 
 const ToastContext = createContext(null);
 

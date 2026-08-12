@@ -1,119 +1,250 @@
 // src/components/ResponseWorkbench.jsx
-import { useState, useCallback } from 'react'
-import { JsonView, allExpanded, collapseAllNested, darkStyles } from 'react-json-view-lite'
-import 'react-json-view-lite/dist/index.css'
 import { PaneTabs } from './PaneTabs.jsx'
 import { ResponseMetrics } from './ResponseMetrics.jsx'
-import { CopyButton } from './ui/CopyButton.jsx'
-import { Loader2, ChevronsUpDown, ChevronsDownUp, TriangleAlert, CheckCircle, Info } from 'lucide-react'
+import { JsonViewer } from './JsonViewer.jsx'
+import { SqlViewer } from './SqlViewer.jsx'
+import { Loader2, TriangleAlert, CheckCircle, Info, Lightbulb } from 'lucide-react'
 import { useUiStore } from '../store/uiStore.js'
 
-// ─── Dark-themed JSON viewer styles ─────────────────────────────────────────
-const darkJsonStyles = {
-  ...darkStyles,
-  container: 'bg-transparent text-[12px] font-mono leading-5',
-  basicChildStyle: 'ml-4 border-l border-outline-variant/20 pl-2',
-  label: 'text-sky-300 mr-1 font-semibold',
-  nullValue: 'text-zinc-500 italic',
-  undefinedValue: 'text-zinc-500 italic',
-  numberValue: 'text-amber-300',
-  stringValue: 'text-emerald-300',
-  booleanValue: 'text-violet-400',
-  punctuation: 'text-zinc-400',
-  expandIcon: 'text-zinc-500 hover:text-primary cursor-pointer select-none mr-1 transition-colors',
-  collapseIcon: 'text-zinc-500 hover:text-primary cursor-pointer select-none mr-1 transition-colors',
-}
-
-// ─── Empty-state placeholder data ────────────────────────────────────────────
-//
-// Shown when no profile run has been executed yet, so the user can see what
-// the panels will look like with real data. NOT profile results — replaced
-// as soon as the engine returns something real.
+// ─── Default Empty State Data ──────────────────────────────────────────────
 const EMPTY_RESPONSE = {
-  status: 'success',
-  message: 'No profile run yet — pick a target and hit Execute to see results.',
-  count: 0,
-  results: [],
+  status: 'info',
+  message: 'No profile run executed yet. Select a target and click Send to inspect results.',
 }
 
-const EMPTY_RESPONSE_HEADERS = []
-
-const EMPTY_SQL_QUERIES = []
-
-// ─── View-mode pill toggle (Pretty / Raw) ─────────────────────────────────────
-function ViewToggle({ mode, onChange }) {
+// ─── Sub-Component: Error View ─────────────────────────────────────────────
+function ResponseErrorView({ error, statusCode }) {
   return (
-    <div className="flex items-center gap-0.5 bg-surface-container border border-outline-variant rounded p-0.5 text-[10px] font-semibold">
-      {['pretty', 'raw'].map((m) => (
-        <button
-          key={m}
-          type="button"
-          onClick={() => onChange(m)}
-          className={`px-2.5 py-0.5 rounded transition-colors capitalize ${
-            mode === m
-              ? 'bg-primary/20 text-primary'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          {m}
-        </button>
-      ))}
+    <div className="flex flex-col items-center justify-center h-full p-6 text-center space-y-3">
+      <div className="p-3 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+        <TriangleAlert size={28} />
+      </div>
+      <div className="space-y-1 max-w-md">
+        <h3 className="text-sm font-semibold text-red-400">
+          Execution Error {statusCode ? `(${statusCode})` : ''}
+        </h3>
+        <p className="text-xs text-on-surface-variant font-mono bg-surface-container p-3 rounded border border-outline-variant break-all text-left whitespace-pre-wrap">
+          {typeof error === 'string' ? error : JSON.stringify(error, null, 2)}
+        </p>
+      </div>
     </div>
   )
 }
 
-// ─── ResponseWorkbench ────────────────────────────────────────────────────────
+// ─── Sub-Component: Response Headers View ──────────────────────────────────
+function ResponseHeadersView({ headers = {} }) {
+  const headerEntries = Object.entries(headers)
+
+  if (headerEntries.length === 0) {
+    return (
+      <div className="text-center py-8 text-xs text-on-surface-variant">
+        No response headers returned.
+      </div>
+    )
+  }
+
+  return (
+    <div className="border border-outline-variant rounded overflow-hidden">
+      <table className="w-full text-left text-xs border-collapse">
+        <thead>
+          <tr className="bg-surface-container-low border-b border-outline-variant font-label-caps text-[10px] text-on-surface-variant">
+            <th className="p-2.5 border-r border-outline-variant w-1/3">Header</th>
+            <th className="p-2.5">Value</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-outline-variant/40">
+          {headerEntries.map(([key, value], i) => (
+            <tr key={i} className="hover:bg-surface-container/50 transition-colors">
+              <td className="p-2.5 font-semibold text-primary border-r border-outline-variant font-mono text-[11px]">
+                {key}
+              </td>
+              <td className="p-2.5 text-on-surface-variant font-mono text-[11px]">
+                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ─── Sub-Component: SQL Queries View ────────────────────────────────────────
+function ResponseQueriesView({ queries = [], nPlusOneDetected = false }) {
+  return (
+    <div className="space-y-3">
+      {nPlusOneDetected && (
+        <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs flex items-center gap-2">
+          <TriangleAlert size={14} />
+          <span>N+1 Query Issue Detected across database execution</span>
+        </div>
+      )}
+
+      {queries.length === 0 ? (
+        <div className="text-center py-8 text-xs text-on-surface-variant">
+          No SQL queries recorded for this execution.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {queries.map((q, idx) => (
+            <div
+              key={idx}
+              className="p-3 rounded-lg border border-outline-variant bg-surface space-y-2"
+            >
+              <div className="flex justify-between items-center text-[10px] text-on-surface-variant">
+                <span className="font-bold font-mono text-primary">QUERY #{idx + 1}</span>
+                <div className="flex items-center gap-2">
+                  {q.src_loc && <span className="font-mono text-zinc-400">{q.src_loc}</span>}
+                  {q.time_ms !== undefined && (
+                    <span className="text-emerald-400 font-mono font-bold">{q.time_ms} ms</span>
+                  )}
+                </div>
+              </div>
+              <SqlViewer sql={q.sql || q.fingerprint || ''} maxHeight="200px" />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Sub-Component: Summary View ────────────────────────────────────────────
+function ResponseSummaryView({ metrics = {}, analysis = [] }) {
+  const totalQueries = metrics.total_queries ?? 0
+  const uniqueFingerprints = metrics.unique_fingerprints ?? 0
+  const dbTime = metrics.db_time_ms !== undefined ? `${metrics.db_time_ms} ms` : '—'
+  const duplicateQueries = totalQueries - uniqueFingerprints
+
+  return (
+    <div className="space-y-4">
+      {/* Dynamic Summary Cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="p-3 rounded-lg border border-outline-variant bg-surface">
+          <span className="text-[10px] font-label-caps uppercase text-on-surface-variant tracking-wider">
+            Total Queries
+          </span>
+          <p className="text-xl font-bold mt-1 text-primary">{totalQueries}</p>
+        </div>
+        <div className="p-3 rounded-lg border border-outline-variant bg-surface">
+          <span className="text-[10px] font-label-caps uppercase text-on-surface-variant tracking-wider">
+            Duplicate Queries
+          </span>
+          <p className={`text-xl font-bold mt-1 ${duplicateQueries > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+            {duplicateQueries > 0 ? `${duplicateQueries} (N+1)` : '0'}
+          </p>
+        </div>
+        <div className="p-3 rounded-lg border border-outline-variant bg-surface">
+          <span className="text-[10px] font-label-caps uppercase text-on-surface-variant tracking-wider">
+            DB Execution Time
+          </span>
+          <p className="text-xl font-bold mt-1 text-emerald-400">{dbTime}</p>
+        </div>
+      </div>
+
+      {/* Dynamic Analysis & Suggestions */}
+      {analysis.length > 0 ? (
+        <div className="space-y-3">
+          <p className="font-semibold text-xs text-on-surface flex items-center gap-1.5">
+            <Lightbulb size={14} className="text-amber-400" /> Performance Analysis & Suggestions
+          </p>
+          <div className="space-y-2">
+            {analysis.map((item, idx) => (
+              <div key={idx} className="p-3 rounded-lg border border-outline-variant bg-surface space-y-1 text-xs">
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="font-bold text-amber-400">{item.target_model || 'Target Query'}</span>
+                  <span className="text-on-surface-variant">Executions: {item.count}</span>
+                </div>
+                {item.src_loc && <p className="text-[10px] font-mono text-zinc-400">Location: {item.src_loc}</p>}
+                {item.suggestion && (
+                  <p className="text-on-surface pt-1">
+                    <span className="text-primary font-semibold">Suggestion: </span>
+                    <code className="font-mono text-xs text-emerald-300 bg-surface-container px-1 py-0.5 rounded border border-outline-variant/50">
+                      {item.suggestion}
+                    </code>
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="p-3 rounded-lg border border-outline-variant bg-surface text-xs text-on-surface-variant">
+          No performance issues detected for this query run.
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Sub-Component: Side Effects View ───────────────────────────────────────
+function ResponseSideEffectsView({ sideEffects = [] }) {
+  if (sideEffects.length === 0) {
+    return (
+      <div className="space-y-3 text-xs">
+        <p className="font-semibold text-on-surface">Database Mutations / Side Effects</p>
+        <div className="p-3 border border-outline-variant rounded-lg bg-surface text-on-surface-variant">
+          No side effect warnings recorded during this execution.
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3 text-xs">
+      <p className="font-semibold text-on-surface">Database Mutations / Side Effects</p>
+      <div className="divide-y divide-outline-variant/30 border border-outline-variant rounded-lg overflow-hidden">
+        {sideEffects.map((item, idx) => (
+          <div key={idx} className="flex items-start gap-2.5 px-3 py-2.5 bg-surface hover:bg-surface-container/40 transition-colors">
+            {item.type === 'warning' ? (
+              <TriangleAlert size={14} className="text-amber-400 shrink-0 mt-0.5" />
+            ) : (
+              <CheckCircle size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+            )}
+            <span className="text-on-surface-variant">{typeof item === 'string' ? item : item.message || JSON.stringify(item)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Component: ResponseWorkbench ───────────────────────────────────────
 export function ResponseWorkbench({
   profileResult,
   loading = false,
+  metrics,
   'data-label': testId = 'response-workbench',
 }) {
-  // Read active response tab from UI store
-  const {
-    activeResponseTab,
-    setActiveResponseTab,
-  } = useUiStore()
+  const { activeResponseTab, setActiveResponseTab } = useUiStore()
 
-  const [viewMode, setViewMode] = useState('pretty')
-  const [expandState, setExpandState] = useState(null) // null | true | false
+  // Parse result dynamic data according to profiler output schema
+  const queries = profileResult?.queries || []
+  const responseData = profileResult?.response_body ?? (profileResult?.error ? null : EMPTY_RESPONSE)
+  const headers = profileResult?.request?.headers || profileResult?.headers || {}
+  const analysis = profileResult?.analysis || profileResult?.metrics?.n_plus_one_groups || []
+  const sideEffects = profileResult?.side_effect_warnings || []
 
-  const expandFn = useCallback(
-    (expandState) => {
-      // null = default (collapsed top-level only), true = all expanded, false = all collapsed
-      return expandState === true
-        ? allExpanded
-        : expandState === false
-          ? collapseAllNested
-          : (level) => level < 1 // default: top-level open
-    },
-    []
-  )
-
+  // Dynamic tab items with real counts
   const responseTabs = [
     { id: 'response', label: 'Response' },
-    { id: 'headers', label: 'Headers' },
-    { id: 'queries', label: 'SQL Queries', count: profileResult?.sql_queries?.length || EMPTY_SQL_QUERIES.length },
+    { id: 'headers', label: 'Headers', count: Object.keys(headers).length },
+    { id: 'queries', label: 'SQL Queries', count: queries.length },
     { id: 'summary', label: 'Summary' },
-    { id: 'sideEffects', label: 'Side Effects' },
-    { id: 'logs', label: 'Logs' },
+    { id: 'sideEffects', label: 'Side Effects', count: sideEffects.length },
   ]
 
-  const jsonData = profileResult?.response?.data || profileResult?.data || EMPTY_RESPONSE
-  const jsonString = JSON.stringify(jsonData, null, 2)
-
   return (
-    <section
-      className="flex-1 flex flex-col bg-background overflow-hidden relative"
-      data-label={testId}
-    >
-      {/* Metrics strip */}
+    <section className="flex-1 flex flex-col bg-background overflow-hidden relative" data-label={testId}>
+      {/* Metrics Header Strip */}
       <ResponseMetrics
-        status={'200 OK'}
-        time={'14.2 ms'}
-        size={'1.2 KB'}
+        status={metrics?.status || '—'}
+        time={metrics?.time || '—'}
+        size={metrics?.size || '—'}
         testId={`${testId}-metrics`}
       />
 
+      {/* Tab Navigation */}
       <PaneTabs
         tabs={responseTabs}
         activeId={activeResponseTab}
@@ -121,197 +252,41 @@ export function ResponseWorkbench({
         testId={`${testId}-tabs`}
       />
 
-      <div
-        className="flex-1 p-4 overflow-y-auto bg-surface-container-lowest text-on-surface relative"
-        data-label={`${testId}-content`}
-      >
-        {/* ── Loading ─────────────────────────────────────────────── */}
+      {/* Main Content Area */}
+      <div className="flex-1 p-4 overflow-y-auto bg-surface-container-lowest text-on-surface relative" data-label={`${testId}-content`}>
         {loading ? (
           <div className="flex items-center justify-center h-full gap-2 text-on-surface-variant">
             <Loader2 size={20} className="animate-spin" />
             <span className="text-xs">Executing target & profiling execution...</span>
           </div>
+        ) : profileResult?.error ? (
+          <ResponseErrorView error={profileResult.error} statusCode={profileResult.status_code} />
         ) : (
           <>
-            {/* ── 1. Response ─────────────────────────────────────── */}
             {activeResponseTab === 'response' && (
-              <div className="space-y-2">
-                {/* Toolbar */}
-                <div className="flex items-center gap-2 mb-2">
-                  <ViewToggle mode={viewMode} onChange={setViewMode} />
-                  {viewMode === 'pretty' && (
-                    <div className="flex items-center gap-0.5 bg-surface-container border border-outline-variant rounded p-0.5">
-                      <button
-                        type="button"
-                        title="Expand all"
-                        onClick={() => setExpandState(true)}
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
-                          expandState === true ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:text-on-surface'
-                        }`}
-                      >
-                        <ChevronsUpDown size={12} />
-                        Expand All
-                      </button>
-                      <button
-                        type="button"
-                        title="Collapse all"
-                        onClick={() => setExpandState(false)}
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
-                          expandState === false ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:text-on-surface'
-                        }`}
-                      >
-                        <ChevronsDownUp size={12} />
-                        Collapse All
-                      </button>
-                    </div>
-                  )}
-                  <div className="ml-auto">
-                    <CopyButton text={jsonString} />
-                  </div>
-                </div>
-
-                {viewMode === 'pretty' ? (
-                  <div className="p-3 rounded-lg bg-surface border border-outline-variant overflow-x-auto">
-                    <JsonView
-                      data={jsonData}
-                      shouldExpandNode={expandFn}
-                      clickToExpandNode
-                      style={darkJsonStyles}
-                    />
-                  </div>
-                ) : (
-                  <pre className="p-3 rounded-lg bg-surface border border-outline-variant text-emerald-300 overflow-x-auto font-mono text-xs whitespace-pre-wrap break-all">
-                    {jsonString}
-                  </pre>
-                )}
-              </div>
+              <JsonViewer data={responseData} className="h-full min-h-[250px]" />
             )}
 
-            {/* ── 2. Response Headers ──────────────────────────────── */}
             {activeResponseTab === 'headers' && (
-              <div className="border border-outline-variant rounded overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-surface-container-low border-b border-outline-variant font-label-caps text-[10px] text-on-surface-variant">
-                      <th className="p-2.5 border-r border-outline-variant w-1/3">Header</th>
-                      <th className="p-2.5">Value</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-outline-variant/40">
-                    {EMPTY_RESPONSE_HEADERS.map((h, i) => (
-                      <tr key={i} className="hover:bg-surface-container/50 transition-colors">
-                        <td className="p-2.5 font-semibold text-primary border-r border-outline-variant font-mono text-[11px]">
-                          {h.key}
-                        </td>
-                        <td className="p-2.5 text-on-surface-variant font-mono text-[11px]">
-                          {h.value}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ResponseHeadersView headers={headers} />
             )}
 
-            {/* ── 3. SQL Queries ───────────────────────────────────── */}
             {activeResponseTab === 'queries' && (
-              <div className="space-y-3">
-                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs flex items-center gap-2">
-                  <TriangleAlert size={14} />
-                  <span>Detected N+1 Query: Author fetched 3 times in loop — consider <code className="font-mono">select_related('author')</code></span>
-                </div>
-                <div className="space-y-2">
-                  {EMPTY_SQL_QUERIES.map((q, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-2.5 rounded-lg border ${
-                        q.n1
-                          ? 'border-amber-500/40 bg-amber-500/5'
-                          : 'border-outline-variant bg-surface'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center text-[10px] text-on-surface-variant mb-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold">QUERY #{idx + 1}</span>
-                          {q.n1 && (
-                            <span className="px-1.5 py-px rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-bold">
-                              N+1
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-primary font-mono">{q.time}</span>
-                      </div>
-                      <code className="text-xs text-on-surface font-mono break-all">{q.sql}</code>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <ResponseQueriesView
+                queries={queries}
+                nPlusOneDetected={profileResult?.metrics?.n_plus_one_detected}
+              />
             )}
 
-            {/* ── 4. Summary ──────────────────────────────────────── */}
             {activeResponseTab === 'summary' && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-
-                    { label: 'Queries Executed', value: '4', color: 'text-primary' },
-                    { label: 'Duplicate Queries', value: '3 (N+1)', color: 'text-amber-400' },
-                    { label: 'Total Duration', value: '14.2 ms', color: 'text-emerald-400' },
-                  ].map(({ label, value, color }) => (
-                    <div key={label} className="p-3 rounded-lg border border-outline-variant bg-surface">
-                      <span className="text-[10px] font-label-caps uppercase text-on-surface-variant tracking-wider">{label}</span>
-                      <p className={`text-xl font-bold mt-1 ${color}`}>{value}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="p-3 rounded-lg border border-outline-variant bg-surface space-y-2 text-xs">
-                  <p className="font-semibold text-on-surface">Performance Suggestions</p>
-                  <ul className="list-disc pl-4 space-y-1 text-on-surface-variant">
-                    <li>Use <code className="text-primary font-mono">select_related('author')</code> to eliminate 3 duplicate queries.</li>
-                    <li>Consider adding a database index on <code className="text-primary font-mono">book.author_id</code>.</li>
-                    <li>Enable query caching for repeated identical lookups.</li>
-                  </ul>
-                </div>
-              </div>
+              <ResponseSummaryView
+                metrics={profileResult?.metrics || {}}
+                analysis={analysis}
+              />
             )}
 
-            {/* ── 5. Side Effects ──────────────────────────────────── */}
             {activeResponseTab === 'sideEffects' && (
-              <div className="space-y-3 text-xs">
-                <p className="font-semibold text-on-surface">Database Mutations / Side Effects</p>
-                <div className="divide-y divide-outline-variant/30 border border-outline-variant rounded-lg overflow-hidden">
-                  {[
-
-                    { Icon: CheckCircle, color: 'text-emerald-400', label: 'No database writes (INSERT/UPDATE/DELETE) detected.' },
-                    { Icon: CheckCircle, color: 'text-emerald-400', label: 'No Celery tasks spawned during request cycle.' },
-                    { Icon: Info, color: 'text-sky-400', label: 'Signal listeners triggered: post_init (×4).' },
-                    { Icon: Info, color: 'text-sky-400', label: 'Middleware: SessionMiddleware, CsrfViewMiddleware, AuthenticationMiddleware.' },
-                  ].map(({ Icon: RowIcon, color, label }) => (
-                    <div key={label} className="flex items-start gap-2.5 px-3 py-2.5 bg-surface hover:bg-surface-container/40 transition-colors">
-                      <RowIcon size={14} className={color} />
-                      <span className="text-on-surface-variant">{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── 6. Logs ──────────────────────────────────────────── */}
-            {activeResponseTab === 'logs' && (
-              <div className="p-3 rounded-lg bg-surface border border-outline-variant font-mono text-[11px] space-y-1.5 overflow-x-auto">
-                {[
-
-                  { level: 'INFO', color: 'text-emerald-400', msg: '2026-08-11 23:00:01 - Processing GET /api/v1/books/' },
-                  { level: 'DEBUG', color: 'text-zinc-400', msg: '2026-08-11 23:00:01 - Authenticated user: Anonymous' },
-                  { level: 'DEBUG', color: 'text-zinc-400', msg: '2026-08-11 23:00:01 - QuerySet evaluated: Book.objects.all()' },
-                  { level: 'WARN', color: 'text-amber-400', msg: '2026-08-11 23:00:01 - N+1 query issue detected in BookSerializer' },
-                  { level: 'INFO', color: 'text-emerald-400', msg: '2026-08-11 23:00:01 - Completed 200 OK in 14.2ms (4 queries)' },
-                ].map(({ level, color, msg }, i) => (
-                  <p key={i} className={color}>
-                    <span className="opacity-60">[{level}]</span> {msg}
-                  </p>
-                ))}
-              </div>
+              <ResponseSideEffectsView sideEffects={sideEffects} />
             )}
           </>
         )}

@@ -145,8 +145,11 @@ export function Workbench({
 
     const onMouseMove = (e) => {
       if (!isResizingRef.current) return
-      const delta = dragStartYRef.current - e.clientY
-      const newHeight = Math.max(120, dragStartHeightRef.current + delta)
+      const containerHeight = topRef.current?.parentElement?.offsetHeight ?? 600
+      const delta = e.clientY - dragStartYRef.current
+      // Ensure top pane height leaves at least 120px for the response pane at the bottom
+      const maxTopHeight = Math.max(120, containerHeight - 120)
+      const newHeight = Math.min(maxTopHeight, Math.max(120, dragStartHeightRef.current + delta))
       setTopHeight(newHeight)
     }
 
@@ -218,7 +221,7 @@ export function Workbench({
             <PaneResizer onResize={handleResizeMouseDown} />
 
             <div
-              className={`flex flex-col bg-surface-container-low overflow-hidden relative ${topHeight !== null ? 'flex-1' : 'flex-1 h-1/2'
+              className={`flex flex-col bg-surface-container-low overflow-hidden relative min-h-30 ${topHeight !== null ? 'flex-1' : 'flex-1 h-1/2'
                 }`}
               data-label={`${testId}-response`}
             >
@@ -228,9 +231,17 @@ export function Workbench({
                 profileResult={profileResult}
                 loading={profiling}
                 metrics={{
-                  status: '200 OK',
-                  time: '14.2 ms',
-                  size: '1.2 KB',
+                  status: profileResult?.error
+                    ? `${profileResult.status_code || 500} Internal Error`
+                    : profileResult?.status_code
+                      ? `${profileResult.status_code} OK`
+                      : '200 OK',
+                  time: profileResult?.metrics?.db_time_ms !== undefined
+                    ? `${profileResult.metrics.db_time_ms} ms`
+                    : '—',
+                  size: profileResult?.response_size !== undefined && profileResult?.response_size !== null
+                    ? `${profileResult.response_size} B`
+                    : '—',
                 }}
                 data-label={`${testId}-response-pane`}
               />
