@@ -125,42 +125,6 @@ class DjangoSandboxRunner:
     ) -> ProfileResult:
         """
         Execute one HTTP request against a discovered route, under observation.
-
-        ELI5: This is the "press Execute" button on the workbench. We:
-        1. Look up the route in the URL conf (or accept a path you pass).
-        2. Fill in any `<...>` blanks (from your explicit values or from a
-           real DB row).
-        3. Build an HTTP request with your headers/body/user attached.
-        4. Hand it to the view, watching every SQL query.
-        5. By default, writes DO NOT roll back — data persists so you can
-           run full CRUD cycles (POST → PUT → GET, for example). Set
-           sandbox=True if you want strict rollback so the caller's real
-           DB is untouched.
-        6. Package up the response and the query trace into a ProfileResult.
-
-        Args:
-            url_name_or_path: the URL pattern (e.g. `/api/v1/books/`) or the
-                URL name (e.g. `books-list`).
-            method: HTTP verb. One of GET, POST, PUT, PATCH, DELETE.
-            path_params: explicit values for `<...>` placeholders, e.g.
-                `{"pk": 42}`. Wins over the database lookup.
-            query_params: query string parameters as a dict.
-            headers: HTTP headers as a dict.
-            body: parsed JSON body for POST/PUT/PATCH. If you don't provide
-                one and the view has a serializer, the proxy layer can call
-                `suggest_payload()` to get a template you can edit.
-            user: a Django User instance (or None for AnonymousUser). The
-                runner doesn't authenticate it — that's the impersonation
-                layer's job in v0.5; here we just attach it to request.user.
-            sandbox: when True, writes roll back. Set False (default) when
-                the caller wants to persist data and run full CRUD cycles
-                (POST → PUT → GET, for example).
-
-        Returns:
-            A ProfileResult containing the HTTP response, every captured
-            query with file:line origins, and any N+1 flags with fixes.
-            When `sandbox=False` (default), any DB writes from the view
-            will persist and be visible to subsequent requests.
         """
         
         method = method.upper()
@@ -177,8 +141,7 @@ class DjangoSandboxRunner:
 
         route = self._lookup_route(url_name_or_path)
 
-        # Resolve path parameters. If we can't, surface a clear error instead
-        # of inventing data.
+        # Resolves URL path parameters (like <int:pk>) using either explicit values from the calle
         try:
             resolution = PathConverterResolver.resolve(route, explicit_params=path_params)
         except UnresolvablePathError as exc:
@@ -193,7 +156,7 @@ class DjangoSandboxRunner:
 
         concrete_url = resolution.url
 
-        # Match the resolved URL to its view callable.
+        # Match the resolved URL to its view callable, if the URL exists. If it doesn't exist, we return a 404.
         try:
             match = resolve(concrete_url)
             view_func = match.func
@@ -204,8 +167,7 @@ class DjangoSandboxRunner:
                 error=f"Route resolution failed: {exc}",
             )
 
-        # Find blocking I/O calls in the view's source code BEFORE running it
-        # so we can flag risky endpoints early.
+        # Find blocking I/O calls in the view's source code BEFORE running it so we can flag risky endpoints early.
         side_effect_warnings = _detect_blocking_calls(view_func)
 
         # Build and dispatch the request under observation.
@@ -227,6 +189,8 @@ class DjangoSandboxRunner:
 
         status_code = getattr(response, "status_code", 200)
         response_body = _extract_response_body(response)
+        response_size = _extract_response_size(response)
+            
         request_snapshot = {
             "route": url_name_or_path,
             "method": method,
@@ -247,6 +211,7 @@ class DjangoSandboxRunner:
             queries_captured=queries_captured,
             db_duration_ms=db_duration_ms,
             response_body=response_body,
+            response_size=response_size,
             side_effect_warnings=side_effect_warnings,
             request=request_snapshot,
             target_model=route.model,
@@ -293,6 +258,7 @@ class DjangoSandboxRunner:
         user and resolver metadata so the view can't tell it's not real.
         """
         request_func = getattr(self._request_factory, method.lower(), None)
+
         if request_func is None:
             raise ValueError(f"Unsupported HTTP method: {method}")
 
@@ -362,16 +328,30 @@ def _dispatch_view(view_func: Any, request: Request, match: Any) -> Response:
 def _extract_response_body(response: Any) -> Any:
     """
     Pull the parsed body out of a DRF Response, falling back to bytes decoding.
-
-    ELI5: DRF responses store their data in `.data` (a Python dict/list).
-    Plain Django responses store it in `.content` (bytes). We try both.
     """
     if hasattr(response, "data"):
         return response.data
+    
     content = getattr(response, "content", None)
+    
     if not content:
         return None
+    
     try:
         return json.loads(content.decode("utf-8"))
     except (ValueError, UnicodeDecodeError):
         return None
+
+
+def _extract_response_size(response: Any) -> int | None:
+    """
+    Calculate the response size in bytes for the frontend.
+    """
+    if hasattr(response, "data"):
+        try:
+            return len(json.dumps(response.data))
+        except (TypeError, ValueError):
+            return None
+    elif hasattr(response, "content"):
+        return len(response.content)
+    return None

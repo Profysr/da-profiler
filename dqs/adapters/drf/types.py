@@ -116,6 +116,7 @@ class ProfileResult:
         error: a human-readable error message, or None on success.
         side_effect_warnings: warnings about blocking I/O calls in the view.
         response_body: the parsed JSON body the view returned.
+        response_size: the size of the response body in bytes (None if not available).
         request: a snapshot of the request that was sent (for debugging).
     """
 
@@ -127,6 +128,7 @@ class ProfileResult:
     error: str | None = None
     side_effect_warnings: list[str] = field(default_factory=list)
     response_body: Any | None = None
+    response_size: int | None = None
     request: dict[str, Any] | None = None
 
 
