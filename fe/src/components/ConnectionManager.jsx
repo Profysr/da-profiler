@@ -51,12 +51,9 @@ export function ProjectSelector() {
         variant="outline"
         size="sm"
         className="gap-2 bg-surface-container-high border-dialog-border hover:border-primary/50 text-on-surface transition-all shadow-sm flex"
-        onClick={() =>
-          window.dispatchEvent(new CustomEvent("dqs:open-connections"))
-        }
       >
         <Plus className="w-4 h-4 text-primary" />
-        <span className="font-medium text-xs tracking-wide">Add Project</span>
+        <span className="font-medium text-xs tracking-wide">No connections available, create one</span>
       </Button>
     );
   }
@@ -324,7 +321,7 @@ export function ConnectionManager({ isOpen, onClose }) {
             <Button
               type="submit"
               disabled={isVerifying}
-              className="gap-2 bg-primary text-white hover:opacity-90 transition-all text-xs font-semibold rounded px-4 py-2"
+              className="gap-2 bg-primary text-white hover:opacity-90 transition-all text-xs font-semibold rounded px-4 py-2 flex items-center justify-center"
             >
               {isVerifying ? (
                 <>

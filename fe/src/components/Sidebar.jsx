@@ -1,20 +1,34 @@
 // src/components/Sidebar.jsx
-import { useState, useRef, useCallback } from 'react'
-import { useRoutesStore } from '../store/routesStore.js'
-import { useUiStore } from '../store/uiStore.js'
-import { TARGET_KINDS, TARGET_KIND_ORDER, ROUTE_FILTERS, getMethodBadgeClass } from '../utils/constants.js'
-import { ProjectSelector, ConnectionManager } from './ConnectionManager.jsx'
-import { Search, X, Loader2, ChevronDown, ChevronRight, Folder, Link as LinkIcon, RefreshCcw } from 'lucide-react'
+import { useState, useRef, useCallback } from "react";
+import { useRoutesStore } from "../store/routesStore.js";
+import { useUiStore } from "../store/uiStore.js";
+import {
+  TARGET_KINDS,
+  TARGET_KIND_ORDER,
+  ROUTE_FILTERS,
+  getMethodBadgeClass,
+} from "../utils/constants.js";
+import { ProjectSelector, ConnectionManager } from "./ConnectionManager.jsx";
+import {
+  Search,
+  X,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  Link as LinkIcon,
+  RefreshCcw,
+} from "lucide-react";
 
 // ----------------------------------------------------------------------
 // 1. Method Badges Component (with +n overflow)
 // ----------------------------------------------------------------------
-function MethodBadges({ methods = ['GET'], maxVisible = 2 }) {
-  if (!methods || methods.length === 0) return null
+function MethodBadges({ methods = ["GET"], maxVisible = 2 }) {
+  if (!methods || methods.length === 0) return null;
 
-  const visibleMethods = methods.slice(0, maxVisible)
-  const hiddenMethods = methods.slice(maxVisible)
-  const hiddenCount = hiddenMethods.length
+  const visibleMethods = methods.slice(0, maxVisible);
+  const hiddenMethods = methods.slice(maxVisible);
+  const hiddenCount = hiddenMethods.length;
 
   return (
     <div className="flex items-center gap-1 shrink-0">
@@ -26,13 +40,13 @@ function MethodBadges({ methods = ['GET'], maxVisible = 2 }) {
       {hiddenCount > 0 && (
         <span
           className="text-[9px] font-bold px-1 py-0.5 rounded bg-surface-container-highest text-on-surface-variant/80 border border-outline-variant/50"
-          title={`Additional methods: ${hiddenMethods.join(', ')}`}
+          title={`Additional methods: ${hiddenMethods.join(", ")}`}
         >
           +{hiddenCount}
         </span>
       )}
     </div>
-  )
+  );
 }
 
 // ----------------------------------------------------------------------
@@ -45,17 +59,25 @@ function SidebarHeader() {
         <ProjectSelector />
       </div>
     </div>
-  )
+  );
 }
 
 // ----------------------------------------------------------------------
 // 3. Search and Filter Component
 // ----------------------------------------------------------------------
-function SidebarSearch({ searchQuery, setSearchQuery, activeFilter, setActiveFilter }) {
+function SidebarSearch({
+  searchQuery,
+  setSearchQuery,
+  activeFilter,
+  setActiveFilter,
+}) {
   return (
     <div className="p-3 border-b border-outline-variant bg-surface-container-low space-y-2.5">
       <div className="relative w-full">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" />
+        <Search
+          size={14}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none"
+        />
         <input
           type="text"
           value={searchQuery}
@@ -66,7 +88,7 @@ function SidebarSearch({ searchQuery, setSearchQuery, activeFilter, setActiveFil
         {searchQuery && (
           <button
             type="button"
-            onClick={() => setSearchQuery('')}
+            onClick={() => setSearchQuery("")}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface text-xs"
           >
             <X size={12} />
@@ -76,58 +98,80 @@ function SidebarSearch({ searchQuery, setSearchQuery, activeFilter, setActiveFil
 
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
         {ROUTE_FILTERS.map((f) => {
-          const isActive = activeFilter === f.value || activeFilter === f.id
+          const isActive = activeFilter === f.value || activeFilter === f.id;
           return (
             <button
               key={f.value}
               type="button"
               onClick={() => setActiveFilter(f.value)}
-              className={`text-[10px] px-2.5 py-1 rounded transition-colors font-medium whitespace-nowrap ${isActive
-                  ? 'bg-primary text-white font-bold shadow-sm'
-                  : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface border border-outline-variant'
-                }`}
+              className={`text-[10px] px-2.5 py-1 rounded transition-colors font-medium whitespace-nowrap ${
+                isActive
+                  ? "bg-primary text-white font-bold shadow-sm"
+                  : "bg-surface-container-high text-on-surface-variant hover:text-on-surface border border-outline-variant"
+              }`}
             >
               {f.label}
             </button>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }
 
 // ----------------------------------------------------------------------
 // 4. Target Route Item
 // ----------------------------------------------------------------------
-function TargetItem({ target, isSelected, onSelect }) {
-  const methods = target.target_details?.methods || ['GET']
-  const path = target.target_details?.path || target.name || 'Unnamed Target'
+function TargetItem({ target, isSelected, onSelect, index }) {
+  const methods = target.target_details?.methods || ["GET"];
+  const path = target.target_details?.path || target.name || "Unnamed Target";
 
   return (
     <button
       type="button"
       onClick={() => onSelect?.(target)}
-      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-left transition-all text-xs gap-2 group ${isSelected
-          ? 'bg-primary/20 text-primary font-bold border-l-2 border-primary shadow-sm'
-          : 'hover:bg-surface-container-high text-on-surface/90'
-        }`}
+      className={`w-full px-2.5 py-2 rounded text-left transition-all text-xs flex items-center gap-2.5 group ${
+        isSelected
+          ? "bg-primary/20 text-primary font-bold border-l-2 border-primary shadow-sm"
+          : "hover:bg-surface-container-high text-on-surface/90"
+      }`}
     >
-      <MethodBadges methods={methods} maxVisible={2} />
-
-      <span className="truncate font-mono text-[11px] flex-1 text-on-surface/90" title={path}>
-        {path}
+      {/* Index Counter (Left Column) */}
+      <span className="font-mono text-[10px] text-on-surface-variant/60 min-w-5 text-right shrink-0 select-none">
+        {index + 1}.
       </span>
+
+      {/* Right Column (Stacked Badges + URL) */}
+      <div className="flex flex-col gap-1 min-w-0 flex-1">
+        <div className="flex items-center">
+          <MethodBadges methods={methods} maxVisible={2} />
+        </div>
+
+        <span
+          className="truncate font-mono text-[11px] text-on-surface/90 block"
+          title={path}
+        >
+          {path}
+        </span>
+      </div>
     </button>
-  )
+  );
 }
 
 // ----------------------------------------------------------------------
 // 5. Target Folder Group Component
 // ----------------------------------------------------------------------
-function TargetFolder({ kind, targets, isExpanded, onToggle, selectedTarget, onSelectTarget }) {
-  if (!targets || targets.length === 0) return null
+function TargetFolder({
+  kind,
+  targets,
+  isExpanded,
+  onToggle,
+  selectedTarget,
+  onSelectTarget,
+}) {
+  if (!targets || targets.length === 0) return null;
 
-  const meta = TARGET_KINDS[kind] || {}
+  const meta = TARGET_KINDS[kind] || {};
 
   return (
     <div className="space-y-1">
@@ -148,8 +192,9 @@ function TargetFolder({ kind, targets, isExpanded, onToggle, selectedTarget, onS
 
       {isExpanded && (
         <div className="pl-4 space-y-1 border-l border-outline-variant ml-3">
-          {targets.map((target) => (
+          {targets.map((target, idx) => (
             <TargetItem
+              index={idx}
               key={target.id}
               target={target}
               isSelected={selectedTarget?.id === target.id}
@@ -159,19 +204,27 @@ function TargetFolder({ kind, targets, isExpanded, onToggle, selectedTarget, onS
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // ----------------------------------------------------------------------
 // 6. Navigation Tree Container
 // ----------------------------------------------------------------------
-function SidebarTree({ loading, filteredTargets, groupedTargets, expandedFolders, onToggleFolder, selectedTarget, onSelectTarget }) {
+function SidebarTree({
+  loading,
+  filteredTargets,
+  groupedTargets,
+  expandedFolders,
+  onToggleFolder,
+  selectedTarget,
+  onSelectTarget,
+}) {
   if (loading) {
     return (
       <div className="p-4 flex-1 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2">
         <Loader2 size={14} className="animate-spin" />
       </div>
-    )
+    );
   }
 
   if (filteredTargets.length === 0) {
@@ -179,7 +232,7 @@ function SidebarTree({ loading, filteredTargets, groupedTargets, expandedFolders
       <div className="p-4 text-center text-xs text-on-surface-variant">
         No targets found for current collection/filter.
       </div>
-    )
+    );
   }
 
   return (
@@ -196,7 +249,7 @@ function SidebarTree({ loading, filteredTargets, groupedTargets, expandedFolders
         />
       ))}
     </nav>
-  )
+  );
 }
 
 // ----------------------------------------------------------------------
@@ -213,9 +266,11 @@ function SidebarFooter({ onOpenConnManager }) {
         <LinkIcon size={14} />
         <span>Manage Connections</span>
       </button>
-      <span className="text-xs font-mono text-on-surface-variant/60">v1.0.0</span>
+      <span className="text-xs font-mono text-on-surface-variant/60">
+        v1.0.0
+      </span>
     </div>
-  )
+  );
 }
 
 // ----------------------------------------------------------------------
@@ -224,7 +279,7 @@ function SidebarFooter({ onOpenConnManager }) {
 export function Sidebar({
   onSelectTarget,
   selectedTarget,
-  "data-label": testId = 'sidebar-navigator',
+  "data-label": testId = "sidebar-navigator",
 }) {
   const {
     filteredTargets,
@@ -234,61 +289,61 @@ export function Sidebar({
     setActiveFilter,
     loading,
     fetchTargets,
-  } = useRoutesStore()
-  const {
-    sidebarWidth,
-    setSidebarWidth,
-  } = useUiStore()
-  const [isConnManagerOpen, setIsConnManagerOpen] = useState(false)
+  } = useRoutesStore();
+  const { sidebarWidth, setSidebarWidth } = useUiStore();
+  const [isConnManagerOpen, setIsConnManagerOpen] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState({
     view: true,
     task: true,
     consumer: false,
     signal: false,
-  })
+  });
 
-  const isResizingRef = useRef(false)
-  const startXRef = useRef(0)
-  const startWidthRef = useRef(280)
+  const isResizingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(280);
 
   const toggleFolder = useCallback((kind) => {
-    setExpandedFolders((prev) => ({ ...prev, [kind]: !prev[kind] }))
-  }, [])
+    setExpandedFolders((prev) => ({ ...prev, [kind]: !prev[kind] }));
+  }, []);
 
   const handleResizeMouseDown = useCallback(
     (e) => {
-      e.preventDefault()
-      isResizingRef.current = true
-      startXRef.current = e.clientX
-      startWidthRef.current = sidebarWidth
-      document.body.style.cursor = 'col-resize'
-      document.body.style.userSelect = 'none'
+      e.preventDefault();
+      isResizingRef.current = true;
+      startXRef.current = e.clientX;
+      startWidthRef.current = sidebarWidth;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
 
       const onMouseMove = (e) => {
-        if (!isResizingRef.current) return
-        const delta = e.clientX - startXRef.current
-        const newWidth = Math.max(220, Math.min(480, startWidthRef.current + delta))
-        setSidebarWidth(newWidth)
-      }
+        if (!isResizingRef.current) return;
+        const delta = e.clientX - startXRef.current;
+        const newWidth = Math.max(
+          220,
+          Math.min(480, startWidthRef.current + delta),
+        );
+        setSidebarWidth(newWidth);
+      };
 
       const onMouseUp = () => {
-        isResizingRef.current = false
-        document.body.style.cursor = ''
-        document.body.style.userSelect = ''
-        document.removeEventListener('mousemove', onMouseMove)
-        document.removeEventListener('mouseup', onMouseUp)
-      }
+        isResizingRef.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      };
 
-      document.addEventListener('mousemove', onMouseMove)
-      document.addEventListener('mouseup', onMouseUp)
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
     },
-    [sidebarWidth, setSidebarWidth]
-  )
+    [sidebarWidth, setSidebarWidth],
+  );
 
   const groupedTargets = TARGET_KIND_ORDER.reduce((acc, kind) => {
-    acc[kind] = filteredTargets.filter((t) => (t.kind || 'view') === kind)
-    return acc
-  }, {})
+    acc[kind] = filteredTargets.filter((t) => (t.kind || "view") === kind);
+    return acc;
+  }, {});
 
   return (
     <>
@@ -344,5 +399,5 @@ export function Sidebar({
         onClose={() => setIsConnManagerOpen(false)}
       />
     </>
-  )
+  );
 }
