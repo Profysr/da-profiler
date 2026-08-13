@@ -51,6 +51,7 @@
 | **v0.35.0** | Workbench UI + `suggest_payload()` (Human Surface) | 🔲 **PLANNED** |
 | **v0.4.0** | MCP Server & Agentic Loop (Agent Surface) | 🔲 **PLANNED** |
 | **v0.5.0** | Auth Impersonation, AuthZ Audit Matrix & Hardened Execution Proxy | 🔲 **PLANNED** |
+| **v0.6.0** | Introspector Dual-Mode: Package Routes & Manual URL Execution | 🔲 **PLANNED** |
 | **v1.0.0** | Launch: Workbench UI + MCP + Auth, together | 🔮 **FUTURE** |
 
 ---
@@ -249,6 +250,29 @@ The v0.3 deliverables above were **deleted or repurposed** as part of the v0.35 
 - [ ] `tests/adapters/drf/auth/test_impersonation.py` — each auth mode, anonymous handling, missing-user error.
 - [ ] `tests/adapters/drf/auth/test_audit.py` — matrix generation, leak detection, transaction isolation between roles.
 - [ ] End-to-end: UI fires a request through the proxy, MCP fires the same request, results match byte-for-byte.
+
+---
+
+## v0.6.0 — Introspector Dual-Mode: Package Routes & Manual URL Execution
+
+> Status: PLANNED 🔲
+> **Why this comes after v0.5:** by then the execution proxy is the single entry point for both surfaces, and the runner's `_lookup_route()` is the one place a manually-typed URL flows through — so this becomes a small, contained change on top of a stable proxy instead of a redesign.
+
+### Problem
+
+`DjangoIntrospector.list_all_routes()` has exactly one mode: it walks the URL tree but **excludes** views whose module starts with `django.contrib.*` or `django.views.*` (Django admin, auth, static serving, etc.) to avoid noisy output and AST parse errors on framework-built-in views. That filtered list feeds `GET /profiler/manage/routes` and the workbench sidebar, and the URL bar is currently read-only — so a user cannot test framework-provided endpoints like `/admin/login/` at all.
+
+Meanwhile the runner already *sort of* executes them: when `_lookup_route()` doesn't find a URL in the filtered list it falls back to a bare-bones `Route(methods=["GET"], kind="api_view")`, and Django's own `resolve()` still matches the real URL. It works, but with wrong method metadata, no path-param extraction, and an empty `request_snapshot.path_params`.
+
+### Solution — two modes, one method
+
+- [ ] **`DjangoIntrospector.list_all_routes(include_installed_apps: bool = False)`** — new keyword argument. When `True`, the `_is_installed_app_view()` skip is bypassed and **every** route in the URL tree is returned, including Django admin / contrib / static views.
+- [ ] **`/manage/routes` stays as-is** — called without the flag, still returns the curated user-project list for the sidebar.
+- [ ] **`runner._lookup_route()` calls with `include_installed_apps=True`** — a manually-typed URL like `/admin/login/` resolves to a full `Route` (real methods, `url_params`, `kind`, `name`) so execution, path-param resolution, and the request snapshot are all accurate.
+- [ ] **Re-enable the workbench URL bar** — make the path input editable again (keeping sidebar selection), so users can type any URL — including package-defined ones — and execute it through the same proxy.
+- [ ] **Prerequisite fix — FBV method metadata** — `_analyze_fbv()` currently reads `http_method_names` / `allowed_methods` from `inspect.unwrap(callback)` (the raw function), but Django/DRF decorators attach that metadata to the *wrapper*, not the original function, so standard FBVs come back with `executable=False` and empty methods. Read the attribute from the `callback` wrapper (or walk the wrapper chain without unwrapping) so FBV routes carry their real methods. Without this, manual execution of plain FBVs reports wrong method metadata.
+- [ ] **Optional perf win** — `_lookup_route()` re-walks the entire URL tree on every `execute_request` call; cache the route map per-process since the URL tree is static at runtime.
+- [ ] **Tests** — admin/contrib URL resolves to a full `Route`; a typed `/admin/login/` executes end-to-end; `/manage/routes` output is unchanged.
 
 ---
 

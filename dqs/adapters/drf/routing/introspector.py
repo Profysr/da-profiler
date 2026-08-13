@@ -78,25 +78,30 @@ class DjangoIntrospector:
     plain Django function-based views.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, urlconf: str | None = None) -> None:
         if not getattr(settings, "DEBUG", False):
             raise ImproperlyConfigured(
                 "DjangoIntrospector can only run when DEBUG=True. "
                 "Route introspection in production would leak your URL structure."
             )
-        self.resolver = get_resolver()
+        self.resolver = get_resolver(urlconf)
 
     # ------------------------------------------------------------------------
     # 1. The main entry point
     # ------------------------------------------------------------------------
     def list_all_routes(self) -> list[Route]:
         """
-        Recursively scan the entire URL tree and return one Route per
+        Recursively scan the URL tree and return one Route per
         discovered DRF route.
 
-        ELI5: Start at the root of your project's URLs, then walk every
-        `include()` and every leaf route. Skip any URL that starts with
-        `/profiler/` (those are OUR endpoints; we don't profile ourselves).
+        ELI5: Start at the root of your project's URLs (or a custom
+        urlconf if provided), then walk every `include()` and every
+        leaf route. Skip any URL that starts with `/profiler/`
+        (those are OUR endpoints; we don't profile ourselves).
+
+        Args:
+            urlconf: Optional Python path to a URL configuration module.
+                     If not provided, uses Django's ROOT_URLCONF setting.
         """
         routes: list[Route] = []
         self._walk(self.resolver.url_patterns, prefix="/", routes=routes)
@@ -404,6 +409,9 @@ class DjangoIntrospector:
     # -------------------------------------------------------------------------
     # 4b. Function-Based View analysis (plain FBV, DRF @api_view FBV)
     # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # 4b. Function-Based View analysis (plain FBV, DRF @api_view FBV)
+    # -------------------------------------------------------------------------
     def _analyze_fbv(
         self,
         callback: Any,
@@ -427,11 +435,30 @@ class DjangoIntrospector:
             name = pattern.name or getattr(unwrapped, "__name__", "unknown_drf_fbv")
             kind = "api_view"
         else:
-            methods = [
-                m.upper()
-                for m in getattr(unwrapped, "http_method_names", [])
-                if m.upper() in VALID_HTTP_METHODS
-            ]
+            # 1. Check for Django's @require_http_methods / @require_POST / @require_GET decorators
+            methods = []
+            target_func = callback
+            while hasattr(target_func, "__wrapped__"):
+                if getattr(target_func, "__closure__", None):
+                    for cell in target_func.__closure__:
+                        contents = cell.cell_contents
+                        if isinstance(contents, (list, tuple, set)) and all(
+                            isinstance(x, str) for x in contents
+                        ):
+                            methods = [
+                                m.upper()
+                                for m in contents
+                                if m.upper() in VALID_HTTP_METHODS
+                            ]
+                            break
+                if methods:
+                    break
+                target_func = target_func.__wrapped__
+
+            # 2. Fallback: Plain Django FBVs accept standard HTTP methods by default
+            if not methods:
+                methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+
             name = pattern.name or getattr(unwrapped, "__name__", "unknown_fbv")
             kind = "function_view"
 
