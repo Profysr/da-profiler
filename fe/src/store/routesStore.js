@@ -1,7 +1,6 @@
 // store/routesStore.js
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { ROUTE_FILTERS } from '../utils/constants.js'
 import { useConnectionsStore } from './connectionsStore.js'
 
 function filterRoutes(routes, searchQuery, activeFilter) {
@@ -57,6 +56,17 @@ export const useRoutesStore = create(
         set({ loading: true, error: null })
         try {
           const data = await loadTargets()
+          if (data.error) {
+            set({ 
+              loading: false, 
+              error: data.error,
+              targets: [],
+              filteredTargets: [],
+              counts: {},
+              total: 0,
+            })
+            return { error: data.error }
+          }
           const targets = data.targets || []
           const filtered = filterRoutes(targets, get().searchQuery, get().activeFilter)
           set({ 
@@ -67,15 +77,18 @@ export const useRoutesStore = create(
             loading: false,
             error: null,
           })
+          return { error: null }
         } catch (error) {
+          const errMessage = error.message || 'Failed to fetch targets'
           set({ 
             loading: false, 
-            error: error.message || 'Failed to fetch targets',
+            error: errMessage,
             targets: [],
             filteredTargets: [],
             counts: {},
             total: 0,
           })
+          return { error: errMessage }
         }
       },
       
@@ -119,9 +132,9 @@ export const useRoutesStore = create(
 // Subscribe to connection changes
 if (typeof window !== 'undefined') {
   useConnectionsStore.subscribe(
-    (state) => state.activeConnectionId,
-    (activeConnectionId) => {
-      if (activeConnectionId) {
+    (state) => state.selectedConnectionId,
+    (selectedConnectionId) => {
+      if (selectedConnectionId) {
         useRoutesStore.getState().onConnectionChange()
       }
     }

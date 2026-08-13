@@ -4,7 +4,7 @@ import { useRoutesStore } from '../store/routesStore.js'
 import { useUiStore } from '../store/uiStore.js'
 import { TARGET_KINDS, TARGET_KIND_ORDER, ROUTE_FILTERS, getMethodBadgeClass } from '../utils/constants.js'
 import { ProjectSelector, ConnectionManager } from './ConnectionManager.jsx'
-import { Search, X, Loader2, ChevronDown, ChevronRight, Folder, Link as LinkIcon } from 'lucide-react'
+import { Search, X, Loader2, ChevronDown, ChevronRight, Folder, Link as LinkIcon, RefreshCcw } from 'lucide-react'
 
 // ----------------------------------------------------------------------
 // 1. Method Badges Component (with +n overflow)
@@ -204,7 +204,7 @@ function SidebarTree({ loading, filteredTargets, groupedTargets, expandedFolders
 // ----------------------------------------------------------------------
 function SidebarFooter({ onOpenConnManager }) {
   return (
-    <div className="p-3 border-t border-outline-variant flex items-center justify-between text-xs text-on-surface-variant bg-surface-container">
+    <div className="p-3 mt-auto border-t border-outline-variant flex items-center justify-between text-xs text-on-surface-variant bg-surface-container">
       <button
         type="button"
         onClick={onOpenConnManager}
@@ -226,7 +226,15 @@ export function Sidebar({
   selectedTarget,
   "data-label": testId = 'sidebar-navigator',
 }) {
-  const { filteredTargets, searchQuery, setSearchQuery, activeFilter, setActiveFilter, loading } = useRoutesStore()
+  const {
+    filteredTargets,
+    searchQuery,
+    setSearchQuery,
+    activeFilter,
+    setActiveFilter,
+    loading,
+    fetchTargets,
+  } = useRoutesStore()
   const {
     sidebarWidth,
     setSidebarWidth,
@@ -298,6 +306,18 @@ export function Sidebar({
           activeFilter={activeFilter}
           setActiveFilter={setActiveFilter}
         />
+
+        {/* Refresh Routes Button */}
+        <div className="p-3 border-t border-outline-variant flex items-center justify-end bg-surface-container">
+          <button
+            onClick={() => fetchTargets()}
+            className="flex items-center gap-2 text-[10px] font-medium text-on-surface-variant hover:text-primary transition-colors"
+            title="Refresh routes list"
+          >
+            <RefreshCcw className="w-3.5 h-3.5" />
+            <span>Refresh</span>
+          </button>
+        </div>
 
         <SidebarTree
           loading={loading}

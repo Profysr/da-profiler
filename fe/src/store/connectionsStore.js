@@ -1,11 +1,12 @@
 // store/connectionsStore.js
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import { v4 as uuidv4 } from 'uuid'
-import { getHealth, getTargets } from '../api/endpoints.js'
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { getHealth, getTargets } from "../api/endpoints.js";
 
 function generateId() {
-  return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substr(2)
+  return crypto.randomUUID
+    ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
 
 export const useConnectionsStore = create(
@@ -13,105 +14,175 @@ export const useConnectionsStore = create(
     (set, get) => ({
       // State
       connections: [],
-      activeConnectionId: null,
+      selectedConnectionId: null,
       testingConnection: null,
       testResult: null,
-      
+
       // Actions
       addConnection: (name, baseUrl) => {
-        const id = generateId()
-        const normalizedUrl = baseUrl.replace(/\/$/, '')
-        set(state => ({
-          connections: [...state.connections, { id, name, baseUrl: normalizedUrl, connected: false }]
-        }))
+        const id = generateId();
+        const normalizedUrl = baseUrl.replace(/\/$/, "");
+        set((state) => ({
+          connections: [
+            ...state.connections,
+            { id, name, baseUrl: normalizedUrl, connected: false },
+          ],
+        }));
         // Auto-select first connection
-        if (get().connections.length === 0) {
-          set({ activeConnectionId: id })
+        if (!get().selectedConnectionId) {
+          set({ selectedConnectionId: id });
         }
-        return id
+        return id;
       },
-      
+
       removeConnection: (id) => {
-        set(state => {
-          const newConnections = state.connections.filter(c => c.id !== id)
-          let newActiveId = state.activeConnectionId
-          if (state.activeConnectionId === id) {
-            newActiveId = newConnections.length > 0 ? newConnections[0].id : null
+        set((state) => {
+          const newConnections = state.connections.filter((c) => c.id !== id);
+          let newSelectedId = state.selectedConnectionId;
+          // If the removed connection was selected, pick the next one
+          if (state.selectedConnectionId === id) {
+            newSelectedId =
+              newConnections.length > 0 ? newConnections[0].id : null;
           }
           return {
             connections: newConnections,
-            activeConnectionId: newActiveId
-          }
-        })
+            selectedConnectionId: newSelectedId,
+          };
+        });
       },
-      
+
       updateConnection: (id, updates) => {
-        set(state => ({
-          connections: state.connections.map(c => c.id === id ? { ...c, ...updates } : c)
-        }))
+        set((state) => ({
+          connections: state.connections.map((c) =>
+            c.id === id ? { ...c, ...updates } : c
+          ),
+        }));
       },
-      
-      setActiveConnection: (id) => {
-        set({ activeConnectionId: id })
+
+      setSelectedConnection: (id) => {
+        set({ selectedConnectionId: id });
+        if (id) {
+          get().ensureConnectionAlive(id);
+        }
       },
-      
+
       setConnectionStatus: (id, connected) => {
-        set(state => ({
-          connections: state.connections.map(c => c.id === id ? { ...c, connected } : c)
-        }))
+        set((state) => ({
+          connections: state.connections.map((c) =>
+            c.id === id ? { ...c, connected } : c
+          ),
+        }));
       },
-      
+
+      /**
+       * Checks connection health for the given connectionId or selectedConnection.
+       * Automatically updates `connected` status in the store.
+       * Returns standard response: { success, data, error, message, status }
+       */
+      ensureConnectionAlive: async (connectionId) => {
+        const targetId = connectionId || get().selectedConnectionId;
+        const conn =
+          get().connections.find((c) => c.id === targetId) ||
+          get().getSelectedConnection();
+
+        if (!conn) {
+          return {
+            success: false,
+            data: null,
+            error: "No connection selected",
+            message: "No connection selected",
+            status: null,
+          };
+        }
+
+        const health = await getHealth(conn.baseUrl);
+
+        // Synchronize connection status in store
+        get().setConnectionStatus(conn.id, health.success);
+
+        return health;
+      },
+
+      /**
+       * Test connection for an explicit baseUrl without modifying selected connection.
+       */
       testConnection: async (baseUrl) => {
-        const normalizedUrl = baseUrl.replace(/\/$/, '')
-        set({ testingConnection: normalizedUrl, testResult: null })
-        try {
-          const data = await getHealth(normalizedUrl)
-          const success = data.debug === true && data.router_configured === true
-          set({ 
-            testResult: { success, data, error: success ? null : 'DEBUG=False or router not configured' },
-            testingConnection: null
-          })
-          return { success, data }
-        } catch (error) {
-          set({ 
-            testResult: { success: false, error: error.message || 'Connection failed' },
-            testingConnection: null
-          })
-          return { success: false, error: error.message }
-        }
+        const normalizedUrl = baseUrl.replace(/\/$/, "");
+        set({ testingConnection: normalizedUrl, testResult: null });
+
+        const health = await getHealth(normalizedUrl);
+
+        set({
+          testResult: {
+            success: health.success,
+            data: health.data,
+            error: health.error,
+          },
+          testingConnection: null,
+        });
+
+        return health;
       },
-      
+
       clearTestResult: () => set({ testResult: null }),
-      
-      getActiveConnection: () => {
-        const { connections, activeConnectionId } = get()
-        return connections.find(c => c.id === activeConnectionId) || null
+
+      getSelectedConnection: () => {
+        const { connections, selectedConnectionId } = get();
+        return connections.find((c) => c.id === selectedConnectionId) || null;
       },
-      
+
       getConnection: (id) => {
-        return get().connections.find(c => c.id === id) || null
+        return get().connections.find((c) => c.id === id) || null;
       },
-      
-      // Load targets for active connection
+
+      /**
+       * Ensures connection health first, then loads targets.
+       */
       loadTargets: async () => {
-        const conn = get().getActiveConnection()
-        if (!conn) return { targets: [], counts: {}, total: 0 }
-        
-        try {
-          const data = await getTargets(conn.baseUrl)
-          return data
-        } catch (error) {
-          console.error('Failed to load targets:', error)
-          return { targets: [], counts: {}, total: 0 }
+        const conn = get().getSelectedConnection();
+        if (!conn) return { targets: [], counts: {}, total: 0 };
+
+        // 1. Ensure connection is alive FIRST
+        const health = await get().ensureConnectionAlive(conn.id);
+
+        // 2. Short-circuit if inactive or unreachable
+        if (!health.success) {
+          console.error("Aborting target load - connection inactive:", health.error);
+          return {
+            targets: [],
+            counts: {},
+            total: 0,
+            error: health.error || "Connection inactive or unreachable",
+          };
         }
-      }
+
+        // 3. Load targets using getTargets endpoint
+        const targetsResult = await getTargets(conn.baseUrl);
+        if (!targetsResult.success) {
+          console.error("Failed to load targets:", targetsResult.error);
+          return {
+            targets: [],
+            counts: {},
+            total: 0,
+            error: targetsResult.error,
+          };
+        }
+
+        return targetsResult.data;
+      },
     }),
     {
-      name: 'dqs.connections',
+      name: "dqs.connections",
       partialize: (state) => ({
         connections: state.connections,
-        activeConnectionId: state.activeConnectionId,
+        selectedConnectionId: state.selectedConnectionId,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state && state.selectedConnectionId) {
+          state.ensureConnectionAlive(state.selectedConnectionId);
+        }
+      },
     }
   )
-)
+);
+

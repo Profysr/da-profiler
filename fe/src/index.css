@@ -8,39 +8,39 @@
    ============================================================================= */
 
 @theme {
+  /* Claude-Inspired Dark Palette — Warm Minimalist Dark */
+  --color-background: #151515;
+  --color-on-background: #ffffff;
+
   /* Surfaces */
-  --color-surface: #0a0b0d;
-  --color-surface-dim: #070809;
-  --color-surface-bright: #1c1e24;
-  --color-surface-container-lowest: #050608;
-  --color-surface-container-low: #07080b;
-  --color-surface-container: #0b0d11;
-  --color-surface-container-high: #12151c;
-  --color-surface-container-highest: #161922;
-  --color-surface-variant: #232733;
+  --color-surface: #20201f;
+  --color-surface-dim: #181818;
+  --color-surface-bright: #2a2a29;
+  --color-surface-container-lowest: #101010;
+  --color-surface-container-low: #131313;
+  --color-surface-container: #20201f;
+  --color-surface-container-high: #262624;
+  --color-surface-container-highest: #30302e;
+  --color-surface-variant: #282826;
 
   /* Modals & Dialogs */
-  --color-dialog: #0d0f14;
-  --color-dialog-border: #282d3c;
+  --color-dialog: #1c1c1b;
+  --color-dialog-border: #333330;
 
   /* Text & Contrast */
-  --color-on-surface: #f1f5f9;
-  --color-on-surface-variant: #94a3b8;
+  --color-on-surface: #ffffff;
+  --color-on-surface-variant: #a1a19e;
 
   /* Outlines */
-  --color-outline: #333846;
-  --color-outline-variant: #1e222d;
+  --color-outline: #383835;
+  --color-outline-variant: #2a2a28;
 
-  /* Primary Brand (Postman Vibrant Orange) */
+  /* Primary Brand Accent */
   --color-primary: #ff6c37;
   --color-surface-tint: #ff6c37;
   --color-on-primary: #ffffff;
-  --color-primary-container: #c44717;
+  --color-primary-container: #da4f20;
   --color-on-primary-container: #ffffff;
-
-  /* Background */
-  --color-background: #050608;
-  --color-on-background: #f8fafc;
 
   /* Fonts */
   --font-sans: 'Inter', system-ui, sans-serif;

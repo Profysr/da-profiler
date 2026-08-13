@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { getApiClient } from '../api/client.js'
+import { executeRequest } from '../api/endpoints.js'
 import { useConnectionsStore } from './connectionsStore.js'
 
 export const useProfileStore = create((set, get) => ({
@@ -12,19 +12,25 @@ export const useProfileStore = create((set, get) => ({
   // Actions
   /**
    * Profile a selected target from the routes sidebar.
-   * Automatically builds the payload from target.id, target.kind,
-   * target.target_details.methods, target.target_details.path, etc.
    * Posts to /profiler/execute and stores the result.
-   *
-   * @param target - The selected target object from useRoutesStore
-   * @param extraPayload - Optional overrides for method, path, params, headers, bodyContent
-   * @returns The ProfileResult from the backend
    */
   profileTarget: async (target, extraPayload = {}) => {
-    const { getActiveConnection } = useConnectionsStore.getState()
-    const connection = getActiveConnection()
+    const { getSelectedConnection, ensureConnectionAlive } = useConnectionsStore.getState()
+    const connection = getSelectedConnection()
     if (!connection) {
-      throw new Error('No active connection')
+      throw new Error('No selected connection')
+    }
+
+    // 1. Verify connection is alive before proceeding
+    const health = await ensureConnectionAlive(connection.id)
+    if (!health.success) {
+      const errMessage = health.error || 'Connection inactive or misconfigured'
+      set({
+        loading: false,
+        error: errMessage,
+        result: { error: errMessage, status_code: health.status || 0 },
+      })
+      throw new Error(errMessage)
     }
 
     const payload = {
@@ -42,21 +48,22 @@ export const useProfileStore = create((set, get) => ({
     }
 
     set({ loading: true, error: null, lastPayload: payload })
-    try {
-      const client = getApiClient(connection.baseUrl)
-      const response = await client.post('/profiler/execute', payload)
-      const result = response.data
-      set({ result, loading: false, error: null })
-      return result
-    } catch (error) {
-      const errorMessage = error.message || 'Profiling failed'
+
+    const response = await executeRequest(connection.baseUrl, payload)
+
+    if (!response.success) {
+      const errorMessage = response.error || response.message || 'Profiling failed'
       set({
         loading: false,
         error: errorMessage,
-        result: { error: errorMessage, status_code: error.status || 0 },
+        result: { error: errorMessage, status_code: response.status || 0 },
       })
-      throw error
+      throw new Error(errorMessage)
     }
+
+    const result = response.data
+    set({ result, loading: false, error: null })
+    return result
   },
 
   /**
@@ -70,28 +77,41 @@ export const useProfileStore = create((set, get) => ({
    * @deprecated Use profileTarget(target, extraPayload) for new code
    */
   runProfile: async (payload) => {
-    const { getActiveConnection } = useConnectionsStore.getState();
-    const connection = getActiveConnection();
+    const { getSelectedConnection, ensureConnectionAlive } = useConnectionsStore.getState()
+    const connection = getSelectedConnection()
     if (!connection) {
-      throw new Error('No active connection');
+      throw new Error('No selected connection')
+    }
+
+    // 1. Verify connection is alive before proceeding
+    const health = await ensureConnectionAlive(connection.id)
+    if (!health.success) {
+      const errMessage = health.error || 'Connection inactive or misconfigured'
+      set({
+        loading: false,
+        error: errMessage,
+        result: { error: errMessage, status_code: health.status || 0 },
+      })
+      throw new Error(errMessage)
     }
 
     set({ loading: true, error: null, lastPayload: payload })
-    try {
-      const client = getApiClient(connection.baseUrl);
-      const response = await client.post('/profiler/execute', payload);
-      const result = response.data;
-      set({ result, loading: false, error: null })
-      return result
-    } catch (error) {
-      const errorMessage = error.message || 'Profiling failed'
+
+    const response = await executeRequest(connection.baseUrl, payload)
+
+    if (!response.success) {
+      const errorMessage = response.error || response.message || 'Profiling failed'
       set({
         loading: false,
         error: errorMessage,
-        result: { error: errorMessage, status_code: error.status || 0 },
+        result: { error: errorMessage, status_code: response.status || 0 },
       })
-      throw error
+      throw new Error(errorMessage)
     }
+
+    const result = response.data
+    set({ result, loading: false, error: null })
+    return result
   },
 
   clearResult: () => {

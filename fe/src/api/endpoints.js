@@ -1,39 +1,70 @@
 // api/endpoints.js
-//
-// Thin wrappers around the DQS HTTP API. Every function takes the backend's
-// base URL (e.g. "http://localhost:8000") and returns the parsed JSON
-// payload. All endpoints live under the /profiler/ namespace.
 
-import { getApiClient } from './client.js'
+import { sendApiRequest } from './client.js'
 
-// GET /profiler/connection/health — quick sanity check that DQS is reachable + configured.
+/**
+ * GET /profiler/connection/health
+ * Verifies backend connectivity, DEBUG status, and shadow DB configuration.
+ * Returns standard shape: { success, data, error, message, status }
+ */
 export async function getHealth(baseUrl) {
-  const client = getApiClient(baseUrl)
-  const response = await client.get('/profiler/connection/health')
-  return response.data
+  const res = await sendApiRequest(baseUrl, {
+    method: 'GET',
+    url: '/profiler/connection/health',
+  })
+
+  if (!res.success) {
+    return {
+      success: false,
+      data: res.data,
+      error: res.error || 'Connection unreachable.',
+      message: res.message || 'Connection unreachable.',
+      status: res.status,
+    }
+  }
+
+  const isHealthy = res.data?.status === 'ok' && res.data?.debug === true
+  if (!isHealthy) {
+    const errorMsg =
+      res.data?.error ||
+      'Connection is inactive or misconfigured (DEBUG=True required). Check Setup Guide'
+    return {
+      success: false,
+      data: res.data,
+      error: errorMsg,
+      message: errorMsg,
+      status: res.status,
+    }
+  }
+
+  return {
+    success: true,
+    data: res.data,
+    error: null,
+    message: 'Connection healthy',
+    status: res.status,
+  }
 }
 
-// GET /profiler/manage/routes — list every discoverable target (views, tasks, consumers).
+/**
+ * GET /profiler/manage/routes — list discoverable targets (views, tasks, consumers).
+ * Returns standard shape: { success, data, error, message, status }
+ */
 export async function getTargets(baseUrl) {
-  const client = getApiClient(baseUrl)
-  const response = await client.get('/profiler/manage/routes')
-  return response.data
+  return await sendApiRequest(baseUrl, {
+    method: 'GET',
+    url: '/profiler/manage/routes',
+  })
 }
 
-// POST /profiler/execute — run one request, return HTTP response + SQL trace.
-//
-// `payload` is the full request shape the runner expects:
-//   {
-//     target_id: "view:/api/v1/books/",
-//     method: "POST",
-//     path_params: { pk: 42 },
-//     query_params: { page: 1 },
-//     headers: { "X-Custom": "value" },
-//     body: { title: "Clean Code" },
-//     sandbox: true,   // default — writes roll back
-//   }
+/**
+ * POST /profiler/execute — run request in sandbox and return HTTP response + SQL trace.
+ * Returns standard shape: { success, data, error, message, status }
+ */
 export async function executeRequest(baseUrl, payload) {
-  const client = getApiClient(baseUrl)
-  const response = await client.post('/profiler/execute', payload)
-  return response.data
+  return await sendApiRequest(baseUrl, {
+    method: 'POST',
+    url: '/profiler/execute',
+    data: payload,
+  })
 }

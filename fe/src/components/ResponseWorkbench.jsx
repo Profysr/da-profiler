@@ -3,7 +3,7 @@ import { PaneTabs } from './PaneTabs.jsx'
 import { ResponseMetrics } from './ResponseMetrics.jsx'
 import { JsonViewer } from './JsonViewer.jsx'
 import { SqlViewer } from './SqlViewer.jsx'
-import { Loader2, TriangleAlert, CheckCircle, Info, Lightbulb } from 'lucide-react'
+import { Loader2, TriangleAlert, CheckCircle, Lightbulb } from 'lucide-react'
 import { useUiStore } from '../store/uiStore.js'
 
 // ─── Default Empty State Data ──────────────────────────────────────────────

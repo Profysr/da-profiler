@@ -21,7 +21,7 @@ export const useUiStore = create(
       sidebarWidth: 280,
 
       // Request panel
-      activeRequestTab: 'params',
+      activeRequestTab: 'pathParams',
 
       // Response panel
       activeResponseTab: 'response',

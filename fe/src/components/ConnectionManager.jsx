@@ -21,14 +21,14 @@ import { Button } from "./ui/Button.jsx";
 export function ProjectSelector() {
   const {
     connections,
-    activeConnectionId,
-    setActiveConnection,
-    getActiveConnection,
+    selectedConnectionId,
+    setSelectedConnection,
+    getSelectedConnection,
   } = useConnectionsStore();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const activeConnection = getActiveConnection();
+  const activeConnection = getSelectedConnection();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -41,7 +41,7 @@ export function ProjectSelector() {
   }, []);
 
   const handleSelect = (id) => {
-    setActiveConnection(id);
+    setSelectedConnection(id);
     setIsOpen(false);
   };
 
@@ -72,7 +72,7 @@ export function ProjectSelector() {
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <div className="relative flex items-center justify-center">
             <span
-              className={`w-2 h-2 rounded-full transition-all ${activeConnection?.connected ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" : "bg-zinc-500"}`}
+              className={`w-2 h-2 rounded-full transition-all ${activeConnection?.connected ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" : "bg-red-500"}`}
             />
           </div>
           <div className="flex flex-col min-w-0">
@@ -96,15 +96,16 @@ export function ProjectSelector() {
           </div>
           <div className="max-h-60 overflow-y-auto px-1 space-y-0.5">
             {connections.map((conn) => {
-              const isActive = conn.id === activeConnectionId;
+              const isActive = conn.id === selectedConnectionId;
               return (
                 <button
                   key={conn.id}
                   onClick={() => handleSelect(conn.id)}
-                  className={`w-full px-2.5 py-2 text-left flex items-center gap-2.5 rounded transition-all ${isActive
+                  className={`w-full px-2.5 py-2 text-left flex items-center gap-2.5 rounded transition-all ${
+                    isActive
                       ? "bg-primary/15 text-primary font-medium"
                       : "hover:bg-surface-container-highest text-on-surface"
-                    }`}
+                  }`}
                 >
                   <span
                     className={`w-2 h-2 rounded-full shrink-0 ${conn.connected ? "bg-emerald-400" : "bg-zinc-500"}`}
@@ -135,11 +136,11 @@ export function ProjectSelector() {
 export function ConnectionManager({ isOpen, onClose }) {
   const {
     connections,
-    activeConnectionId,
+    selectedConnectionId,
     addConnection,
     removeConnection,
     updateConnection,
-    setActiveConnection,
+    setSelectedConnection,
     testConnection,
     clearTestResult,
   } = useConnectionsStore();
@@ -159,12 +160,12 @@ export function ConnectionManager({ isOpen, onClose }) {
       if (!newName.trim() || !newUrl.trim()) return;
 
       const trimmedName = newName.trim();
-      const normalizedUrl = newUrl.trim().replace(/\/$/, '');
+      const normalizedUrl = newUrl.trim().replace(/\/$/, "");
 
       const duplicate = connections.find(
         (c) =>
           c.name.toLowerCase() === trimmedName.toLowerCase() ||
-          c.baseUrl.replace(/\/$/, '') === normalizedUrl,
+          c.baseUrl.replace(/\/$/, "") === normalizedUrl,
       );
       if (duplicate) {
         setValidationError(
@@ -222,9 +223,9 @@ export function ConnectionManager({ isOpen, onClose }) {
 
   const handleConnect = useCallback(
     (id) => {
-      setActiveConnection(id);
+      setSelectedConnection(id);
     },
-    [setActiveConnection],
+    [setSelectedConnection],
   );
 
   const handleDelete = useCallback(
@@ -306,7 +307,8 @@ export function ConnectionManager({ isOpen, onClose }) {
                 className="w-full bg-surface-container-lowest border-dialog-border font-mono text-xs text-on-surface"
               />
               <p className="mt-1 text-[10px] text-on-surface-variant/70 font-mono">
-                Host + port only (no trailing slash, no /profiler — the client adds it automatically). Any port works: 8000, 8001, 8003, etc.
+                Host + port only (no trailing slash, no /profiler — the client
+                adds it automatically). Any port works: 8000, 8001, 8003, etc.
               </p>
             </div>
           </div>
@@ -354,23 +356,21 @@ export function ConnectionManager({ isOpen, onClose }) {
           ) : (
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {connections.map((conn) => {
-                const isActive = conn.id === activeConnectionId;
+                const isActive = conn.id === selectedConnectionId;
                 const isEditing = editingId === conn.id;
                 const isChecking = checkingId === conn.id;
 
                 return (
                   <div
                     key={conn.id}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all ${isActive
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all ${
+                      isActive
                         ? "bg-primary/10 border-primary/40"
                         : "bg-surface-container-high border-dialog-border hover:border-outline"
-                      }`}
+                    }`}
                   >
                     <div
-                      className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${conn.connected
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : "bg-surface-variant text-on-surface-variant"
-                        }`}
+                      className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${conn.connected ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}
                     >
                       {conn.connected ? (
                         <Wifi className="w-4 h-4" />
@@ -419,13 +419,17 @@ export function ConnectionManager({ isOpen, onClose }) {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleSaveEdit(conn.id)}
-                            icon={<CheckCircle className="w-4 h-4 text-emerald-400" />}
+                            icon={
+                              <CheckCircle className="w-4 h-4 text-emerald-400" />
+                            }
                           />
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={handleCancelEdit}
-                            icon={<X className="w-4 h-4 text-on-surface-variant" />}
+                            icon={
+                              <X className="w-4 h-4 text-on-surface-variant" />
+                            }
                           />
                         </>
                       ) : (
@@ -435,27 +439,39 @@ export function ConnectionManager({ isOpen, onClose }) {
                             size="sm"
                             onClick={() => handleTestExisting(conn)}
                             disabled={isChecking}
-                            icon={isChecking ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <CheckCircle className="w-4 h-4 text-on-surface-variant hover:text-emerald-400" />}
+                            icon={
+                              isChecking ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                              ) : (
+                                <CheckCircle className="w-4 h-4 text-on-surface-variant hover:text-emerald-400" />
+                              )
+                            }
                           />
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEditClick(conn)}
-                            icon={<Edit2 className="w-4 h-4 text-on-surface-variant hover:text-primary" />}
+                            icon={
+                              <Edit2 className="w-4 h-4 text-on-surface-variant hover:text-primary" />
+                            }
                           />
                           {!isActive && (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleConnect(conn.id)}
-                              icon={<Play className="w-4 h-4 text-on-surface-variant hover:text-primary" />}
+                              icon={
+                                <Play className="w-4 h-4 text-on-surface-variant hover:text-primary" />
+                              }
                             />
                           )}
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(conn.id)}
-                            icon={<Trash2 className="w-4 h-4 text-on-surface-variant hover:text-red-400" />}
+                            icon={
+                              <Trash2 className="w-4 h-4 text-on-surface-variant hover:text-red-400" />
+                            }
                           />
                         </>
                       )}

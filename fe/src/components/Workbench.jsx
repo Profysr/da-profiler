@@ -28,7 +28,7 @@ export function Workbench({
   const { toast } = useToast()
   const { fetchTargets, selectedTarget, selectTarget } = useRoutesStore()
   const { profileTarget, loading: profiling, result: profileResult } = useProfileStore()
-  const { activeConnectionId } = useConnectionsStore()
+  const { selectedConnectionId } = useConnectionsStore()
   const { pathParams, queryParams } = useRequestStore()
 
   const [method, setMethod] = useState('GET')
@@ -51,8 +51,12 @@ export function Workbench({
   const topRef = useRef(null)
 
   useEffect(() => {
-    fetchTargets()
-  }, [fetchTargets, activeConnectionId])
+    fetchTargets().then((res) => {
+      if (res?.error) {
+        toast.error('Connection Inactive', res.error)
+      }
+    })
+  }, [])
 
   // ================================================
   // ── Seed path params from selected target ───────
@@ -82,8 +86,21 @@ export function Workbench({
   const handleSend = async () => {
     if (!selectedTarget) return
 
-    // All path params are required — the backend cannot resolve the URL without them.
-    // Block execution and surface the missing fields to the user.
+    // Verify connection health before proceeding
+    const { getSelectedConnection, ensureConnectionAlive } = useConnectionsStore.getState()
+    const activeConn = getSelectedConnection()
+    if (!activeConn) {
+      toast.error('No Connection Selected', 'Please select or add a project workspace.')
+      return
+    }
+
+    const health = await ensureConnectionAlive(activeConn.id)
+    if (!health.success) {
+      toast.error('Connection Inactive', health.error || 'Connection is unreachable or misconfigured.')
+      return
+    }
+
+    // All path params are required — the backend cannot resolve the URL without them. Block execution and surface the missing fields to the user.
     const missingParams = pathParams.filter((p) => p.enabled && p.value.trim() === '')
     if (missingParams.length > 0) {
       const names = missingParams.map((p) => p.key).join(', ')

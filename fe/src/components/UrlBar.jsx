@@ -2,6 +2,8 @@
 import { MethodSelector } from './MethodSelector.jsx'
 import { useConnectionsStore } from '../store/connectionsStore.js'
 import { Loader2, Send } from 'lucide-react'
+import { useProfileStore } from '../store/profileStore.js'
+import { useRoutesStore } from '../store/routesStore.js'
 
 export function UrlBar({
   method = 'GET',
@@ -11,9 +13,12 @@ export function UrlBar({
   loading = false,
   "data-label": testId = 'url-bar',
 }) {
-  const { getActiveConnection } = useConnectionsStore()
-  const activeConnection = getActiveConnection()
+  const { getSelectedConnection } = useConnectionsStore()
+    const { fetchTargets, selectedTarget, selectTarget } = useRoutesStore()
+  const activeConnection = getSelectedConnection()
   const baseUrl = activeConnection?.baseUrl || 'http://127.0.0.1:8000'
+
+  const isSendDisabled = loading || !activeConnection || !selectedTarget
 
   return (
     <div className="flex items-center gap-3" data-label={testId}>
@@ -51,9 +56,9 @@ export function UrlBar({
       <button
         type="button"
         onClick={onSend}
-        disabled={loading}
-        className="bg-primary text-white h-10 px-6 rounded-lg font-bold text-xs hover:opacity-90 transition-all flex items-center gap-2 shrink-0 disabled:opacity-60 shadow-[0_0_15px_rgba(255,108,55,0.3)] active:scale-95 cursor-pointer"
-        title="Send Request (Ctrl + Enter)"
+        disabled={isSendDisabled}
+        className="bg-primary text-white h-10 px-6 rounded-lg font-bold text-xs hover:opacity-90 transition-all flex items-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(255,108,55,0.3)] active:scale-95"
+        title={!activeConnection ? "No connection selected" : "Send Request (Ctrl + Enter)"}
       >
         {loading ? (
           <>
