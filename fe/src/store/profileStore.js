@@ -21,6 +21,16 @@ export const useProfileStore = create((set, get) => ({
       throw new Error('No selected connection')
     }
 
+    // 1. Check if target is executable — if not, show static analysis message and return
+    if (target.executable === false || target.executable === undefined && !target.can_execute) {
+      set({
+        loading: false,
+        error: 'This endpoint is marked as non-executable — static analysis only. Requests cannot be sent to this route.',
+        result: { error: 'This endpoint is marked as non-executable — static analysis only.', status_code: 0 },
+      })
+      throw new Error('This endpoint is marked as non-executable — static analysis only.')
+    }
+
     // 1. Verify connection is alive before proceeding
     const health = await ensureConnectionAlive(connection.id)
     if (!health.success) {

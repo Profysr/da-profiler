@@ -89,7 +89,11 @@ export function Workbench({ "data-label": testId = "workbench" }) {
     selectedTarget?.name ||
     basePathPattern;
 
-  const handleSend = async () => {
+  // Derive if target is executable — check route.executable first, fall back to can_execute
+  const isTargetExecutable =
+    selectedTarget?.executable !== undefined ? selectedTarget.executable : selectedTarget?.can_execute;
+
+const handleSend = async () => {
     if (!selectedTarget) return;
 
     // Verify connection health before proceeding
@@ -258,6 +262,18 @@ export function Workbench({ "data-label": testId = "workbench" }) {
               loading={profiling}
               data-label={`${testId}-url-bar`}
             />
+            
+            {/* Non-executable endpoint notice */}
+            {!isTargetExecutable && (
+              <div
+                className="p-2 bg-surface-container-low border-t border-outline-variant text-xs text-on-surface-variant/80"
+                data-label={`${testId}-non-executable-notice`}
+              >
+                <span className="font-mono">
+                  This endpoint is marked as non-executable — static analysis only.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Request / Response Split Panes */}

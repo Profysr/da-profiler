@@ -7,8 +7,10 @@ function filterRoutes(routes, searchQuery, activeFilter) {
   const query = searchQuery.toLowerCase().trim()
   
   return routes.filter((route) => {
-    // Filter by executable status
-if (activeFilter === 'executable' && !route.can_execute) return false
+    // Filter by executable status — use route.executable from introspector
+    // if available, otherwise fall back to TARGET_KINDS can_execute
+    const routeExecutable = route.executable !== undefined ? route.executable : route.can_execute
+if (activeFilter === 'executable' && !routeExecutable) return false
 if (activeFilter === 'params' && (!route.target_details?.path_params || route.target_details.path_params.length === 0)) return false
     
     // Filter by kind

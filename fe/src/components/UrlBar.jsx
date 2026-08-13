@@ -18,7 +18,9 @@ export function UrlBar({
   const activeConnection = getSelectedConnection()
   const baseUrl = activeConnection?.baseUrl || 'http://127.0.0.1:8000'
 
-  const isSendDisabled = loading || !activeConnection || !selectedTarget
+  const isSendDisabled = loading || !activeConnection || !selectedTarget || !(
+      selectedTarget.executable !== undefined ? selectedTarget.executable : selectedTarget.can_execute
+    )
 
   return (
     <div className="flex items-center gap-3" data-label={testId}>
