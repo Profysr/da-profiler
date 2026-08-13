@@ -1,15 +1,15 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
-import { Header } from './Header.jsx'
-import { Sidebar } from './Sidebar.jsx'
-import { UrlBar } from './UrlBar.jsx'
-import { RequestWorkbench } from './RequestWorkbench.jsx'
-import { ResponseWorkbench } from './ResponseWorkbench.jsx'
-import { useRoutesStore } from '../store/routesStore.js'
-import { useProfileStore } from '../store/profileStore.js'
-import { useConnectionsStore } from '../store/connectionsStore.js'
-import { useRequestStore } from '../store/requestStore.js'
-import { useUiStore } from '../store/uiStore.js'
-import { useToast } from './ui/toast.jsx'
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Header } from "./Header.jsx";
+import { Sidebar } from "./Sidebar.jsx";
+import { UrlBar } from "./UrlBar.jsx";
+import { RequestWorkbench } from "./RequestWorkbench.jsx";
+import { ResponseWorkbench } from "./ResponseWorkbench.jsx";
+import { useRoutesStore } from "../store/routesStore.js";
+import { useProfileStore } from "../store/profileStore.js";
+import { useConnectionsStore } from "../store/connectionsStore.js";
+import { useRequestStore } from "../store/requestStore.js";
+import { useUiStore } from "../store/uiStore.js";
+import { useToast } from "./ui/toast.jsx";
 
 function PaneResizer({ onResize }) {
   return (
@@ -19,20 +19,22 @@ function PaneResizer({ onResize }) {
       role="separator"
       aria-orientation="horizontal"
     />
-  )
+  );
 }
 
-export function Workbench({
-  "data-label": testId = 'workbench',
-}) {
-  const { toast } = useToast()
-  const { fetchTargets, selectedTarget, selectTarget } = useRoutesStore()
-  const { profileTarget, loading: profiling, result: profileResult } = useProfileStore()
-  const { selectedConnectionId } = useConnectionsStore()
-  const { pathParams, queryParams } = useRequestStore()
+export function Workbench({ "data-label": testId = "workbench" }) {
+  const { toast } = useToast();
+  const { fetchTargets, selectedTarget, selectTarget } = useRoutesStore();
+  const {
+    profileTarget,
+    loading: profiling,
+    result: profileResult,
+  } = useProfileStore();
+  const { selectedConnectionId } = useConnectionsStore();
+  const { pathParams, queryParams } = useRequestStore();
 
-  const [method, setMethod] = useState('GET')
-  const [basePathPattern] = useState('/api/v1/books/')
+  const [method, setMethod] = useState("GET");
+  const [basePathPattern] = useState("/api/v1/books/");
 
   const {
     activeSidebarNav,
@@ -43,81 +45,100 @@ export function Workbench({
     setActiveRequestTab,
     setActiveResponseTab,
     setTopHeight,
-  } = useUiStore()
+  } = useUiStore();
 
-  const isResizingRef = useRef(false)
-  const dragStartYRef = useRef(0)
-  const dragStartHeightRef = useRef(0)
-  const topRef = useRef(null)
+  const isResizingRef = useRef(false);
+  const dragStartYRef = useRef(0);
+  const dragStartHeightRef = useRef(0);
+  const topRef = useRef(null);
 
   useEffect(() => {
     fetchTargets().then((res) => {
       if (res?.error) {
-        toast.error('Connection Inactive', res.error)
+        toast.error("Connection Inactive", res.error);
       }
-    })
-  }, [fetchTargets, selectedConnectionId, toast])
+    });
+  }, [fetchTargets, selectedConnectionId, toast]);
 
   // ================================================
   // ── Seed path params from selected target ───────
   // ================================================
-  const { setPathParams } = useRequestStore()
+  const { setPathParams } = useRequestStore();
 
   useEffect(() => {
-    if (!selectedTarget) return
+    if (!selectedTarget) return;
 
-    const urlParams = selectedTarget.target_details?.url_params ?? []
+    const urlParams = selectedTarget.target_details?.url_params ?? [];
 
     // Build one row per path segment. The converter tells the user what type of value is expected (e.g. 'int' → must be a number, 'slug' → slug string).
     const seeded = urlParams.map(({ name, converter }) => ({
       enabled: true,
       key: name,
-      value: '',
-      description: converter ?? 'str',
-    }))
+      value: "",
+      description: converter ?? "str",
+    }));
 
-    setPathParams(seeded)
-  }, [selectedTarget, setPathParams])
+    setPathParams(seeded);
+  }, [selectedTarget, setPathParams]);
 
   // Derive effective method & base path from selectedTarget or local state
-  const effectiveMethod = selectedTarget?.target_details?.methods?.[0] || method
-  const effectiveBasePath = selectedTarget?.target_details?.path || selectedTarget?.name || basePathPattern
+  const effectiveMethod =
+    selectedTarget?.target_details?.methods?.[0] || method;
+  const effectiveBasePath =
+    selectedTarget?.target_details?.path ||
+    selectedTarget?.name ||
+    basePathPattern;
 
   const handleSend = async () => {
-    if (!selectedTarget) return
+    if (!selectedTarget) return;
 
     // Verify connection health before proceeding
-    const { getSelectedConnection, ensureConnectionAlive } = useConnectionsStore.getState()
-    const activeConn = getSelectedConnection()
+    const { getSelectedConnection, ensureConnectionAlive } =
+      useConnectionsStore.getState();
+    const activeConn = getSelectedConnection();
     if (!activeConn) {
-      toast.error('No Connection Selected', 'Please select or add a project workspace.')
-      return
+      toast.error(
+        "No Connection Selected",
+        "Please select or add a project workspace.",
+      );
+      return;
     }
 
-    const health = await ensureConnectionAlive(activeConn.id)
+    const health = await ensureConnectionAlive(activeConn.id);
     if (!health.success) {
-      toast.error('Connection Inactive', health.error || 'Connection is unreachable or misconfigured.')
-      return
+      toast.error(
+        "Connection Inactive",
+        health.error || "Connection is unreachable or misconfigured.",
+      );
+      return;
     }
 
     // All path params are required — the backend cannot resolve the URL without them. Block execution and surface the missing fields to the user.
-    const missingParams = pathParams.filter((p) => p.enabled && p.value.trim() === '')
+    const missingParams = pathParams.filter(
+      (p) => p.enabled && p.value.trim() === "",
+    );
     if (missingParams.length > 0) {
-      const names = missingParams.map((p) => p.key).join(', ')
-      toast.error('Missing Path Parameters', `Required path param${missingParams.length > 1 ? 's' : ''} missing: ${names}`)
-      return
+      const names = missingParams.map((p) => p.key).join(", ");
+      toast.error(
+        "Missing Path Parameters",
+        `Required path param${missingParams.length > 1 ? "s" : ""} missing: ${names}`,
+      );
+      return;
     }
 
-    const { headers, bodyContent, bodyType } = useRequestStore.getState()
+    const { headers, bodyContent, bodyType } = useRequestStore.getState();
 
     // Validate JSON body if JSON body type is active
-    let parsedBody = null
-    if (bodyType === 'json' && bodyContent && bodyContent.trim() !== '') {
+    let parsedBody = null;
+    if (bodyType === "json" && bodyContent && bodyContent.trim() !== "") {
       try {
-        parsedBody = JSON.parse(bodyContent)
+        parsedBody = JSON.parse(bodyContent);
       } catch (err) {
-        toast.error('Invalid JSON Body', err.message || 'Syntax error in JSON request body')
-        return
+        toast.error(
+          "Invalid JSON Body",
+          err.message || "Syntax error in JSON request body",
+        );
+        return;
       }
     }
 
@@ -126,62 +147,78 @@ export function Workbench({
     //   query_params: {page: '1', size: '10'}  ← query string key=value pairs
     const path_params = Object.fromEntries(
       pathParams
-        .filter((p) => p.enabled && p.key.trim() !== '')
-        .map((p) => [p.key.trim(), p.value])
-    )
+        .filter((p) => p.enabled && p.key.trim() !== "")
+        .map((p) => [p.key.trim(), p.value]),
+    );
     const query_params = Object.fromEntries(
       queryParams
-        .filter((q) => q.enabled && q.key.trim() !== '')
-        .map((q) => [q.key.trim(), q.value])
-    )
+        .filter((q) => q.enabled && q.key.trim() !== "")
+        .map((q) => [q.key.trim(), q.value]),
+    );
 
+    const keyPairHeaders = Object.fromEntries(
+      headers
+        .filter((h) => h.enabled && h.key.trim() !== "")
+        .map((h) => [h.key.trim(), h.value]),
+    );
     try {
       await profileTarget(selectedTarget, {
         method: effectiveMethod,
         path: effectiveBasePath,
         path_params,
         query_params,
-        headers,
+        headers: keyPairHeaders,
         body: parsedBody,
-      })
+      });
     } catch (err) {
-      toast.error('Request Failed', err.message || 'Failed to execute profile target')
+      toast.error(
+        "Request Failed",
+        err.message || "Failed to execute profile target",
+      );
     }
-  }
+  };
 
   // ================================================
   // ── Resize SplitPane ────────────────────────────
   // ================================================
-  const handleResizeMouseDown = useCallback((e) => {
-    e.preventDefault()
-    isResizingRef.current = true
-    dragStartYRef.current = e.clientY
-    dragStartHeightRef.current = topRef.current?.offsetHeight ?? 300
-    document.body.style.cursor = 'row-resize'
-    document.body.style.userSelect = 'none'
+  const handleResizeMouseDown = useCallback(
+    (e) => {
+      e.preventDefault();
+      isResizingRef.current = true;
+      dragStartYRef.current = e.clientY;
+      dragStartHeightRef.current = topRef.current?.offsetHeight ?? 300;
+      document.body.style.cursor = "row-resize";
+      document.body.style.userSelect = "none";
 
-    const onMouseMove = (e) => {
-      if (!isResizingRef.current) return
-      const containerHeight = topRef.current?.parentElement?.offsetHeight ?? 600
-      const delta = e.clientY - dragStartYRef.current
-      // Ensure top pane height leaves at least 120px for the response pane at the bottom
-      const maxTopHeight = Math.max(120, containerHeight - 120)
-      const newHeight = Math.min(maxTopHeight, Math.max(120, dragStartHeightRef.current + delta))
-      setTopHeight(newHeight)
-    }
+      const onMouseMove = (e) => {
+        if (!isResizingRef.current) return;
+        const containerHeight =
+          topRef.current?.parentElement?.offsetHeight ?? 600;
+        const delta = e.clientY - dragStartYRef.current;
+        // Ensure top pane height leaves at least 120px for the response pane at the bottom
+        const maxTopHeight = Math.max(120, containerHeight - 120);
+        const newHeight = Math.min(
+          maxTopHeight,
+          Math.max(120, dragStartHeightRef.current + delta),
+        );
+        setTopHeight(newHeight);
+      };
 
-    const onMouseUp = () => {
-      isResizingRef.current = false
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-    }
+      const onMouseUp = () => {
+        isResizingRef.current = false;
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      };
 
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-  }, [setTopHeight])
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    },
+    [setTopHeight],
+  );
 
-  const topStyle = topHeight !== null ? { height: `${topHeight}px` } : undefined
-  const topClass = topHeight !== null ? 'shrink-0' : 'flex-1 h-1/2'
+  const topStyle =
+    topHeight !== null ? { height: `${topHeight}px` } : undefined;
+  const topClass = topHeight !== null ? "shrink-0" : "flex-1 h-1/2";
 
   return (
     <div
@@ -191,7 +228,10 @@ export function Workbench({
       {/* Clean Header */}
       <Header data-label={`${testId}-header`} />
 
-      <div className="flex flex-1 overflow-hidden" data-label={`${testId}-body`}>
+      <div
+        className="flex flex-1 overflow-hidden"
+        data-label={`${testId}-body`}
+      >
         {/* Resizable Sidebar */}
         <Sidebar
           activeNavId={activeSidebarNav}
@@ -221,7 +261,10 @@ export function Workbench({
           </div>
 
           {/* Request / Response Split Panes */}
-          <div className="flex flex-col flex-1 overflow-hidden relative" data-label={`${testId}-panes`}>
+          <div
+            className="flex flex-col flex-1 overflow-hidden relative"
+            data-label={`${testId}-panes`}
+          >
             <div
               ref={topRef}
               className={`flex flex-col border-b border-outline-variant bg-surface-container-low overflow-hidden ${topClass}`}
@@ -238,8 +281,9 @@ export function Workbench({
             <PaneResizer onResize={handleResizeMouseDown} />
 
             <div
-              className={`flex flex-col bg-surface-container-low overflow-hidden relative min-h-30 ${topHeight !== null ? 'flex-1' : 'flex-1 h-1/2'
-                }`}
+              className={`flex flex-col bg-surface-container-low overflow-hidden relative min-h-30 ${
+                topHeight !== null ? "flex-1" : "flex-1 h-1/2"
+              }`}
               data-label={`${testId}-response`}
             >
               <ResponseWorkbench
@@ -252,13 +296,16 @@ export function Workbench({
                     ? `${profileResult.status_code || 500} Internal Error`
                     : profileResult?.status_code
                       ? `${profileResult.status_code} OK`
-                      : '200 OK',
-                  time: profileResult?.metrics?.db_time_ms !== undefined
-                    ? `${profileResult.metrics.db_time_ms} ms`
-                    : '—',
-                  size: profileResult?.response_size !== undefined && profileResult?.response_size !== null
-                    ? `${profileResult.response_size} B`
-                    : '—',
+                      : "200 OK",
+                  time:
+                    profileResult?.metrics?.db_time_ms !== undefined
+                      ? `${profileResult.metrics.db_time_ms} ms`
+                      : "—",
+                  size:
+                    profileResult?.response_size !== undefined &&
+                    profileResult?.response_size !== null
+                      ? `${profileResult.response_size} B`
+                      : "—",
                 }}
                 data-label={`${testId}-response-pane`}
               />
@@ -267,5 +314,5 @@ export function Workbench({
         </main>
       </div>
     </div>
-  )
+  );
 }

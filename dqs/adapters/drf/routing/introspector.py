@@ -35,6 +35,17 @@ from django.core.exceptions import ImproperlyConfigured
 from django.urls import URLPattern, URLResolver, get_resolver
 from django.urls.resolvers import RegexPattern, RoutePattern
 
+# Module prefixes that belong to Django core only.
+# Routes from these modules are excluded from introspection to avoid
+# parsing errors and noisy output from framework-built-in endpoints
+# (e.g., Django admin, auth, views). Third-party packages like dj_rest_auth,
+# allauth, oauth2_provider, etc. ARE included because they are explicitly
+# registered by the user in their URL configuration.
+_INSTALLED_APP_PREFIXES = (
+    "django.contrib.",
+    "django.views.",
+)
+
 from dqs.adapters.drf.routing.converters import PathConverterResolver
 from dqs.adapters.drf.types import Route
 
@@ -115,9 +126,40 @@ class DjangoIntrospector:
                 # Skip our own profiler endpoints — profiling them would be recursive nonsense.
                 if full_path.startswith("/profiler/"):
                     continue
+
+                # Skip routes from installed Django apps or third-party packages
+                # to avoid AST parse errors and noisy output from framework-built-in views.
+                if self._is_installed_app_view(pattern.callback):
+                    continue
+
                 route = self._analyze_view(pattern, full_path)
                 if route is not None:
                     routes.append(route)
+
+    # ------------------------------------------------------------------------
+    # 3. Check if a view callback belongs to an installed app (Django core or
+    #    third-party packages). If so, skip it to avoid AST parse errors
+    #    and noisy output from framework-built-in endpoints.
+    # --------------------------------------------------------------------
+    @staticmethod
+    def _is_installed_app_view(callback: Any) -> bool:
+        """
+        Return True if the view callback's module originates from a known
+        Django core or third-party installed app, so the introspector can
+        skip it rather than trying to parse source code that may have
+        indentation errors or be dynamically generated.
+        """
+        try:
+            module = inspect.getmodule(callback)
+            if module is None:
+                return False
+            module_name = module.__name__
+            for prefix in _INSTALLED_APP_PREFIXES:
+                if module_name.startswith(prefix):
+                    return True
+        except Exception:
+            pass
+        return False
 
     # ------------------------------------------------------------------------
     # 3. Path normalization (handles both Django's new path() syntax and old regex urls)

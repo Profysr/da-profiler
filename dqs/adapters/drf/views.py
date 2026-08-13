@@ -139,11 +139,18 @@ class ExecuteView(CORSEnabledAPIView):
 
         route_path = body.get("path") or target_id.replace("view:", "", 1)
 
-        headers_raw = body.get("headers")
-        if isinstance(headers_raw, list):
-            headers = dict(headers_raw) if headers_raw else {}
-        else:
-            headers = headers_raw or {}
+        # headers_raw = body.get("headers")
+        # if isinstance(headers_raw, list):
+        #     headers = {}
+        #     for item in headers_raw:
+        #         if isinstance(item, (list, tuple)) and len(item) >= 2:
+        #             headers[item[0]] = item[1]
+        #         elif isinstance(item, dict):
+        #             headers.update(item)
+        # elif isinstance(headers_raw, dict):
+        #     headers = headers_raw
+        # else:
+        #     headers = {}
 
         try:
             result = DjangoSandboxRunner().execute_request(
@@ -151,7 +158,7 @@ class ExecuteView(CORSEnabledAPIView):
                 method=body.get("method", "GET"),
                 path_params=body.get("path_params") or {},
                 query_params=body.get("query_params") or {},
-                headers=headers,
+                headers=body.get("headers"),
                 body=body.get("body"),
                 sandbox=bool(body.get("sandbox", True)),
             )

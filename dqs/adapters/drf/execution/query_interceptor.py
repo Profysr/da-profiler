@@ -147,6 +147,7 @@ class QueryAnalysisEngine:
         queries_captured: list[dict[str, Any]],
         db_duration_ms: float,
         response_body: Any,
+        response_size: int,
         side_effect_warnings: list[str],
         request: dict[str, Any] | None = None,
         target_model: str | None = None,
@@ -212,6 +213,7 @@ class QueryAnalysisEngine:
             queries=formatted_queries,
             analysis=analysis_payload,
             response_body=response_body,
+            response_size=response_size,
             side_effect_warnings=side_effect_warnings,
             request=request,
         )

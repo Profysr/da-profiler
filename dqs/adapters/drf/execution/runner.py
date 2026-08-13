@@ -132,8 +132,8 @@ class DjangoSandboxRunner:
         path_params = path_params or {}
         query_params = query_params or {}
         headers = headers or {}
-        if isinstance(headers, list):
-            headers = dict(headers) if headers else {}
+        # if isinstance(headers, list):
+        #     headers = dict(headers) if headers else {}
 
         if method not in CORE_HTTP_METHODS:
             return ProfileResult(
@@ -276,9 +276,27 @@ class DjangoSandboxRunner:
         else:
             request = request_func(concrete_url)
 
+        # {
+        #     "target_id": "view:/api/books/bad/",
+        #     "kind": "view",
+        #     "path": "/api/books/bad/",
+        #     "method": "GET",
+        #     "path_params": {},
+        #     "query_params": {},
+        #     "headers": {
+        #         "Accept": "application/json",
+        #         "Content-Type": "application/json"
+        #     },
+        #     "body": {
+        #         "title": "New Book",
+        #         "author_id": 1
+        #     },
+        #     "sandbox": false
+        # }
         # Attach the caller-supplied headers.
         for header_name, header_value in headers.items():
-            request[header_name] = header_value
+            meta_key = f"HTTP_{header_name.upper().replace('-', '_')}"
+            request.META[meta_key] = header_value
 
         # Attach user (anonymous if none provided).
         from django.contrib.auth.models import AnonymousUser
