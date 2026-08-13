@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import time
+import inspect
 from collections.abc import Callable
 from typing import Any
 
@@ -131,6 +132,8 @@ class DjangoSandboxRunner:
         path_params = path_params or {}
         query_params = query_params or {}
         headers = headers or {}
+        if isinstance(headers, list):
+            headers = dict(headers) if headers else {}
 
         if method not in CORE_HTTP_METHODS:
             return ProfileResult(

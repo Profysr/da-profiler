@@ -27,6 +27,9 @@ app_name = "drf"
 
 urlpatterns = [
     path("manage/routes", ManageRoutesView.as_view(), name="manage-routes"),
+    path("manage/routes/", ManageRoutesView.as_view()),
     path("execute", ExecuteView.as_view(), name="execute"),
+    path("execute/", ExecuteView.as_view()),
     path("connection/health", ConnectionHealthView.as_view(), name="connection-health"),
+    path("connection/health/", ConnectionHealthView.as_view()),
 ]

@@ -3,14 +3,14 @@
 import { sendApiRequest } from './client.js'
 
 /**
- * GET /profiler/connection/health
+ * GET /profiler/connection/health/
  * Verifies backend connectivity, DEBUG status, and shadow DB configuration.
  * Returns standard shape: { success, data, error, message, status }
  */
 export async function getHealth(baseUrl) {
   const res = await sendApiRequest(baseUrl, {
     method: 'GET',
-    url: '/profiler/connection/health',
+    url: '/profiler/connection/health/',
   })
 
   if (!res.success) {
@@ -47,24 +47,24 @@ export async function getHealth(baseUrl) {
 }
 
 /**
- * GET /profiler/manage/routes — list discoverable targets (views, tasks, consumers).
+ * GET /profiler/manage/routes/ — list discoverable targets (views, tasks, consumers).
  * Returns standard shape: { success, data, error, message, status }
  */
 export async function getTargets(baseUrl) {
   return await sendApiRequest(baseUrl, {
     method: 'GET',
-    url: '/profiler/manage/routes',
+    url: '/profiler/manage/routes/',
   })
 }
 
 /**
- * POST /profiler/execute — run request in sandbox and return HTTP response + SQL trace.
+ * POST /profiler/execute/ — run request in sandbox and return HTTP response + SQL trace.
  * Returns standard shape: { success, data, error, message, status }
  */
 export async function executeRequest(baseUrl, payload) {
   return await sendApiRequest(baseUrl, {
     method: 'POST',
-    url: '/profiler/execute',
+    url: '/profiler/execute/',
     data: payload,
   })
 }

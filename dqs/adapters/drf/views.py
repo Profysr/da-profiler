@@ -47,20 +47,28 @@ _DEFAULT_CORS_ORIGINS = (
 )
 
 
-def _add_cors_headers(response: Response, request: Request) -> Response:
+def _add_cors_headers(response: Response, request: Any) -> Response:
     """Attach permissive CORS headers when the request is from an allowed dev origin."""
-    origin = request.headers.get("Origin")
+    origin = None
+    if hasattr(request, "headers"):
+        origin = request.headers.get("Origin")
+    elif hasattr(request, "META"):
+        origin = request.META.get("HTTP_ORIGIN")
+
     if not origin:
         return response
 
     allowed = getattr(settings, "DQS_ALLOWED_ORIGINS", _DEFAULT_CORS_ORIGINS)
-    if not getattr(settings, "DEBUG", False) and origin not in allowed:
+    is_debug = getattr(settings, "DEBUG", False)
+
+    # In non-DEBUG mode, check if origin is explicitly allowed
+    if not is_debug and origin not in allowed:
         return response
 
     response["Access-Control-Allow-Origin"] = origin
     response["Access-Control-Allow-Credentials"] = "true"
-    response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    response["Access-Control-Allow-Headers"] = "Content-Type, X-CSRFToken, Authorization"
+    response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, PUT, PATCH, DELETE"
+    response["Access-Control-Allow-Headers"] = "Content-Type, X-CSRFToken, Authorization, X-Requested-With"
     response["Vary"] = "Origin"
     return response
 
@@ -71,19 +79,21 @@ class CORSEnabledAPIView(APIView):
     authentication_classes: list = []
     permission_classes: list = []
 
-    def dispatch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+    def dispatch(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         """Block requests immediately if DEBUG is False before running any view logic."""
         if not getattr(settings, "DEBUG", False):
-            return Response(
+            response = Response(
                 {"error": "Da Profiler is disabled in production. Set DEBUG=True in local settings."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+            return _add_cors_headers(response, request)
         return super().dispatch(request, *args, **kwargs)
 
-    def options(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return _add_cors_headers(Response(), request)
+    def options(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+        response = Response(status=status.HTTP_200_OK)
+        return _add_cors_headers(response, request)
 
-    def finalize_response(self, request: Request, response: Response, *args: Any, **kwargs: Any) -> Response:
+    def finalize_response(self, request: Any, response: Response, *args: Any, **kwargs: Any) -> Response:
         response = super().finalize_response(request, response, *args, **kwargs)
         return _add_cors_headers(response, request)
 
@@ -129,13 +139,19 @@ class ExecuteView(CORSEnabledAPIView):
 
         route_path = body.get("path") or target_id.replace("view:", "", 1)
 
+        headers_raw = body.get("headers")
+        if isinstance(headers_raw, list):
+            headers = dict(headers_raw) if headers_raw else {}
+        else:
+            headers = headers_raw or {}
+
         try:
             result = DjangoSandboxRunner().execute_request(
                 url_name_or_path=route_path,
                 method=body.get("method", "GET"),
                 path_params=body.get("path_params") or {},
                 query_params=body.get("query_params") or {},
-                headers=body.get("headers") or {},
+                headers=headers,
                 body=body.get("body"),
                 sandbox=bool(body.get("sandbox", True)),
             )

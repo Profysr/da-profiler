@@ -34,11 +34,15 @@ export async function sendApiRequest(baseUrl, { method = 'GET', url, data = null
     }
   } catch (err) {
     const statusCode = err.response?.status || null
-    const errorMessage =
+    let errorMessage =
       err.response?.data?.error ||
       err.message ||
       'Request failed. Please check network connection.'
     
+    if (err.message === 'Network Error' || !err.response) {
+      errorMessage = `Backend server unreachable at ${baseUrl || 'target URL'}. Ensure Django server is running.`
+    }
+
     return {
       success: false,
       data: err.response?.data || null,

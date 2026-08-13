@@ -56,7 +56,7 @@ export function Workbench({
         toast.error('Connection Inactive', res.error)
       }
     })
-  }, [])
+  }, [fetchTargets, selectedConnectionId, toast])
 
   // ================================================
   // ── Seed path params from selected target ───────
@@ -202,7 +202,7 @@ export function Workbench({
         />
 
         <main
-          className="flex-1 flex flex-col bg-background h-full overflow-hidden relative"
+          className="flex-1 flex flex-col bg-background h-full overflow-hidden"
           data-label={`${testId}-main`}
         >
           {/* Static Readonly URL Bar */}

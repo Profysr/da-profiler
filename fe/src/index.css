@@ -42,6 +42,9 @@
   --color-primary-container: #da4f20;
   --color-on-primary-container: #ffffff;
 
+  /* Z-Index */
+  --z-toast: 9999;
+
   /* Fonts */
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;

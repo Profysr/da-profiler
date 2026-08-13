@@ -57,37 +57,37 @@ export function ToastProvider({ children }) {
       {createPortal(
         <div
           className="fixed top-4 left-1/2 -translate-x-1/2 flex flex-col gap-2 pointer-events-none"
-          style={{ zIndex: "var(--z-toast)" }}
+          style={{ zIndex: 9999 }}
         >
           {toasts.map((t, i) => (
             <div
               key={t.id}
               className={cn(
-                "pointer-events-auto w-full max-w-sm rounded-md border bg-card shadow-popover",
+                "pointer-events-auto w-full max-w-sm rounded-lg border border-dialog-border bg-surface-container-high shadow-xl shadow-black/60",
                 "flex items-start gap-3 px-4 py-3",
-                "animate-toast-in",
+                "transition-all duration-200",
                 i > 0 && "opacity-70 scale-95",
               )}
               style={{ animationDelay: `${i * 20}ms` }}
             >
               {ICONS[t.type] && (
-                <div className="flex-shrink-0 mt-0.5">{ICONS[t.type]}</div>
+                <div className="shrink-0 mt-0.5">{ICONS[t.type]}</div>
               )}
               <div className="flex-1 min-w-0">
                 {t.title && (
-                  <p className="text-sm font-semibold text-foreground leading-snug">
+                  <p className="text-sm font-semibold text-on-surface leading-snug">
                     {t.title}
                   </p>
                 )}
                 {t.description && (
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                  <p className="text-xs text-on-surface-variant mt-0.5 leading-snug">
                     {t.description}
                   </p>
                 )}
               </div>
               <button
                 onClick={() => dismiss(t.id)}
-                className="flex-shrink-0 p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors mt-0.5"
+                className="shrink-0 p-0.5 rounded text-on-surface-variant hover:text-on-surface transition-colors mt-0.5"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
