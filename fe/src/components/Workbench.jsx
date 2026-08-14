@@ -34,7 +34,7 @@ export function Workbench({ "data-label": testId = "workbench" }) {
   const { pathParams, queryParams } = useRequestStore();
 
   const [method, setMethod] = useState("GET");
-  const [basePathPattern] = useState("/api/v1/books/");
+  const [basePathPattern] = useState("/api/v1/choose your path/");
 
   const {
     activeSidebarNav,
@@ -82,8 +82,7 @@ export function Workbench({ "data-label": testId = "workbench" }) {
   }, [selectedTarget, setPathParams]);
 
   // Derive effective method & base path from selectedTarget or local state
-  const effectiveMethod =
-    selectedTarget?.target_details?.methods?.[0] || method;
+  const effectiveMethod = method;
   const effectiveBasePath =
     selectedTarget?.target_details?.path ||
     selectedTarget?.name ||
