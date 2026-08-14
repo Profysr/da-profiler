@@ -1,26 +1,35 @@
 """
-Da Profiler — URL Configuration
+DQS URL Configuration
+=====================
 
-To mount the dashboard in your Django project, add to your root urls.py:
+Mount in your project's root urls.py:
 
     from django.urls import path, include
 
     if settings.DEBUG:
-        urlpatterns += [
-            path("dqs/", include("dqs.adapters.drf.urls")),
-        ]
+        urlpatterns += [path("profiler/", include("dqs.adapters.drf.urls"))]
 
-This exposes:
-  GET  /dqs/          → Developer dashboard
-  POST /dqs/profile/  → AJAX sandbox profiling endpoint
+Endpoints exposed under /profiler/:
+  GET  /profiler/manage/routes     → List all discoverable targets
+  POST /profiler/execute           → Run one request, return HTTP response + SQL trace
+  GET  /profiler/connection/health → Sanity check DQS configuration
 """
+
 from django.urls import path
 
-from dqs.adapters.drf.views import DQSDashboardView, DQSProfileView
+from dqs.adapters.drf.views import (
+    ConnectionHealthView,
+    ExecuteView,
+    ManageRoutesView,
+)
 
 app_name = "drf"
 
 urlpatterns = [
-    path("", DQSDashboardView.as_view(), name="dashboard"),
-    path("profile/", DQSProfileView.as_view(), name="profile"),
+    path("manage/routes", ManageRoutesView.as_view(), name="manage-routes"),
+    path("manage/routes/", ManageRoutesView.as_view()),
+    path("execute", ExecuteView.as_view(), name="execute"),
+    path("execute/", ExecuteView.as_view()),
+    path("connection/health", ConnectionHealthView.as_view(), name="connection-health"),
+    path("connection/health/", ConnectionHealthView.as_view()),
 ]

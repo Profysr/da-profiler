@@ -33,7 +33,7 @@ Da Profiler has progressed through key development milestones:
 | **DB Query Interceptor** | [`dqs/adapters/drf/query_interceptor.py`](file:///c:/Users/mprof/OneDrive/Desktop/django-profiler/dqs/adapters/drf/query_interceptor.py) | Hooks into database drivers (`execute_wrapper`) and inspects Python call stacks to pinpoint originating lines of code. | ✅ Complete |
 | **Unified `Target` Model** | [`dqs/core/targets.py`](file:///c:/Users/mprof/OneDrive/Desktop/django-profiler/dqs/core/targets.py) | Represents HTTP endpoints, signals, and background tasks under one unified data model. | ✅ Complete |
 | **Static Code Advisor** | [`dqs/core/static_advisor.py`](file:///c:/Users/mprof/OneDrive/Desktop/django-profiler/dqs/core/static_advisor.py) | Performs pure AST scans to flag ORM calls inside loops and blocking synchronous I/O. | ✅ Complete |
-| **Mock Data Generator** | `dqs/adapters/drf/mock_generator.py` | Auto-populates test rows using `model_bakery` for path parameter resolution (`/books/<int:pk>/`). | 🟡 In Progress |
+| **Mock Data Generator** | *(removed)* | Auto-seeding was deleted in the v0.35 cleanup. Payloads are now caller-supplied via `POST /profiler/execute`; the engine never writes fake data to the DB on its own. | ❌ Removed |
 | **MCP Agent Server** | `dqs/mcp/server.py` | Exposes profiling capabilities as AI-callable tools for Cursor & Claude. | 🔲 Planned |
 
 ---
@@ -42,8 +42,9 @@ Da Profiler has progressed through key development milestones:
 
 Whether you're a developer integrating Da Profiler or an open-source contributor looking to hack on the codebase, check out these guides:
 
-- 🚀 [**Quickstart Guide**](./quickstart.md): Get up and running in 5 minutes.
-- 💡 [**How It Works (ELI5)**](./how-it-works.md): Simple explanations of Sandboxing, AST Fingerprinting, and Interceptors.
-- 🛠️ [**Developer Onboarding & File Reference Guide**](./developer-onboarding.md): Complete file-by-file reference walkthrough of every module in the repository.
+- 🚀 [**Quickstart Guide**](./Quickstart.md): Get up and running in 5 minutes.
+- 📦 [**Test and Publish Guide**](./Test%20and%20Publish%20Guide.md): Complete guide for publishing both packages to PyPI/npm and testing locally.
+- 💡 [**How It Works (ELI5)**](./How%20it%20work.md): Simple explanations of Sandboxing, AST Fingerprinting, and Interceptors.
+- 🛠️ [**Developer Onboarding & File Reference Guide**](./Developer%20Onboarding.md): Complete file-by-file reference walkthrough of every module in the repository.
 - ❓ [**Frequently Asked Questions (FAQ)**](./faq.md): Common questions, comparisons with Silk/Debug Toolbar, and safety guarantees.
 - 🏗️ [**System Architecture Blueprint**](../architecture.md): In-depth technical architecture document and sequence diagrams.

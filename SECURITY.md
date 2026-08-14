@@ -5,7 +5,7 @@
 | Version | Supported          |
 | ------- | ------------------ |
 | 0.3.x   | :white_check_mark: |
-| < 0.3   | :x:                |
+| < 0.3.5 | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -20,4 +20,4 @@ Please include:
 - Steps to reproduce
 - Potential impact
 
-We aim to respond within 48 hours and will keep you updated as we investigate and patch the issue. Once resolved, we'll credit you in the release notes (unless you prefer to stay anonymous).
+We aim to respond within 48 hours and will keep you updated as we investigate and patch the issue. Once resolved, we'll credit you in the release notes (unless you prefer to stay anonymous).

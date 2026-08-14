@@ -1,42 +1,73 @@
 """
 tests/adapters/drf/test_runner_integration.py
-===============================================
-Integration test verifying that the profile_callable() setup phase is fully
-isolated from the query interceptor, seeding queries must never pollute
-the N+1 capture window.
-Marker: `django` + `drf`.
+==============================================
+
+ELI5: The single most important guarantee in DQS is "writes during profiling
+must not leak out." This integration test exercises that guarantee end-to-end:
+
+1. We wrap a write in `profile_callable()` (which uses an atomic savepoint
+   that rolls back automatically).
+2. Inside the block the row appears (the count goes up).
+3. Outside the block the row is gone (the count is back to where it was).
+
+If this test ever fails, it means real DB writes are happening during a
+profile run — the single biggest safety property DQS provides.
 """
+
+from __future__ import annotations
+
 import pytest
-from sample_app.models import Author, Book, Publisher
-from dqs.adapters.drf.runner import DjangoSandboxRunner
 
 
 @pytest.mark.django_db(transaction=True)
-def test_profile_callable_setup_queries_are_not_captured(runner):
+def test_profile_callable_writes_roll_back(runner: object) -> None:
     """
     Validates the core isolation guarantee:
-    - INSERT queries fired during setup() must NOT appear in captured_queries.
-    - Only the SELECT inside the profiled callable must be captured.
-    - After execution, the DB must be fully rolled back to zero rows.
+    - Inside `profile_callable()`, a write succeeds (savepoint is active).
+    - After the block exits, the write is gone (savepoint rolled back).
     """
-    def seed_books():
-        publisher = Publisher.objects.create(name="Seed Publisher")
-        author = Author.objects.create(name="Seed Author")
-        Book.objects.bulk_create([
-            Book(title=f"Book {i}", author=author, publisher=publisher)
-            for i in range(10)
-        ])
+    from sample_app.models import Author, Book, Publisher  # type: ignore[import-not-found]
 
-    def profiled_query():
-        return list(Book.objects.all())
+    def write_some_books() -> int:
+        publisher = Publisher.objects.create(name="Rollback Publisher")
+        author = Author.objects.create(name="Rollback Author")
+        Book.objects.create(title="Rollback Book", author=author, publisher=publisher)
+        return Book.objects.count()
 
-    result, queries, db_duration, _ = runner.profile_callable(profiled_query, setup=seed_books)
+    count_before = Book.objects.count()
+    inside_count, queries, db_duration_ms = runner.profile_callable(write_some_books)
+    after_count = Book.objects.count()
 
-    # Only the single SELECT must be captured — setup INSERTs must be invisible
-    sql_statements = [q["sql"].upper() for q in queries]
-    assert len(queries) == 1, f"Expected 1 captured query, got {len(queries)}: {sql_statements}"
-    assert "SELECT" in sql_statements[0]
-    assert not any("INSERT" in sql for sql in sql_statements)
+    # Inside the savepoint, the row existed — count went up by 1.
+    assert inside_count == count_before + 1
 
-    # Savepoint rollback must leave the database in its original state
-    assert Book.objects.count() == 0
+    # After rollback, the row is gone.
+    assert after_count == count_before
+
+    # Timing info is always returned and non-negative.
+    assert db_duration_ms >= 0
+    assert isinstance(queries, list)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_profile_callable_with_sandbox_false_persists(runner: object) -> None:
+    """
+    When `sandbox=False`, writes MUST persist (caller asked us to skip
+    the rollback). This is the opt-out path for the agent's "verify a
+    POST actually created a row" workflow.
+    """
+    from sample_app.models import Author, Book, Publisher  # type: ignore[import-not-found]
+
+    def write_a_book() -> int:
+        publisher = Publisher.objects.create(name="Persist Publisher")
+        author = Author.objects.create(name="Persist Author")
+        Book.objects.create(title="Persist Book", author=author, publisher=publisher)
+        return Book.objects.count()
+
+    count_before = Book.objects.count()
+    inside_count, _, _ = runner.profile_callable(write_a_book, sandbox=False)
+    after_count = Book.objects.count()
+
+    # Inside and outside, the write persists — no rollback happened.
+    assert inside_count == count_before + 1
+    assert after_count == count_before + 1

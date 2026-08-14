@@ -6,7 +6,7 @@ Welcome to **Da Profiler**! This guide will help you install and run your very f
 
 ## 🧒 What are we trying to do?
 
-Imagine you want to test how fast your web app gets data from the database, but you don't want to mess up your real database or click 100 buttons on your website. 
+Imagine you want to test how fast your web app gets data from the database, but you don't want to mess up your real database or click 100 buttons on your website.
 
 With Da Profiler:
 1. You install the package.
@@ -21,7 +21,7 @@ With Da Profiler:
 Add `da-profiler` to your Django project's dependencies:
 
 ```bash
-pip install da-profiler
+pip install da-profiler[django]
 ```
 
 *(Or if working from the source repository, `pip install -e .`)*
@@ -39,19 +39,74 @@ INSTALLED_APPS = [
     # ... your existing Django apps ...
     'dqs.adapters.drf',  # Registers Da Profiler Django adapter
 ]
+
+DATABASE_ROUTERS = [
+    'dqs.adapters.drf.router.DQSRouter',  # Registers Da Profiler database router
+]
 ```
 
 > [!IMPORTANT]
 > **Safety Guard**: Da Profiler requires `DEBUG = True` in your settings to protect production environments from running sandbox simulations.
+>
+> **Shadow Database Setup**: Configure a `dqs_shadow` entry in `DATABASES` matching your engine
+> ```bash
+>   DATABASES = {
+>    'default': {
+>        'ENGINE': 'django.db.backends.sqlite3',
+>        'NAME': BASE_DIR / 'db.sqlite3',
+>    },
+>    # ✅ Required by Da Profiler: shadow database for isolated profiling. Ensure the db name should match dqs_shadow
+>    'dqs_shadow': {
+>        'ENGINE': 'django.db.backends.sqlite3',
+>        'NAME': BASE_DIR / 'dqs_shadow.sqlite3',
+>    },
+> }
+> ```
+> and run migrations:
+> ```bash
+> python manage.py migrate --database=dqs_shadow
+> ```
 
 ---
 
-## 🧪 Step 3: Run Your First Isolated Profile
+## 🌐 Step 3: Start the Visual Dashboard (Optional but Recommended)
 
-You can run Da Profiler directly from Python code or a management script:
+The **React-based dashboard** runs as a separate process — no installation in your Django project needed!
+
+```bash
+# Terminal 1: Start your Django project
+python manage.py runserver 8000
+
+# Terminal 2: Start the dashboard (anywhere, no install!)
+npx @da-profiler/dashboard
+# Opens http://localhost:5173 automatically
+```
+
+**In the browser (http://localhost:5173):**
+1. Click **"Add Project"** → Name: "My App", URL: `http://localhost:8000`
+2. Click **"Test Connection"** → Should show ✓ Connected
+3. Click **"Connect"** → Sidebar loads all targets grouped by kind:
+   - 🌐 **HTTP Views** (executable — full profiling)
+   - ⚡ **Celery Tasks** (static analysis only)
+   - 🔌 **WebSocket Consumers** (static analysis only)
+   - 🔔 **Django Signals** (future)
+4. Click any **View** → Click **"Profile Route"** → See queries, N+1 analysis, metrics
+5. Click a **Task/Consumer** → See static findings (ORM in loops, blocking calls)
+
+> **Why separate dashboard?**
+> - ✅ Optional, skip if you only need programmatic API
+> - ✅ One dashboard serves multiple Django projects
+> - ✅ Runs on different port — zero interference with your app
+> - ✅ Stops cleanly with Ctrl+C, Django keeps running
+
+---
+
+## 🧪 Step 4: Programmatic API (Alternative to Dashboard)
+
+You can also run Da Profiler directly from Python code:
 
 ```python
-from dqs.adapters.drf.runner import DjangoSandboxRunner
+from dqs.adapters.drf.execution.runner import DjangoSandboxRunner
 from dqs.core.analyzer import detect_n_plus_one
 
 # 1. Initialize the sandbox runner
@@ -59,36 +114,35 @@ runner = DjangoSandboxRunner()
 
 # 2. Execute an endpoint in isolated savepoint sandbox
 # (This simulates GET /api/books/ without saving anything to the DB!)
-result = runner.execute_isolated(
-    path="/api/books/",
-    method="GET"
+result = runner.execute_request(
+    url_name_or_path="/api/books/",
+    method="GET",
 )
 
-print(f"Status Code: {result['status_code']}")
-print(f"Total Database Queries Fired: {result['query_count']}")
+print(f"Status Code: {result.status_code}")
+print(f"Total Database Queries Fired: {result.metrics['total_queries']}")
 
 # 3. Analyze for N+1 bottlenecks
-n_plus_one_flags = detect_n_plus_one(result['queries'], threshold=3)
-
-for flag in n_plus_one_flags:
+for n1 in result.analysis:
     print("\n⚠️ Bottleneck Detected!")
-    print(f"File & Line: {flag['source_location']}")
-    print(f"Repeated Query Count: {flag['count']}")
-    print(f"Suggested Fix: {flag['suggestion']}")
+    print(f"File & Line: {n1['src_loc']}")
+    print(f"Repeated Query Count: {n1['count']}")
+    print(f"Suggested Fix: {n1['suggestion']}")
 ```
 
 ---
 
 ## 🎯 What Happens Under the Hood?
 
-When you run `execute_isolated()`:
+When you run `execute_request()` (via workbench UI or API):
 1. **Magic Savepoint**: Django opens a `transaction.atomic()` savepoint.
 2. **Query Interception**: Every SQL query is recorded along with the exact file name and line number in your code.
-3. **Automatic Rollback**: The savepoint is rolled back immediately when execution finishes. **Zero database clutter!**
+3. **Automatic Rollback**: The changes are rolled back immediately by flushing the shadow db. **Zero database clutter in Production!**
 
 ---
 
 ## ⏩ Next Steps
 
-- Want to understand how Da Profiler works under the hood? Check out [How It Works (ELI5)](./how-it-works.md).
-- Interested in contributing? Read [Developer Onboarding](./developer-onboarding.md).
+- Want to understand how Da Profiler works under the hood? Check out [How It Works (ELI5)](./How%20it%20work.md).
+- Need to publish or test packages locally? See [Test and Publish Guide](./Test%20and%20Publish%20Guide.md).
+- Interested in contributing? Read [Developer Onboarding](./Developer%20Onboarding.md).
