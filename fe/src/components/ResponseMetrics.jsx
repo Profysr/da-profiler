@@ -7,8 +7,8 @@ export function ResponseMetrics({
 }) {
   const isError = status && (status.toString().startsWith('5') || status.toString().startsWith('4') || status.toString().includes('Error'))
   const statusColor = isError
-    ? 'bg-red-500/20 text-red-400 border-red-500/30'
-    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+    ? 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30'
+    : 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-400 border-emerald-500/30'
 
   return (
     <div className="flex items-center gap-4 px-4 py-2 bg-surface border-b border-outline-variant text-xs select-none" data-label={testId}>

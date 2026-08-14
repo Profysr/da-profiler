@@ -43,7 +43,7 @@ export function UrlBar({
         data-label={`${testId}-field-wrapper`}
       >
         <span
-          className="pl-3.5 font-mono text-xs text-primary/90 border-r border-outline-variant pr-3 select-none bg-surface-container-low shrink-0 h-full flex items-center font-bold"
+          className="pl-3.5 font-mono text-xs text-on-surface-variant border-r border-outline-variant pr-3 select-none bg-surface-container-high shrink-0 h-full flex items-center font-bold"
           title="Active Server Base URL"
         >
           {baseUrl}

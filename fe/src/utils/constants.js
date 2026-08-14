@@ -36,8 +36,10 @@ export const WORKSPACE_TABS = [
 ]
 
 /**
- * HTTP methods available in the request workbench
+ * Standard HTTP methods order for consistent display across all UI components
  */
+export const METHOD_ORDER = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
+
 export const HTTP_METHODS = [
   { id: 'GET', label: 'GET' },
   { id: 'POST', label: 'POST' },
@@ -47,23 +49,42 @@ export const HTTP_METHODS = [
 ]
 
 /**
+ * Sorts an array of HTTP methods (strings or objects) according to canonical METHOD_ORDER
+ */
+export function sortMethods(methods = []) {
+  if (!Array.isArray(methods)) return []
+  return [...methods].sort((a, b) => {
+    const nameA = (typeof a === 'string' ? a : a?.id || a?.name || '').toUpperCase()
+    const nameB = (typeof b === 'string' ? b : b?.id || b?.name || '').toUpperCase()
+    const indexA = METHOD_ORDER.indexOf(nameA)
+    const indexB = METHOD_ORDER.indexOf(nameB)
+    
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB
+    if (indexA !== -1) return -1
+    if (indexB !== -1) return 1
+    return nameA.localeCompare(nameB)
+  })
+}
+
+/**
  * Shared method badge styling for consistent UI across components.
  * Returns: full class string including typography + method-specific colors.
  */
 export function getMethodBadgeClass(method) {
-  const base = 'text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase shrink-0'
+  const base = 'font-mono font-bold px-1.5 py-0.5 rounded uppercase shrink-0 border'
   switch (method) {
     case 'GET':
-      return `${base} bg-emerald-500/20 text-emerald-400 border-emerald-500/30`
+      return `${base} bg-emerald-500/15 text-emerald-900 dark:text-emerald-400 border-emerald-500/30`
     case 'POST':
-      return `${base} bg-orange-500/20 text-orange-400 border-orange-500/30`
+      return `${base} bg-orange-500/15 text-orange-900 dark:text-orange-400 border-orange-500/30`
     case 'PUT':
+      return `${base} bg-amber-500/15 text-amber-900 dark:text-amber-400 border-amber-500/30`
     case 'PATCH':
-      return `${base} bg-blue-500/20 text-blue-400 border-blue-500/30`
+      return `${base} bg-blue-500/15 text-blue-900 dark:text-blue-400 border-blue-500/30`
     case 'DELETE':
-      return `${base} bg-rose-500/20 text-rose-400 border-rose-500/30`
+      return `${base} bg-rose-500/15 text-rose-900 dark:text-rose-400 border-rose-500/30`
     default:
-      return `${base} bg-zinc-500/20 text-zinc-400 border-zinc-500/30`
+      return `${base} bg-surface-container-highest text-on-surface-variant border-outline-variant`
   }
 }
 

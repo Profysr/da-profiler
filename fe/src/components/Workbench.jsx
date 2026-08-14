@@ -11,6 +11,7 @@ import { useConnectionsStore } from "../store/connectionsStore.js";
 import { useRequestStore } from "../store/requestStore.js";
 import { useUiStore } from "../store/uiStore.js";
 import { useToast } from "./ui/toast.jsx";
+import { TriangleAlert } from "lucide-react";
 
 function PaneResizer({ onResize }) {
   return (
@@ -284,12 +285,13 @@ const handleSend = async () => {
             {/* Non-executable endpoint notice */}
             {!isTargetExecutable && (
               <div
-                className="p-2 bg-surface-container-low border-t border-outline-variant text-xs text-on-surface-variant/80"
+                className="mt-1 p-2 bg-surface-container-low border-t border-outline-variant text-xs text-on-surface-variant/80 flex gap-1 items-center"
                 data-label={`${testId}-non-executable-notice`}
               >
-                <span className="font-mono">
-                  This endpoint is marked as non-executable — static analysis only.
-                </span>
+                <TriangleAlert size={14} className="text-amber-400" />
+                <p className="font-mono">
+                  This endpoint is marked as non-executable, only static analysis available.
+                </p>
               </div>
             )}
           </div>
