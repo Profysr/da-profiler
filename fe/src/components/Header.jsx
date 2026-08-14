@@ -1,6 +1,7 @@
 // src/components/Header.jsx
-import { useState } from 'react'
-import { Globe, Cable, User } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useUiStore } from '../store/uiStore.js'
+import { Globe, Cable, User, Moon, Sun, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { ConnectionManager } from './ConnectionManager.jsx'
 import { HEADER_ICON_BUTTONS } from '../utils/constants.js'
 
@@ -9,6 +10,11 @@ export function Header({
   "data-label": testId = 'global-header',
 }) {
   const [isConnManagerOpen, setIsConnManagerOpen] = useState(false)
+  const { theme, setTheme, isCollapsed, setIsCollapsed } = useUiStore()
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   return (
     <>
@@ -17,8 +23,17 @@ export function Header({
         data-label={testId}
       >
         <div className="flex items-center gap-2.5" data-label={`${testId}-left`}>
-          <div className="w-7 h-7 rounded bg-primary/20 text-primary flex items-center justify-center font-bold shadow-[0_0_12px_rgba(255,108,55,0.3)]">
-            <Globe size={14} />
+          <div
+            className="w-7 h-7 rounded bg-primary/20 text-primary flex items-center justify-center font-bold shadow-[0_0_12px_rgba(255,108,55,0.3)] hover:bg-primary/30 transition-colors cursor-pointer group relative"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            title={isCollapsed ? 'Expand sidebar (Ctrl+B)' : 'Collapse sidebar (Ctrl+B)'}
+          >
+            <Globe size={14} className="group-hover:hidden transition-all" />
+            {isCollapsed ? (
+              <PanelLeftOpen size={14} className="hidden group-hover:block transition-all text-primary" />
+            ) : (
+              <PanelLeftClose size={14} className="hidden group-hover:block transition-all text-primary" />
+            )}
           </div>
           <span className="font-bold text-sm text-on-surface tracking-tight">
             Workbench <span className="text-primary font-mono text-xs uppercase ml-0.5">UI</span>
@@ -34,6 +49,16 @@ export function Header({
           >
             <Cable size={16} className="text-primary" />
             <span>Connections</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded bg-surface-container-highest border border-dialog-border hover:border-primary/60 text-on-surface transition-all shadow-sm active:scale-95"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <Moon size={14} className={theme === 'dark' ? 'hidden' : 'block'} />
+            <Sun size={14} className={theme === 'dark' ? 'block' : 'hidden'} />
           </button>
 
           <div className="flex items-center gap-1 border-l border-outline-variant pl-2 ml-1">

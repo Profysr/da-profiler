@@ -26,19 +26,20 @@ export function CopyButton({ text, className = '', tooltip = 'Copy to clipboard'
       type="button"
       onClick={handleCopy}
       className={cn(
-        'p-1.5 rounded transition-colors duration-fast',
-        'hover:bg-bg-tertiary',
-        'text-text-secondary hover:text-text-primary',
-        copied && 'text-accent-green',
+        'p-1.5 rounded transition-all text-xs font-medium border border-outline-variant',
+        'bg-surface-container-high hover:bg-surface-container-highest',
+        'text-on-surface-variant hover:text-on-surface',
+        copied && 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10',
         className
       )}
+      title={copied ? 'Copied to clipboard!' : tooltip}
       aria-label={copied ? 'Copied!' : tooltip}
       {...props}
     >
       {copied ? (
-        <Check className="h-4 w-4" aria-hidden="true" />
+        <Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
       ) : (
-        <Copy className="h-4 w-4" aria-hidden="true" />
+        <Copy className="h-3.5 w-3.5" aria-hidden="true" />
       )}
     </button>
   )

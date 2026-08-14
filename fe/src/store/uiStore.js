@@ -6,6 +6,8 @@
 //   - active request tab (pathParams, queryParams, headers, body, auth)
 //   - active response tab (response, headers, queries, summary, sideEffects, logs)
 //   - split pane top height
+//   - theme (dark/light)
+//   - collapsed sidebar
 //
 // ELI5: Pure UI state. By holding it here, child components subscribe only to
 // what they render — e.g., changing the active response tab does NOT re-render
@@ -19,6 +21,10 @@ export const useUiStore = create(
       // Sidebar
       activeSidebarNav: 'collections',
       sidebarWidth: 280,
+      isCollapsed: false,
+
+      // Theme
+      theme: 'dark',
 
       // Request panel
       activeRequestTab: 'pathParams',
@@ -32,6 +38,8 @@ export const useUiStore = create(
       // Actions
       setActiveSidebarNav: (activeSidebarNav) => set({ activeSidebarNav }),
       setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
+      setIsCollapsed: (isCollapsed) => set({ isCollapsed }),
+      setTheme: (theme) => set({ theme }),
       setActiveRequestTab: (activeRequestTab) => set({ activeRequestTab }),
       setActiveResponseTab: (activeResponseTab) => set({ activeResponseTab }),
       setTopHeight: (topHeight) => set({ topHeight }),
@@ -41,8 +49,10 @@ export const useUiStore = create(
       partialize: (state) => ({
         activeSidebarNav: state.activeSidebarNav,
         sidebarWidth: state.sidebarWidth,
+        isCollapsed: state.isCollapsed,
         activeRequestTab: state.activeRequestTab,
         activeResponseTab: state.activeResponseTab,
+        theme: state.theme,
       }),
     }
   )

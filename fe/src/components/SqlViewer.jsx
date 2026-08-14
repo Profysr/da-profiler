@@ -5,13 +5,13 @@ import { CopyButton } from './ui/CopyButton.jsx'
 
 export function SqlViewer({ sql, className = '', maxHeight = '300px', showLineNumbers = true, copyable = true }) {
   return (
-    <div className={cn('relative group', className)}>
+    <div className={cn('relative group border border-outline-variant rounded-lg bg-surface-container-lowest overflow-hidden shadow-sm', className)}>
       {copyable && sql && (
         <div className="absolute top-2 right-2 z-10 opacity-80 hover:opacity-100 transition-opacity">
           <CopyButton text={sql} />
         </div>
       )}
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-auto" style={{ maxHeight }}>
+      <div className="overflow-auto" style={{ maxHeight }}>
         <SqlHighlighter 
           sql={sql} 
           showLineNumbers={showLineNumbers} 

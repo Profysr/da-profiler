@@ -3,12 +3,12 @@
 @import "tailwindcss";
 
 /* =============================================================================
-   Sleek Dark Theme Tokens — High-Contrast Ultra Premium Palette
+   Sleek Theme Tokens — Dark & Light Support
    Single Source of Truth Design Tokens for Tailwind v4
    ============================================================================= */
 
 @theme {
-  /* Claude-Inspired Dark Palette — Warm Minimalist Dark */
+  /* Default (dark) values — overridden by [data-theme="light"] if set */
   --color-background: #151515;
   --color-on-background: #ffffff;
 
@@ -39,6 +39,58 @@
   --color-primary: #ff6c37;
   --color-surface-tint: #ff6c37;
   --color-on-primary: #ffffff;
+  --color-primary-container: #da4f20;
+  --color-on-primary-container: #ffffff;
+
+  /* Z-Index */
+  --z-toast: 9999;
+
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-symbols: 'Material Symbols Outlined', sans-serif;
+
+  /* Radius */
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+}
+
+/* Light theme — activated when [data-theme="light"] is set on html */
+[data-theme="light"] {
+  --color-background: #fafafa;
+  --color-on-background: #151515;
+
+  /* Surfaces */
+  --color-surface: #ffffff;
+  --color-surface-dim: #f5f5f0;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #fafafa;
+  --color-surface-container: #ffffff;
+  --color-surface-container-high: #fafafa;
+  --color-surface-container-highest: #ffffff;
+  --color-surface-variant: #f4f4f0;
+
+  /* Modals & Dialogs */
+  --color-dialog: #ffffff;
+  --color-dialog-border: #e0e0e0;
+
+  /* Text & Contrast */
+  --color-on-surface: #151515;
+  --color-on-surface-variant: #4a4a45;
+
+  /* Outlines */
+  --color-outline: #e0e0e0;
+  --color-outline-variant: #d0d0d5;
+
+  /* Primary Brand Accent */
+  --color-primary: #ff6c37;
+  --color-surface-tint: #ff6c37;
+  --color-on-primary: #151515;
   --color-primary-container: #da4f20;
   --color-on-primary-container: #ffffff;
 
@@ -117,3 +169,73 @@ button {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* =============================================================================
+   Highlight.js Syntax Highlighting — Theme Tokens Adaptive
+   ============================================================================= */
+.hljs {
+  background: var(--color-surface-container-lowest) !important;
+  color: var(--color-on-surface) !important;
+  display: block;
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-subst {
+  color: #ff6c37 !important;
+  font-weight: 600;
+}
+
+.hljs-string,
+.hljs-title,
+.hljs-section,
+.hljs-attribute,
+.hljs-literal,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-addition {
+  color: #34d399 !important;
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-deletion,
+.hljs-meta {
+  color: var(--color-on-surface-variant) !important;
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.hljs-number,
+.hljs-regexp,
+.hljs-link {
+  color: #fbbf24 !important;
+}
+
+.hljs-built_in,
+.hljs-symbol,
+.hljs-bullet {
+  color: #60a5fa !important;
+}
+
+.hljs-operator,
+.hljs-punctuation {
+  color: var(--color-on-surface) !important;
+}
+
+[data-theme="light"] .hljs-keyword {
+  color: #ea580c !important;
+}
+[data-theme="light"] .hljs-string {
+  color: #059669 !important;
+}
+[data-theme="light"] .hljs-number {
+  color: #d97706 !important;
+}
+[data-theme="light"] .hljs-built_in {
+  color: #2563eb !important;
+}
+

@@ -1,11 +1,9 @@
 import { useEffect, useRef } from 'react'
 import hljs from 'highlight.js/lib/core'
-import sql from 'highlight.js/lib/languages/sql'
+import sqlLang from 'highlight.js/lib/languages/sql'
 import pgsql from 'highlight.js/lib/languages/pgsql'
-import 'highlight.js/styles/atom-one-dark.css'
-import 'highlight.js/styles/atom-one-light.css'
 
-hljs.registerLanguage('sql', sql)
+hljs.registerLanguage('sql', sqlLang)
 hljs.registerLanguage('pgsql', pgsql)
 
 const DIALECT_MAP = {
@@ -20,64 +18,85 @@ function getLanguage(dialect = 'sql') {
   return DIALECT_MAP[dialect.toLowerCase()] || 'sql'
 }
 
+/**
+ * Formats dense single-line SQL queries into clean multi-line code blocks
+ */
+export function formatSql(sqlInput) {
+  if (!sqlInput || typeof sqlInput !== 'string') return ''
+  const trimmed = sqlInput.trim()
+  
+  // If query is already formatted on multiple lines, keep it as is
+  if (trimmed.includes('\n')) return trimmed
+
+  // Core SQL keywords to split onto separate lines for code block readability
+  const keywords = [
+    'SELECT', 'FROM', 'WHERE', 'GROUP BY', 'HAVING', 'ORDER BY', 'LIMIT', 'OFFSET',
+    'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'OUTER JOIN', 'CROSS JOIN', 'JOIN',
+    'UNION ALL', 'UNION', 'VALUES', 'SET', 'UPDATE', 'INSERT INTO', 'DELETE FROM',
+    'AND', 'OR'
+  ]
+
+  let formatted = trimmed
+  keywords.forEach((kw) => {
+    const regex = new RegExp(`\\b(${kw})\\b`, 'gi')
+    formatted = formatted.replace(regex, '\n$1')
+  })
+
+  return formatted.trim()
+}
+
 export function SqlHighlighter({ 
   sql, 
   className = '', 
   maxHeight = '300px', 
-  theme = 'dark',
   dialect = 'sql'
 }) {
-  const preRef = useRef(null)
+  const codeRef = useRef(null)
   const language = getLanguage(dialect)
+  const formattedSql = formatSql(sql)
 
   useEffect(() => {
-    if (preRef.current) {
-      hljs.highlightElement(preRef.current)
+    if (codeRef.current) {
+      // Re-run syntax highlighting whenever sql or language changes
+      codeRef.current.removeAttribute('data-highlighted')
+      hljs.highlightElement(codeRef.current)
     }
-  }, [sql, language])
+  }, [formattedSql, language])
 
   if (!sql) return null
 
-  const themeClass = theme === 'dark' ? 'hljs atom-one-dark' : 'hljs atom-one-light'
-
   return (
     <div className={className} style={{ maxHeight, overflow: 'auto' }}>
-      <pre style={{ margin: 0, padding: '1rem', fontSize: '0.875rem', lineHeight: '1.5' }}>
+      <pre className="m-0 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words">
         <code 
-          ref={preRef} 
-          className={`${themeClass} language-${language}`}
+          ref={codeRef} 
+          className={`hljs language-${language}`}
           data-language={language}
         >
-          {sql.trim()}
+          {formattedSql}
         </code>
       </pre>
     </div>
   )
 }
 
-export function InlineSql({ sql, className = '', theme = 'dark', dialect = 'sql' }) {
-  const preRef = useRef(null)
+export function InlineSql({ sql, className = '', dialect = 'sql' }) {
+  const codeRef = useRef(null)
   const language = getLanguage(dialect)
 
   useEffect(() => {
-    if (preRef.current) {
-      hljs.highlightElement(preRef.current)
+    if (codeRef.current) {
+      codeRef.current.removeAttribute('data-highlighted')
+      hljs.highlightElement(codeRef.current)
     }
   }, [sql, language])
 
   if (!sql) return null
 
-  const themeClass = theme === 'dark' ? 'hljs atom-one-dark' : 'hljs atom-one-light'
-
   return (
     <code 
-      ref={preRef} 
-      className={`${themeClass} language-${language} font-mono text-sm ${className}`}
-      style={{ 
-        padding: '0.25rem 0.5rem', 
-        borderRadius: '0.25rem', 
-        backgroundColor: theme === 'dark' ? '#282c34' : '#fafafa' 
-      }}
+      ref={codeRef} 
+      className={`hljs language-${language} font-mono text-xs ${className}`}
       data-language={language}
     >
       {sql.trim()}

@@ -4,6 +4,7 @@ import { Sidebar } from "./Sidebar.jsx";
 import { UrlBar } from "./UrlBar.jsx";
 import { RequestWorkbench } from "./RequestWorkbench.jsx";
 import { ResponseWorkbench } from "./ResponseWorkbench.jsx";
+import { HTTP_METHODS } from "../utils/constants.js";
 import { useRoutesStore } from "../store/routesStore.js";
 import { useProfileStore } from "../store/profileStore.js";
 import { useConnectionsStore } from "../store/connectionsStore.js";
@@ -41,16 +42,31 @@ export function Workbench({ "data-label": testId = "workbench" }) {
     activeRequestTab,
     activeResponseTab,
     topHeight,
+    isCollapsed,
+    setIsCollapsed,
     setActiveSidebarNav,
     setActiveRequestTab,
     setActiveResponseTab,
     setTopHeight,
   } = useUiStore();
+  const methods = selectedTarget?.target_details?.methods || HTTP_METHODS;
 
   const isResizingRef = useRef(false);
   const dragStartYRef = useRef(0);
   const dragStartHeightRef = useRef(0);
   const topRef = useRef(null);
+
+  // Keyboard shortcut Ctrl+B / Cmd+B to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        setIsCollapsed(!isCollapsed);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isCollapsed, setIsCollapsed]);
 
   useEffect(() => {
     fetchTargets().then((res) => {
@@ -236,13 +252,15 @@ const handleSend = async () => {
         data-label={`${testId}-body`}
       >
         {/* Resizable Sidebar */}
-        <Sidebar
-          activeNavId={activeSidebarNav}
-          onNavSelect={setActiveSidebarNav}
-          selectedTarget={selectedTarget}
-          onSelectTarget={selectTarget}
-          data-label={`${testId}-sidebar`}
-        />
+        {!isCollapsed && (
+          <Sidebar
+            activeNavId={activeSidebarNav}
+            onNavSelect={setActiveSidebarNav}
+            selectedTarget={selectedTarget}
+            onSelectTarget={selectTarget}
+            data-label={`${testId}-sidebar`}
+          />
+        )}
 
         <main
           className="flex-1 flex flex-col bg-background h-full overflow-hidden"
@@ -256,6 +274,7 @@ const handleSend = async () => {
             <UrlBar
               method={method}
               onMethodChange={setMethod}
+              methods={methods}
               path={effectiveBasePath}
               onSend={handleSend}
               loading={profiling}

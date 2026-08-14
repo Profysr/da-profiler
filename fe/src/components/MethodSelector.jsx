@@ -1,14 +1,15 @@
 // src/components/MethodSelector.jsx
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Check } from 'lucide-react'
-import { HTTP_METHODS, getMethodBadgeClass } from '../utils/constants.js'
+import { getMethodBadgeClass } from '../utils/constants.js'
 
 export function MethodSelector({
   value = 'GET',
   onChange,
-  methods = HTTP_METHODS,
+  methods,
   'data-label': testId = 'method-selector',
 }) {
+  const actualMethods = methods || ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef(null)
   const currentBadgeClass = getMethodBadgeClass(value)
@@ -71,7 +72,7 @@ export function MethodSelector({
           data-label={`${testId}-options`}
           className="absolute left-0 top-full mt-1.5 w-36 bg-[#1e1e1e] border border-zinc-700/60 rounded-md shadow-xl z-50 overflow-hidden py-1 backdrop-blur-md"
         >
-          {methods.map((m) => {
+          {actualMethods.map((m) => {
             const methodId = typeof m === 'string' ? m : m.id
             const itemBadgeClass = getMethodBadgeClass(methodId)
             const isSelected = methodId === value

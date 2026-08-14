@@ -1,32 +1,39 @@
 // src/components/UrlBar.jsx
-import { MethodSelector } from './MethodSelector.jsx'
-import { useConnectionsStore } from '../store/connectionsStore.js'
-import { Loader2, Send } from 'lucide-react'
-import { useProfileStore } from '../store/profileStore.js'
-import { useRoutesStore } from '../store/routesStore.js'
+import { MethodSelector } from "./MethodSelector.jsx";
+import { useConnectionsStore } from "../store/connectionsStore.js";
+import { Loader2, Send } from "lucide-react";
+import { useProfileStore } from "../store/profileStore.js";
+import { useRoutesStore } from "../store/routesStore.js";
+import { HTTP_METHODS } from "../utils/constants.js";
 
 export function UrlBar({
-  method = 'GET',
+  method = "GET",
   onMethodChange,
-  path = '/api/testing/choose-from-sidebar/', //TODO: We can replace it with a good message as npm has
+  methods = HTTP_METHODS,
+  path = "/api/testing/choose-from-sidebar/", //TODO: We can replace it with a good message as npm has
   onSend,
   loading = false,
-  "data-label": testId = 'url-bar',
+  "data-label": testId = "url-bar",
 }) {
-  const { getSelectedConnection } = useConnectionsStore()
-    const { fetchTargets, selectedTarget, selectTarget } = useRoutesStore()
-  const activeConnection = getSelectedConnection()
-  const baseUrl = activeConnection?.baseUrl || 'http://127.0.0.1:8000'
+  const { getSelectedConnection } = useConnectionsStore();
+  const { selectedTarget } = useRoutesStore();
+  const activeConnection = getSelectedConnection();
+  const baseUrl = activeConnection?.baseUrl || "http://127.0.0.1:8000";
 
-  const isSendDisabled = loading || !activeConnection || !selectedTarget || !(
-      selectedTarget.executable !== undefined ? selectedTarget.executable : selectedTarget.can_execute
-    )
+  const isSendDisabled =
+    loading ||
+    !activeConnection ||
+    !selectedTarget ||
+    !(selectedTarget.executable !== undefined
+      ? selectedTarget.executable
+      : selectedTarget.can_execute);
 
   return (
     <div className="flex items-center gap-3" data-label={testId}>
       <MethodSelector
         value={method}
         onChange={onMethodChange}
+        methods={methods}
         data-label={`${testId}-method`}
       />
 
@@ -60,7 +67,11 @@ export function UrlBar({
         onClick={onSend}
         disabled={isSendDisabled}
         className="bg-primary text-white h-10 px-6 rounded-lg font-bold text-xs hover:opacity-90 transition-all flex items-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(255,108,55,0.3)] active:scale-95"
-        title={!activeConnection ? "No connection selected" : "Send Request (Ctrl + Enter)"}
+        title={
+          !activeConnection
+            ? "No connection selected"
+            : "Send Request (Ctrl + Enter)"
+        }
       >
         {loading ? (
           <>
@@ -75,5 +86,5 @@ export function UrlBar({
         )}
       </button>
     </div>
-  )
+  );
 }
