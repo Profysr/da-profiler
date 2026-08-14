@@ -54,84 +54,32 @@ da-profiler/
 
 ---
 
-## 🧪 Testing Locally (Before Publishing)
+## 🧪 Running Tests Locally
 
-Before shipping anything, we test it at home. There are **three ways** to test the Python package and **three ways** to test the dashboard. Pick the one that fits your situation.
-
-### A) Test the Python Package Locally
-
-You need these tools first:
+Quick setup for local development:
 
 ```bash
-pip install build twine pytest ruff
-```
-
-#### Way 1: Run the test suite (fastest)
-
-Da Profiler's tests live in `tests/` and are split into two groups using "markers":
-
-| Marker | What it tests | Needs a database? | Speed |
-|--------|---------------|-------------------|-------|
-| `core` | Pure Python brain (no Django) | No | ⚡ Fastest |
-| `django` | Django + DRF adapter | Yes (PostgreSQL) | 🐢 Slower |
-
-```bash
-# 1. Install the package in "editable" mode (changes show up instantly)
+# 1. Install package with dev deps
 pip install -e ".[dev]"
 
-# 2. Go to the demo Django project (for the django-marked tests)
+# 2. Go to demo Django project
 cd demos/drf
 
-# 3. Set up the shadow database (a safe copy we test against)
+# 3. Set up shadow DB (safe test copy)
 python manage.py migrate --database=dqs_shadow
 
-# 4. Run the tests
-pytest -m core        # Quick pure-Python tests
-pytest -m django      # Slower Django tests
-pytest -v             # Everything, with verbose output
+# 4. Run core tests only (no DB needed, fastest)
+pytest -m core
+
+# 5. Run Django/DRF tests (requires DB)
+pytest -m django
 ```
 
-> **ELI5**: Editable mode (`-e`) means "link to my code, don't copy it." Every time you save a file, the tests use your latest changes.
+> **Need just the core Python tests?** Run `pytest -m core` — no Django, no database, runs in seconds.
 
-#### Way 2: Test your changes inside a real Django project
+> **Need Django/DRF tests?** Make sure PostgreSQL is running and the shadow DB is migrated first.
 
-This is for when you want to see how your changes behave in someone else's Django app.
-
-```bash
-# 1. In your Django project folder:
-pip install -e /path/to/da-profiler[django]
-
-# 2. Verify it's using your local code (not the PyPI version)
-python -c "import dqs; print(dqs.__file__)"
-# It should print a path inside /path/to/da-profiler/
-
-# 3. Run Django and try it out
-python manage.py runserver
-```
-
-#### Way 3: Test the built package (dry-run before shipping)
-
-This simulates what a real user will experience after you publish.
-
-```bash
-# 1. Build the package into a wheel file
-cd /path/to/da-profiler
-python -m build
-# Creates: dist/da_profiler-0.3.0-py3-none-any.whl
-
-# 2. Make a clean sandbox (a fresh virtual room with nothing extra installed)
-python -m venv /tmp/test-env
-source /tmp/test-env/bin/activate    # Windows: \tmp\test-env\Scripts\activate
-
-# 3. Install ONLY the built wheel into the clean room
-pip install dist/da_profiler-0.3.0-py3-none-any.whl[django]
-
-# 4. Try it out — import it, use it, run the demo project
-```
-
-> **ELI5**: This is like putting your toy in a brand-new empty room to make sure it works without any of your home's special setup.
-
----
+> **Using Docker?** Run `docker compose up -d` then `docker compose exec web pytest -m core`.
 
 ### B) Test the Dashboard Locally
 

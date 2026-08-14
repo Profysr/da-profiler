@@ -1,14 +1,14 @@
 <p align="center">
-  <img src="imgs/logo.webp" alt="Da Profiler Logo" width="120">
-</p>
+  <img src="imgs/Logo.png" alt="Da Profiler Logo" width="120">
 
 [![PyPI version](https://img.shields.io/badge/pypi-v0.3.0-blue.svg)](https://pypi.org/project/da-profiler/)
 [![Python Version](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue)](https://www.python.org/)
 [![Django Support](https://img.shields.io/badge/django-4.2%20|%205.0%20|%205.1%20|%205.2-green)](https://www.djangoproject.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Development Status](https://img.shields.io/badge/status-Alpha-orange.svg)](https://pypi.org/project/da-profiler/)
 
-![Da Profiler Banner](imgs/da-profile-social-banner.png)
+![Da Profiler Dashboard](imgs/dashboard.png)
 
 > **Two surfaces, one engine. The interactive Django API workbench + profiler, with an MCP server for AI agents.**
 
@@ -20,15 +20,13 @@
 Both surfaces send requests through a shared **execution proxy** that captures every query at the DB-driver boundary inside a toggleable atomic-rollback sandbox, flags N+1 queries with AST-based SQL fingerprinting, and returns a prescriptive, copy-pasteable ORM fix. Payloads are user/agent-supplied — a lean `suggest_payload()` helper gives both surfaces a starting-point template derived from the target's serializer, but never auto-seeds your DB.
 
 ---
-
-## ⚡ Quick Navigation
+## 📑 Table of Contents
 
 - [Key Features](#-key-features)
 - [Why Da Profiler?](#-why-da-profiler)
 - [Feature Comparison](#-feature-comparison)
 - [Architecture & Design](#-architecture--design)
 - [How It Works](#-how-it-works)
-- [Request Builder & Payload Suggester](#-request-builder--payload-suggester)
 - [AI Agent Integration (MCP)](#-ai-agent-integration-mcp)
 - [Installation & Quickstart](#-installation--quickstart)
 - [Running Tests](#-running-tests)
@@ -37,11 +35,63 @@ Both surfaces send requests through a shared **execution proxy** that captures e
 
 ---
 
+---
+
+## 🚀 Quick Installation
+
+### Install the package:
+
+```bash
+pip install da-profiler[django]     # Full package with Django support
+# or
+pip install da-profiler             # Core only (no Django)
+```
+
+### Add to your Django project (development only):
+
+```python
+# settings.py - only when DEBUG=True
+if DEBUG:
+    INSTALLED_APPS += ["dqs.adapters.drf"]
+    DATABASE_ROUTERS = ["dqs.adapters.drf.router.DQSRouter"]
+```
+
+### Set up shadow database (isolates profiling writes from your real DB):
+
+```python
+# settings.py
+DATABASES = {
+    "default": { /* your real DB config */ },
+    "dqs_shadow": {        # Same engine, separate test DB
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "my_db_shadow",
+        "USER": "db_user",
+        "PASSWORD": "db_password",
+        "HOST": "localhost",
+        "PORT": "5432",
+    },
+}
+# Then run: python manage.py migrate --database=dqs_shadow
+```
+
+### Start profiling:
+
+```bash
+# From your Django project
+python manage.py runserver  # Make sure DEBUG=True
+
+# Then in the workbench UI or via MCP:
+# - Pick an endpoint from the sidebar
+# - Edit the request body/params as needed
+# - Hit Execute
+# - View HTTP response + SQL trace side-by-side
+```
+
 ## ✨ Key Features
 
 - 🖥️ **Postman-Style Workbench UI** — searchable sidebar of every discovered endpoint, request builder with method/path/headers/auth/body editors, side-by-side HTTP response and SQL trace panels. Dark mode, keyboard shortcuts, saved collections.
 - 🤖 **Agent-First MCP Server** — exposes the engine as MCP tools (`list_targets`, `execute_request`, `suggest_payload`, `audit_authz`, `apply_fix`) so an AI coding agent can run the discover → execute → fix → re-verify loop without a human in the loop.
-- 🛡️ **Toggleable Transaction Sandbox** — wraps execution in `transaction.atomic()` with rollback by default. The caller can opt out per-request when it actually wants a write to persist (e.g. the agent verifying a POST created a row).
+- 🛡️ **Toggleable Transaction Sandbox** — wraps execution in `transaction.atomic()` with rollback by default 🔌. The caller can opt out per-request when it actually wants a write to persist (e.g. the agent verifying a POST created a row).
 - 🧬 **AST-Based SQL Fingerprinting** — powered by `sqlglot`. Strips numeric/string literals, normalizes dynamic `IN (...)` parameter lists, canonicalizes table aliases — eliminates false positives that plague Django Silk.
 - 🎯 **Target Discovery Engine** — auto-discovers Django views (FBV, CBV, DRF ViewSets), signal receivers, Celery tasks, and Channels ASGI consumers. Both surfaces consume the same `Target` list.
 - 👤 **Role Impersonation & AuthZ Audit Matrix** *(v0.5)* — pick any user from a dropdown to impersonate, switch between Session / Bearer / Anonymous auth modes, and run a multi-role access audit against any endpoint with a single click. Flags permission leaks and over-restrictions.
@@ -50,16 +100,26 @@ Both surfaces send requests through a shared **execution proxy** that captures e
 - 🧱 **Decoupled Engine Design** — strict separation between framework-agnostic analysis (`dqs/core/`) and Django/DRF adapters (`dqs/adapters/drf/`). One execution proxy serves both the workbench and the MCP server.
 
 ---
+<img src="imgs/Post with Features.png" alt="Da Profiler Feature Highlights">
+
+> **Da Profiler** — SQL fingerprinting, toggleable sandbox, N+1 detection, MCP agent loop, explicit path param resolution, AuthZ audit matrix.
+
+---
 
 ## 💡 Why Da Profiler?
 
-Traditional API tools force a tradeoff: **Postman** gives you a great UI for crafting requests but is blind to what Django does under the hood — no SQL trace, no N+1 detection, no role-aware testing. **Django Silk** gives you deep query introspection but only as passive middleware that logs traffic you've already produced by clicking around in a browser. **Django Debug Toolbar** is the same idea, per-request, in the browser.
+Traditional tools force a tradeoff: **Postman** gives you a great UI but is blind to Django's under-the-hood queries. **Django Silk** gives you deep query introspection but only as passive middleware that logs traffic you've already produced. **Django Debug Toolbar** is the same idea, per-request, in the browser.
 
 `Da Profiler` collapses that tradeoff into one tool:
 
-- **For humans** — open the workbench, pick an endpoint, edit the body, hit Execute. You get the HTTP response and the SQL trace (with file:line origins) in the same view. Switch users from a dropdown. Run a multi-role AuthZ audit without writing test code.
+- **For humans** — open the workbench 🛢️, pick an endpoint, edit the body, hit Execute. You get the HTTP response and the SQL trace (with file:line origins) in the same view. Switch users from a dropdown. Run a multi-role AuthZ audit without writing test code.
 - **For AI agents** — wire the MCP server into your IDE. The agent calls `execute_request`, reads the response, detects the N+1, calls `apply_fix`, re-runs, and confirms the query count dropped. No human re-testing anything.
 - **For both** — payloads are user/agent-supplied, not synthesized. What you test is what your users actually send. Sandbox is on by default, opt-out per call. One execution proxy, one query interceptor, one analyzer.
+
+---
+<!-- <img src="imgs/Simple Post.png" alt="Da Profiler Simple Post"> -->
+
+Traditional API tools force a tradeoff: **Postman** gives you a great UI for crafting requests but is blind to what Django does under the hood — no SQL trace, no N+1 detection, no role-aware testing. **Django Silk** gives you deep query introspection but only as passive middleware that logs traffic you've already produced by clicking around in a browser. **Django Debug Toolbar** is the same idea, per-request, in the browser.
 
 ---
 
@@ -67,16 +127,16 @@ Traditional API tools force a tradeoff: **Postman** gives you a great UI for cra
 
 | Feature | Postman | Django Silk | Da Profiler (`dqs`) |
 |---|---|---|---|
-| **Request builder UI** | Excellent | None | **Postman-style workbench** |
-| **Discovery** | Manual import | Passive traffic logging | **Active URL/signal/task/consumer tree** |
-| **DB footprint** | None | High (persists log rows) | **Zero (toggleable atomic rollback)** |
-| **N+1 detection** | None | Manual SQL review | **Automated AST fingerprinting (`sqlglot`)** |
-| **Fix generation** | None | None | **Prescriptive ORM (`.select_related()`) + agent `apply_fix()`** |
-| **Role impersonation** | Manual token copy-paste | Not supported | **Native dropdown (Session/Bearer/Anonymous)** |
-| **Multi-role AuthZ audit** | Not supported | Not supported | **`audit_authz` tool — one click, full matrix** |
-| **Payload source** | User-typed | n/a | **User/agent-supplied, with `suggest_payload()` template** |
-| **AI agent integration** | None | None | **Native MCP server (Cursor, Claude Code, Windsurf)** |
-| **CI gating** | Collection runner (limited) | Not supported | **Same proxy, CLI linter in v2.0+** |
+| **Request builder UI** | Excellent | None | **Postman-style workbench UI** |
+| **Discovery** | Manual import | Passive traffic logging | **Auto-discovers URLs, signals, tasks** |
+| **DB footprint** | None | High (persists log rows) | **Zero — sandbox rollback by default** 🔌 |
+| **N+1 detection** | None | Manual SQL review | **Automated with `.select_related()` fixes** 🔍 |
+| **Fix generation** | None | None | **Prescriptive ORM fixes + `apply_fix()`** |
+| **Role impersonation** | Manual token copy-paste | Not supported | **Dropdown: Session / Bearer / Anonymous** |
+| **Multi-role AuthZ audit** | Not supported | Not supported | **One-click access matrix** |
+| **Payload source** | User-typed | n/a | **User/agent-supplied, with template** |
+| **AI agent integration** | None | None | **MCP server for IDE agents** |
+| **CI gating** | Collection runner (limited) | Not supported | **CLI linter, same proxy** |
 
 ---
 
