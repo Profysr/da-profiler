@@ -1,6 +1,6 @@
 # Da Profiler — Architecture & System Design 🏗️
 
-> **Da Profiler** (package `dqs`) is an isolated query profiling engine and static code advisor for Django applications, exposed through **two surfaces**: a Postman-style workbench UI for humans (`fe/`) and an MCP server for AI agents (`dqs/mcp/`). Both surfaces drive the same **execution proxy** (`dqs/adapters/drf/execution/proxy.py`), which accepts user/agent-supplied payloads, runs them inside a toggleable atomic-rollback sandbox, intercepts queries at the DB-driver boundary, and normalizes SQL via AST fingerprinting to detect N+1 bottlenecks. Static code analysis runs against the whole codebase without execution.
+> **Da Profiler** (package `dqs`) is an isolated query profiling engine and static code advisor for Django applications, exposed through **two surfaces**: an MCP server for AI agents (`dqs/mcp/`). The human-facing workbench UI has been split out to a separate repository: <https://github.com/Profysr/da-profile-fe>. Both surfaces drive the same **execution proxy** (`dqs/adapters/drf/execution/proxy.py`), which accepts user/agent-supplied payloads, runs them inside a toggleable atomic-rollback sandbox, intercepts queries at the DB-driver boundary, and normalizes SQL via AST fingerprinting to detect N+1 bottlenecks. Static code analysis runs against the whole codebase without execution.
 
 ---
 
@@ -13,9 +13,9 @@ Da Profiler is built around four fundamental design principles:
    - Handles SQL AST fingerprinting (`sqlglot`), N+1 aggregation algorithms, target abstractions (`Target`), and framework-independent static AST code scanning (`StaticASTAdvisor`).
 
 2. **Single Execution Engine, Two Surfaces**:
-   - One engine (`dqs/adapters/drf/execution/`) is consumed by two surfaces:
-     - The **workbench UI** (`fe/`) — human-facing, Postman-style request builder + response/SQL viewer.
-     - The **MCP server** (`dqs/mcp/`) — agent-facing, exposes the engine as MCP tools.
+- One engine (`dqs/adapters/drf/execution/`) is consumed by two surfaces:
+   - The **workbench UI** — human-facing, Postman-style request builder + response/SQL viewer.
+   - The **MCP server** (`dqs/mcp/`) — agent-facing, exposes the engine as MCP tools.
    - Both surfaces call the **execution proxy** (`proxy.execute_request()`) — never the low-level runner directly. The proxy owns the request contract (method, path, payload, user context, sandbox toggle); the runner is the internal engine that dispatches the request.
 
 3. **User/Agent-Supplied Payloads, Not Synthetic Ones**:
@@ -40,9 +40,9 @@ engine. Reading top-to-bottom: two surfaces call one proxy, the proxy validates
 
 ```
                         +-------------------+    +-------------------+
-                        |   Workbench UI    |    |    MCP Server     |
-                        |   (fe/) — human   |    |  (dqs/mcp/) —     |
-                        |   surface         |    |   agent surface   |
+|   Workbench UI    |    |    MCP Server     |
+                         |   — human         |    |  (dqs/mcp/) —     |
+                         |   surface         |    |   agent surface   |
                         +---------+---------+    +---------+---------+
                                   |                        |
                                   |  POST /profiler/execute (etc.)
@@ -295,12 +295,9 @@ the developer; it equips them with the rule.
 - **Resources & Prompts**: `profiler://targets` resource and `fix_n_plus_one` prompt template.
 - Consumed by Cursor, Claude Code, Windsurf, and any other MCP-compatible IDE agent.
 
-### D. Workbench UI (`fe/` — _promoted to primary human surface in v0.35_)
+### D. Workbench UI (split-out to separate repo)
 
-- React 18 + Vite + Tailwind CSS, dark Postman-inspired theme.
-- Three-pane layout: route sidebar (left), request builder (center top), response + profiler (center bottom).
-- Calls `/profiler/manage/routes`, `/profiler/execute`, `/profiler/connection/health` — the same HTTP surface the MCP server calls internally.
-- See [`fe/README.md`](./fe/README.md) for component-level details.
+The human-facing workbench UI has been split out to a separate repository at <https://github.com/Profysr/da-profile-fe>. It was originally built with React 18 + Vite + Tailwind CSS, featuring a three-pane layout (route sidebar, request builder, response + profiler), and communicated with the engine via `POST /profiler/execute`. For component-level details, see the separate `fe/README.md` in the split-out repository.
 
 ---
 
@@ -337,7 +334,7 @@ dqs/
 └── mcp/                               # NEW in v0.4
     ├── server.py                      # MCP server (stdio + SSE) + tool definitions
     └── tools/                         # Tool implementations grouped by concern
-fe/                                    # React/Vite workbench UI (human surface)
+# Workbench UI split out to separate repo at <https://github.com/Profysr/da-profile-fe>
 ```
 
 > **Note:** The `dqs/adapters/drf/mocking/` directory and the `body_inferrer.py` module were **deleted** in the v0.35 cleanup. A `payload_suggester.py` for serializer-derived JSON templates is **deferred to a later release** — payloads are currently caller-supplied via the `body` field of `POST /profiler/execute`.

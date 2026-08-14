@@ -3,7 +3,7 @@
 *Source of truth for project execution. Tracks what is completed, currently under construction, and planned — and, in this section, why any of it matters.*
 
 > **Revision note (this update):** A second structural pivot. DQS is repositioning from "auto-profile every target with synthetic data" to **two surfaces, one engine**:
-> - A **human-facing workbench** (Postman-style UI in `fe/`) for exploration and one-off debugging.
+> - A **human-facing workbench** (Postman-style UI split to separate repo at <https://github.com/Profysr/da-profile-fe>) for exploration and one-off debugging.
 > - An **agent-facing MCP server** that runs the same loop headlessly — discover → execute → detect N+1 → apply the suggested fix → re-verify, with no human in the loop.
 >
 > Both surfaces send requests through one shared **execution proxy** that takes user/agent-supplied payloads, attaches the v0.25 query interceptor inside a toggleable atomic-rollback sandbox, and returns the HTTP response alongside the captured SQL trace. The mock data generator and request-body inferrer from v0.3 are **deleted** — payloads are user/agent-supplied through `POST /profiler/execute`, with a `suggest_payload()` helper (deferred to a later release) planned as an opt-in starting-point template. Auth becomes first-class (user impersonation + multi-role AuthZ audit matrix). The phase order is reshuffled: the workbench UI ships first (v0.35) so the engine has a UI proving the proxy works, then the MCP server (v0.4) so agents can drive the same engine, then auth + the execution proxy itself as a hardened v0.5, then v1.0 ships both surfaces together.
@@ -142,8 +142,8 @@ The v0.3 deliverables above were **deleted or repurposed** as part of the v0.35 
 - [x] **Rename** HTTP endpoints from `/dqs/*` to `/profiler/*` (`/profiler/manage/routes`, `/profiler/execute`, `/profiler/connection/health`).
 - [x] **Update tests** — remove mock-data tests, fix bad imports, update to renamed types.
 - [x] **Update frontend** — endpoint paths, vite proxy, empty-state placeholders.
+### B. Workbench UI request builder (split to separate repo)
 
-### B. Workbench UI request builder in `fe/`
 - [ ] **Route sidebar** (already exists, mostly works): searchable, filterable list of all discovered `Target(kind="view")` records, grouped by app/module. Show kind badge (view / signal / task) so non-view targets surface too.
 - [ ] **Request builder panel** (new):
   - Method picker (auto-derived from the route's allowed methods, editable).
@@ -163,7 +163,7 @@ The v0.3 deliverables above were **deleted or repurposed** as part of the v0.35 
 - [ ] **Keyboard shortcuts** (already exists): `/` focus, `Enter` execute, `Cmd/Ctrl+B` sidebar, etc.
 
 ### C. Tests
-- [ ] `fe/` component tests for the new request builder panels.
+- [ ] Component tests for the new request builder panels (split to separate repo at <https://github.com/Profysr/da-profile-fe>).
 - [ ] Integration test: `runner.execute_request()` returns a valid `ProfileResult` with `metrics`, `queries`, `analysis` populated.
 
 ---
@@ -242,7 +242,7 @@ The v0.3 deliverables above were **deleted or repurposed** as part of the v0.35 
 - [ ] MCP `audit_authz` tool (registered in v0.4) becomes fully functional.
 
 ### D. Wire both surfaces to the proxy
-- [ ] `fe/` request builder — replace the direct `runner.execute_request()` call with `POST /profiler/execute` through the new proxy. The Auth & Impersonation panel becomes live (Session / Bearer / Anonymous + user picker).
+- [ ] Workbench request builder (split to separate repo) — replace the direct `runner.execute_request()` call with `POST /profiler/execute` through the new proxy. The Auth & Impersonation panel becomes live (Session / Bearer / Anonymous + user picker).
 - [ ] MCP `execute_request` tool — the proxy's request shape already matches what the MCP tool returns; the MCP tool just calls the proxy directly instead of the runner.
 
 ### E. Tests
@@ -280,7 +280,7 @@ Meanwhile the runner already *sort of* executes them: when `_lookup_route()` doe
 
 > Status: FUTURE 🔮
 
-- [ ] Production-ready build of `fe/` with optimized bundle, error boundaries, telemetry-free deployment.
+- [ ] Production-ready build of the workbench UI (split to separate repo) with optimized bundle, error boundaries, telemetry-free deployment.
 - [ ] MCP server with both stdio and SSE transports documented and tested across Cursor, Claude Code, and Windsurf.
 - [ ] Auth (impersonation + AuthZ audit) shipped and discoverable in both surfaces from day one.
 - [ ] Comprehensive end-to-end docs: quickstart, "How to use the workbench," "How to wire the MCP server into your IDE," "How to write an agentic loop against the MCP tools."

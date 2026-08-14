@@ -40,7 +40,9 @@ da-profiler/
 │   ├── adapters/drf/
 │   │   └── ... (HTTP API only; no HTML templates)
 │   └── ...
-├── fe/                           # React frontend (npm: @da-profiler/dashboard)
+# The React frontend (@da-profiler/dashboard) has been split out to a separate repository:
+# <https://github.com/Profysr/da-profile-fe>. The Python package (da-profiler) can be
+# used independently without the dashboard.
 │   ├── bin/dashboard.js           # CLI entry point
 │   ├── src/
 │   ├── dist/                      # Built output (after npm run build)
@@ -143,7 +145,7 @@ cd /path/to/your/django/project
 python manage.py runserver 8000
 
 # Terminal 2: Start the dashboard with hot reload
-cd /path/to/da-profiler/fe
+cd /path/to/da-profile-fe
 npm install
 npm run dev
 # Opens at http://localhost:5173 — refreshes automatically as you save files
@@ -157,7 +159,7 @@ Then in the browser:
 #### Way 2: Test the CLI command
 
 ```bash
-cd /path/to/da-profiler/fe
+cd /path/to/da-profile-fe
 
 # Make the `daprofiler-dashboard` command available everywhere on your computer
 npm link
@@ -170,7 +172,7 @@ daprofiler-dashboard
 #### Way 3: Test the built + packed dashboard (dry-run)
 
 ```bash
-cd /path/to/da-profiler/fe
+cd /path/to/da-profile-fe
 
 # 1. Build the production bundle
 npm run build                       # Creates dist/ with index.html and assets
@@ -202,7 +204,7 @@ source /tmp/test-env/bin/activate
 
 # 3. Install both built packages
 pip install dist/da_profiler-*.whl[django]
-npm install -g /path/to/da-profiler/fe/@da-profiler-dashboard-*.tgz
+npm install -g /path/to/da-profile-fe/@da-profiler-dashboard-*.tgz
 
 # 4. Set up a fresh Django project, then run the dashboard
 da-profiler-dashboard
@@ -309,7 +311,7 @@ pip install --index-url https://test.pypi.org/simple/ da-profiler[django]
 #### Pre-publish checklist
 
 ```bash
-cd fe/
+cd /path/to/da-profile-fe
 
 npm install
 npm run lint            # Check for code issues
@@ -323,7 +325,7 @@ npx ./@da-profiler-dashboard-0.1.0.tgz   # Test the packed CLI
 #### Publish
 
 ```bash
-cd fe/
+cd /path/to/da-profile-fe
 
 # One-time login
 npm login
@@ -431,12 +433,12 @@ Both packages use **SemVer** (`MAJOR.MINOR.PATCH`) and **version independently**
 | Package | Bump example |
 |---------|--------------|
 | Python (`da-profiler`) | `0.3.0` → `0.4.0` in `pyproject.toml` |
-| npm (`@da-profiler/dashboard`) | `0.1.0` → `0.2.0` in `fe/package.json` |
+| npm (`@da-profiler/dashboard`) | `0.1.0` → `0.2.0` in `@da-profiler-dashboard/package.json` |
 
 ### Release steps
 
 ```bash
-# 1. Bump versions in pyproject.toml and/or fe/package.json
+# 1. Bump versions in pyproject.toml and/or @da-profiler/dashboard/package.json
 # 2. Update CHANGELOG.md
 # 3. Tag the release
 git tag -a v0.4.0 -m "Release v0.4.0"
@@ -487,7 +489,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'npm', cache-dependency-path: 'fe/package-lock.json' }
+        with: { node-version: '20', cache: 'npm', cache-dependency-path: '@da-profiler-dashboard/package-lock.json' }
       - run: cd fe && npm ci
       - run: cd fe && npm run lint
       - run: cd fe && npm run build
@@ -536,7 +538,7 @@ jobs:
 | `ModuleNotFoundError: dqs` | Install with `pip install -e ".[django]"`, not `pip install -e .` |
 | Dashboard can't connect to Django | Ensure Django `DEBUG=True` and `DATABASE_ROUTERS` are configured |
 | CORS errors | Dashboard uses `withCredentials: true` — Django must allow credentials |
-| `uuid` not found in build | Add `"uuid": "^9.0.0"` to `fe/package.json` dependencies |
+| `uuid` not found in build | Add `"uuid": "^9.0.0"` to `@da-profiler-dashboard/package.json` dependencies |
 | CLI doesn't open browser | Check that the `open` package is installed; try `http://localhost:5173` manually |
 | Published version is old | Make sure you're not in editable mode. Use a fresh venv. |
 
@@ -566,7 +568,7 @@ cd fe && npm publish --access public    # Publish
 ```bash
 python -m build && (cd fe && npm run build && npm pack)
 pip install dist/da_profiler-*.whl[django]
-npm install -g fe/@da-profiler-dashboard-*.tgz
+npm install -g @da-profiler-dashboard/@da-profiler-dashboard-*.tgz
 da-profiler-dashboard
 ```
 

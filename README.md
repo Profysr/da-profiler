@@ -14,7 +14,7 @@
 
 `Da Profiler` (package `dqs`) discovers your Django project's endpoints automatically and exposes them through **two surfaces over one execution engine**:
 
-- A **Postman-style workbench** (`fe/`) — pick an endpoint, build a request, send it, see the HTTP response and the SQL trace side-by-side.
+- A **Postman-style workbench** — split out to a separate repository at <https://github.com/Profysr/da-profile-fe>. Pick an endpoint, build a request, send it, see the HTTP response and the SQL trace side-by-side.
 - An **MCP server** — AI agents in Cursor, Claude Code, and Windsurf drive the same engine headlessly: discover → execute → detect N+1 → apply the suggested fix → re-verify, with no human in the loop.
 
 Both surfaces send requests through a shared **execution proxy** that captures every query at the DB-driver boundary inside a toggleable atomic-rollback sandbox, flags N+1 queries with AST-based SQL fingerprinting, and returns a prescriptive, copy-pasteable ORM fix. Payloads are user/agent-supplied — a lean `suggest_payload()` helper gives both surfaces a starting-point template derived from the target's serializer, but never auto-seeds your DB.
@@ -86,7 +86,7 @@ Da Profiler enforces a clean architectural separation. One execution engine, two
 
 ```
                        ┌────────────────────┐      ┌────────────────────┐
-                       │  Workbench UI (fe/) │      │   MCP Server        │
+                       │  Workbench UI │      │   MCP Server        │
                        │   Human surface     │      │   Agent surface     │
                        └─────────┬──────────┘      └─────────┬──────────┘
                                  │                            │
@@ -116,12 +116,12 @@ Da Profiler enforces a clean architectural separation. One execution engine, two
 
 ```
 dqs/
-├── __init__.py
-├── core/                              # Framework-agnostic engine (zero Django imports)
+├ __init__.py
+├ core/                              # Framework-agnostic engine (zero Django imports)
 │   ├── analyzer.py                    # sqlglot-based SQL AST fingerprinting & N+1 detection
 │   ├── static_advisor.py              # Pure AST static code scanner (loops & blocking I/O)
 │   └── targets.py                     # Unified Target dataclass
-├── adapters/
+├ adapters/
 │   └── drf/                           # Django & DRF adapter
 │       ├── apps.py                    # DQS Django AppConfig (DEBUG guard)
 │       ├── router.py                  # Shadow DB router & profiling_session context manager
@@ -143,7 +143,9 @@ dqs/
 │           └── proxy.py               # NEW in v0.5 — single entry point for UI + MCP
 └── mcp/                               # NEW in v0.4
     └── server.py                      # MCP server (stdio + SSE) + tool definitions
-fe/                                    # React/Vite workbench UI (human surface)
+
+The human-facing workbench UI has been split out to a separate repository at <https://github.com/Profysr/da-profile-fe>.
+```
 ```
 
 > 📖 For full system diagrams and execution sequence specifications, check out [`ARCHITECTURE.md`](./architecture.md).
@@ -473,7 +475,6 @@ pytest -m django
 - 💡 [`docs/How it work.md`](./docs/How%20it%20work.md) — ELI5 explanations of core concepts.
 - 🧪 [`docs/Test and Publish Guide.md`](./docs/Test%20and%20Publish%20Guide.md) — Integration, profiling & testing guide.
 - 🛠️ [`docs/Developer Onboarding.md`](./docs/Developer%20Onboarding.md) — File-by-file codebase reference.
-- 🖥️ [`fe/README.md`](./fe/README.md) — Frontend workbench UI documentation.
 
 ---
 
