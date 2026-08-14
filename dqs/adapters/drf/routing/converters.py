@@ -286,7 +286,8 @@ class PathConverterResolver:
 
         url = route.path
         for name, value in params.items():
-            pattern = re.compile(rf"<(?:[^:]+:)?{name}>")
+            safe_name = re.escape(str(name))
+            pattern = re.compile(rf"<(?:[^:]+:)?{safe_name}>")
             url = pattern.sub(str(value), url)
         return url
 
