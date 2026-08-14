@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "da-profiler"
-version = "0.3.0"
+version = "0.3.5"
 description = "Da Profiler: Isolated query profiling and mock-data sandbox for Django REST endpoints"
 readme = "README.md"
 requires-python = ">=3.10"

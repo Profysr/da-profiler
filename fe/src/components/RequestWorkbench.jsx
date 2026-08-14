@@ -287,6 +287,7 @@ export function RequestWorkbench({ 'data-label': testId = 'request-workbench' })
                 editable
                 onChange={(val) => updateRequestState({ bodyContent: val })}
                 className="flex-1"
+                initialViewMode="raw"
               />
             )}
 

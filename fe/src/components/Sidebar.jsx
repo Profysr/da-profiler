@@ -269,7 +269,7 @@ function SidebarFooter({ onOpenConnManager }) {
         <span>Manage Connections</span>
       </button>
       <span className="text-xs font-mono text-on-surface-variant/60">
-        v1.0.0
+        v0.3.5
       </span>
     </div>
   );
