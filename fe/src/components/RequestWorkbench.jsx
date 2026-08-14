@@ -1,31 +1,13 @@
 // src/components/RequestWorkbench.jsx
-import { useState, useCallback, useMemo } from 'react'
-import { JsonView, darkStyles } from 'react-json-view-lite'
-import 'react-json-view-lite/dist/index.css'
 import { PaneTabs } from './PaneTabs.jsx'
 import { KeyValueEditor } from './KeyValueEditor.jsx'
-import { DjangoRibbon } from './DjangoRibbon.jsx'
-import { Trash2, Upload, ChevronsUpDown, ChevronsDownUp, CircleAlert } from 'lucide-react'
+// import { DjangoRibbon } from './DjangoRibbon.jsx'
+import { Trash2, Upload } from 'lucide-react'
 import { useRequestStore } from '../store/requestStore.js'
 import { useUiStore } from '../store/uiStore.js'
 import { JsonViewer } from './JsonViewer.jsx'
 
 // ─── Shared Theme / Constants ────────────────────────────────────────────────
-const darkJsonStyles = {
-  ...darkStyles,
-  container: 'bg-transparent text-[12px] font-mono leading-5',
-  basicChildStyle: 'ml-4 border-l border-outline-variant/20 pl-2',
-  label: 'text-sky-300 mr-1 font-semibold',
-  nullValue: 'text-zinc-500 italic',
-  undefinedValue: 'text-zinc-500 italic',
-  numberValue: 'text-amber-300',
-  stringValue: 'text-emerald-300',
-  booleanValue: 'text-violet-400',
-  punctuation: 'text-zinc-400',
-  expandIcon: 'text-zinc-500 hover:text-primary cursor-pointer select-none mr-1 transition-colors',
-  collapseIcon: 'text-zinc-500 hover:text-primary cursor-pointer select-none mr-1 transition-colors',
-}
-
 const BODY_TYPES = [
   { id: 'none', label: 'none' },
   { id: 'json', label: 'JSON' },
