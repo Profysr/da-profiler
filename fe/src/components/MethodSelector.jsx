@@ -1,15 +1,21 @@
-// src/components/MethodSelector.jsx
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { ChevronDown, Check } from 'lucide-react'
-import { getMethodBadgeClass } from '../utils/constants.js'
+import { getMethodBadgeClass, sortMethods } from '../utils/constants.js'
 
 export function MethodSelector({
   value = 'GET',
   onChange,
-  methods,
+  methods = [],
   'data-label': testId = 'method-selector',
 }) {
-  const actualMethods = methods || ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+  // Render ONLY methods supported by the endpoint, ordered by standard METHOD_ORDER
+  const actualMethods = useMemo(() => {
+    if (methods && methods.length > 0) {
+      return sortMethods(methods)
+    }
+    return value ? [value] : []
+  }, [methods, value])
+
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef(null)
   const currentBadgeClass = getMethodBadgeClass(value)

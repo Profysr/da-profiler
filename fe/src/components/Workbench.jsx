@@ -1,10 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Header } from "./Header.jsx";
 import { Sidebar } from "./Sidebar.jsx";
 import { UrlBar } from "./UrlBar.jsx";
 import { RequestWorkbench } from "./RequestWorkbench.jsx";
 import { ResponseWorkbench } from "./ResponseWorkbench.jsx";
-import { HTTP_METHODS } from "../utils/constants.js";
+import { sortMethods } from "../utils/constants.js";
 import { useRoutesStore } from "../store/routesStore.js";
 import { useProfileStore } from "../store/profileStore.js";
 import { useConnectionsStore } from "../store/connectionsStore.js";
@@ -50,7 +50,11 @@ export function Workbench({ "data-label": testId = "workbench" }) {
     setActiveResponseTab,
     setTopHeight,
   } = useUiStore();
-  const methods = selectedTarget?.target_details?.methods || HTTP_METHODS;
+  
+  // Supported HTTP methods for the selected target, sorted consistently
+  const methods = useMemo(() => {
+    return sortMethods(selectedTarget?.target_details?.methods || []);
+  }, [selectedTarget]);
 
   const isResizingRef = useRef(false);
   const dragStartYRef = useRef(0);
@@ -99,7 +103,8 @@ export function Workbench({ "data-label": testId = "workbench" }) {
   }, [selectedTarget, setPathParams]);
 
   // Derive effective method & base path from selectedTarget or local state
-  const effectiveMethod = method;
+  const effectiveMethod =
+    methods.length > 0 && !methods.includes(method) ? methods[0] : method;
   const effectiveBasePath =
     selectedTarget?.target_details?.path ||
     selectedTarget?.name ||

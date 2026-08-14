@@ -7,6 +7,7 @@ import {
   TARGET_KIND_ORDER,
   ROUTE_FILTERS,
   getMethodBadgeClass,
+  sortMethods,
 } from "../utils/constants.js";
 import { ProjectSelector, ConnectionManager } from "./ConnectionManager.jsx";
 import {
@@ -26,8 +27,9 @@ import {
 function MethodBadges({ methods = ["GET"], maxVisible = 2 }) {
   if (!methods || methods.length === 0) return null;
 
-  const visibleMethods = methods.slice(0, maxVisible);
-  const hiddenMethods = methods.slice(maxVisible);
+  const sorted = sortMethods(methods);
+  const visibleMethods = sorted.slice(0, maxVisible);
+  const hiddenMethods = sorted.slice(maxVisible);
   const hiddenCount = hiddenMethods.length;
 
   return (
