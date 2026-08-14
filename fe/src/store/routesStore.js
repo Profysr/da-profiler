@@ -5,20 +5,20 @@ import { useConnectionsStore } from './connectionsStore.js'
 
 function filterRoutes(routes, searchQuery, activeFilter) {
   const query = searchQuery.toLowerCase().trim()
-  
+
   return routes.filter((route) => {
     // Filter by executable status — use route.executable from introspector
     // if available, otherwise fall back to TARGET_KINDS can_execute
     const routeExecutable = route.executable !== undefined ? route.executable : route.can_execute
-if (activeFilter === 'executable' && !routeExecutable) return false
-if (activeFilter === 'params' && (!route.target_details?.path_params || route.target_details.path_params.length === 0)) return false
-    
+    if (activeFilter === 'executable' && !routeExecutable) return false
+    if (activeFilter === 'params' && (!route.target_details?.url_params || route.target_details.url_params.length === 0)) return false
+
     // Filter by kind
     if (activeFilter.startsWith('kind:')) {
       const kind = activeFilter.replace('kind:', '')
       if (route.kind !== kind) return false
     }
-    
+
     // Filter by search query
     if (query) {
       const searchableText = [
@@ -30,10 +30,10 @@ if (activeFilter === 'params' && (!route.target_details?.path_params || route.ta
         route.target_details?.receiver || '',
         ...(route.target_details?.methods || []),
       ].join(' ').toLowerCase()
-      
+
       if (!searchableText.includes(query)) return false
     }
-    
+
     return true
   })
 }
@@ -51,7 +51,7 @@ export const useRoutesStore = create(
       error: null,
       counts: {},
       total: 0,
-      
+
       // Actions
       fetchTargets: async () => {
         const { loadTargets } = useConnectionsStore.getState()
@@ -59,8 +59,8 @@ export const useRoutesStore = create(
         try {
           const data = await loadTargets()
           if (data.error) {
-            set({ 
-              loading: false, 
+            set({
+              loading: false,
               error: data.error,
               targets: [],
               filteredTargets: [],
@@ -71,8 +71,8 @@ export const useRoutesStore = create(
           }
           const targets = data.targets || []
           const filtered = filterRoutes(targets, get().searchQuery, get().activeFilter)
-          set({ 
-            targets, 
+          set({
+            targets,
             filteredTargets: filtered,
             counts: data.counts || {},
             total: data.total || targets.length,
@@ -82,8 +82,8 @@ export const useRoutesStore = create(
           return { error: null }
         } catch (error) {
           const errMessage = error.message || 'Failed to fetch targets'
-          set({ 
-            loading: false, 
+          set({
+            loading: false,
             error: errMessage,
             targets: [],
             filteredTargets: [],
@@ -93,29 +93,29 @@ export const useRoutesStore = create(
           return { error: errMessage }
         }
       },
-      
+
       selectTarget: (target) => {
         set({ selectedTarget: target })
       },
-      
+
       setSearchQuery: (query) => {
         const filtered = filterRoutes(get().targets, query, get().activeFilter)
         set({ searchQuery: query, filteredTargets: filtered })
       },
-      
+
       setActiveFilter: (filter) => {
         const filtered = filterRoutes(get().targets, get().searchQuery, filter)
         set({ activeFilter: filter, filteredTargets: filtered })
       },
-      
+
       clearSelection: () => {
         set({ selectedTarget: null })
       },
-      
+
       clearError: () => {
         set({ error: null })
       },
-      
+
       // Trigger refetch when active connection changes
       onConnectionChange: () => {
         get().fetchTargets()
