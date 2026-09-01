@@ -158,7 +158,7 @@ engine. Reading top-to-bottom: two surfaces call one proxy, the proxy validates
 
 - **`execute_request(request: ProxyRequest) -> ProxyResponse`**: The **single entry point** for both the workbench UI and the MCP server.
 - Validates the `target_id` resolves to a known `Target`, the method is allowed, and the path params match the converters (no auto-seeding — returns a clear `400` if a path param can't be resolved).
-- Honors the per-call `sandbox: bool` toggle (default `True`).
+- Honors the per-call `sandbox: bool` toggle (default `False`).
 - Attaches the requested user context via the auth layer, then dispatches to `SandboxRunner` underneath.
 
 #### 2. `auth/impersonation.py` (Role Impersonation — _new in v0.5_)
@@ -456,26 +456,22 @@ sequenceDiagram
     autonumber
     participant Client as Client Code
     participant Resolver as PathConverterResolver
-    participant Django as Django ORM
     participant RouteRec as Route
 
-    Client->>Resolver: resolve(route, explicit_params, lookup_map)
+    Client->>Resolver: resolve(route, explicit_params)
     Resolver->>Resolver: Walk route.url_params
     Note right of Resolver: Get missing params from route.url_params
 
     alt Has route.model
-        Resolver->>Django: Query model.objects.first() (default DB)
-        alt Record exists
-            Django-->>Resolver: Model instance
-            Resolver->>Resolver: extract_from_model_instance() using url_kwarg_to_field
-        else No record & explicit_params provided
-            Resolver->>Resolver: Use explicit value
-        else No record & nothing provided
-            Resolver-->>Client: Return ResolvedPath(url=None, reason="no_record_found")
-        end
+        Note right of Resolver: Model information available but not used<br/>for automatic database resolution
+        Resolver->>Resolver: Use explicit params from caller
     end
 
-    Resolver->>Resolver: _render_url() via reverse() or regex substitution
+    if missing params:
+        Resolver->>Resolver: Return ResolvedPath(url=None, reason="provide explicit values")
+    else:
+        Resolver->>Resolver: _render_url() via reverse() or regex substitution
+
     Resolver-->>Client: ResolvedPath(url, params, reason=None)
 ```
 
@@ -728,7 +724,7 @@ sequenceDiagram
 
 ## 7. Security & Isolation Model
 
-- **Toggleable Sandbox (default ON)**: Every request runs inside an atomic savepoint and is rolled back automatically. The caller can opt out per-call (`sandbox: False`) when it actually wants a write to persist.
+- **Toggleable Sandbox (default OFF)**: Every request runs inside an atomic savepoint by default. When `sandbox=False`, writes persist in the shadow database (`dqs_shadow`). When `sandbox=True`, all writes are rolled back immediately, leaving the real database untouched. The caller can opt in per-call (`sandbox: True`) when they want strict rollback.
 - **`DEBUG=True` Guardrail**: Profiling runs only in development environments — enforced in `apps.py` and `DjangoIntrospector`.
 - **Sanitized SQL**: AST fingerprinting strips user data/literals before rendering analysis reports.
 - **Shadow Database** _(legacy / opt-out path)_: Optional isolated database (`dqs_shadow`) for cases when sandbox is off and the caller wants writes routed away from `default`. Configured via `DATABASE_ROUTERS` and `profiling_session()`.
