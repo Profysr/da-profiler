@@ -6,7 +6,7 @@
 > - A **human-facing workbench** (Postman-style UI split to separate repo at <https://github.com/Profysr/da-profile-fe>) for exploration and one-off debugging.
 > - An **agent-facing MCP server** that runs the same loop headlessly — discover → execute → detect N+1 → apply the suggested fix → re-verify, with no human in the loop.
 >
-> Both surfaces send requests through one shared **execution proxy** that takes user/agent-supplied payloads, attaches the v0.25 query interceptor inside a toggleable atomic-rollback sandbox, and returns the HTTP response alongside the captured SQL trace. The mock data generator and request-body inferrer from v0.3 are **deleted** — payloads are user/agent-supplied through `POST /profiler/execute`, with a `suggest_payload()` helper (deferred to a later release) planned as an opt-in starting-point template. Auth becomes first-class (user impersonation + multi-role AuthZ audit matrix). The phase order is reshuffled: the workbench UI ships first (v0.35) so the engine has a UI proving the proxy works, then the MCP server (v0.4) so agents can drive the same engine, then auth + the execution proxy itself as a hardened v0.5, then v1.0 ships both surfaces together.
+> Both surfaces send requests through one shared **execution proxy** that takes user/agent-supplied payloads, attaches the v0.25 query interceptor inside a toggleable atomic-rollback sandbox, and returns the HTTP response alongside the captured SQL trace. The mock data generator and request-body inferrer from v0.3 are **deleted** — payloads are user/agent-supplied through `POST /profiler/execute`, with a `suggest_payload()` helper (deferred to a later release) planned as an opt-in starting-point template. The phase order is reshuffled: the workbench UI ships first (v0.35) so the engine has a UI proving the proxy works, then the MCP server (v0.4) so agents can drive the same engine, then auth + the execution proxy itself as a hardened v0.5, then v1.0 ships both surfaces together.
 >
 > **Naming cleanup:** the type names in `dqs/adapters/drf/types.py` were tightened for clarity — `RouteMetadata` → `Route`, `PathParam` → `UrlParam`, `PathResolution` → `ResolvedPath`, `ProfileReport` → `ProfileResult`, `SeedDataRequiredError` → `UnresolvablePathError`. HTTP endpoints were renamed from `/dqs/*` to `/profiler/*` (`/profiler/manage/routes`, `/profiler/execute`, `/profiler/connection/health`) to give the tool a stable, brand-aligned namespace.
 
@@ -24,7 +24,7 @@
 - **Profile what actually ran.** The v0.25 query interceptor captures every query at the DB-driver boundary, walks the call stack to the originating file:line, and the AST analyzer flags N+1s with a prescriptive `.select_related()` / `.prefetch_related()` fix.
 - **Agent closes the loop itself.** Detect N+1 → read the suggested fix → apply it → re-profile → confirm the query count dropped. No human re-testing anything by hand.
 
-**Why this order (v0.35 → v0.4 → v0.5 → v1.0):** the workbench UI (v0.35) ships first because it's the fastest way to prove the new execution proxy works end-to-end with real requests — the UI becomes the integration test for the proxy. The MCP server (v0.4) lands next so the same engine gets an agent-facing surface. v0.5 then **introduces the hardened execution proxy and auth layer** retroactively — the UI and MCP both consume it, and the auth surface (impersonation, AuthZ audit) becomes available to both. v1.0 ships both surfaces together with auth as a first-class feature. This ordering keeps each phase demoable on its own.
+**Why this order (v0.35 → v0.4 → v0.5 → v1.0):** the workbench UI (v0.35) ships first because it's the fastest way to prove the new execution proxy works end-to-end with real requests — the UI becomes the integration test for the proxy. The MCP server (v0.4) lands next so the same engine gets an agent-facing surface. v0.5 then **introduces the hardened execution proxy** retroactively — the UI and MCP both consume it. v1.0 ships both surfaces together. This ordering keeps each phase demoable on its own.
 
 **A guiding rule for whoever picks up any task below:** if you're ever unsure whether something belongs in v1 scope, ask "does this get us closer to a trustworthy, zero-risk profiling result an agent or a human can drive through the proxy?" If yes, it's in scope. If it's about polish, multi-framework support, or UI flourishes, it's very likely a "Later Release" item further down this file — check there before building it early.
 
@@ -48,9 +48,9 @@
 | **v0.2.0** | Django Introspector & Isolated Sandbox Execution | ✅ **COMPLETED** |
 | **v0.25.0** | Query Interceptor, `Target` Abstraction & Static AST Advisor | ✅ **COMPLETED** |
 | **v0.3.0** | Dynamic Path Converter Engine, Mock Data Generator & Request-Body Inference | ✅ **COMPLETED** *(deprecated by v0.35 — see below)* |
-| **v0.35.0** | Workbench UI + `suggest_payload()` (Human Surface) | 🔲 **PLANNED** |
-| **v0.4.0** | MCP Server & Agentic Loop (Agent Surface) | 🔲 **PLANNED** |
-| **v0.5.0** | Auth Impersonation, AuthZ Audit Matrix & Hardened Execution Proxy | 🔲 **PLANNED** |
+| **v0.35.0** | Workbench UI (separate Vite app) + `suggest_payload()` (Human Surface) | ✅ **COMPLETED** |
+| **v0.4.0** | MCP Server & Agentic Loop (Agent Surface) | ✅ **COMPLETED** |
+| **v0.5.0** | Hardened Execution Proxy | 🔲 **COMPLETED** (execution proxy built) |
 | **v0.6.0** | Introspector Dual-Mode: Package Routes & Manual URL Execution | 🔲 **PLANNED** |
 | **v1.0.0** | Launch: Workbench UI + MCP + Auth, together | 🔮 **FUTURE** |
 
@@ -198,10 +198,10 @@ The v0.3 deliverables above were **deleted or repurposed** as part of the v0.35 
 
 ---
 
-## v0.5.0 — Auth Impersonation, AuthZ Audit Matrix & Hardened Execution Proxy
+## v0.5.0 — Hardened Execution Proxy
 
 > Status: PLANNED 🔲
-> **Why this comes third:** the workbench UI and the MCP server both exist, but they're currently calling `DjangoSandboxRunner.execute_request()` directly. v0.5 introduces the proper **execution proxy** (`dqs/adapters/drf/execution/proxy.py`) that both surfaces consume going forward, plus the entire auth surface (impersonation, AuthZ audit) that the UI's placeholder panel and the MCP's `audit_authz` tool have been waiting for.
+> **Why this comes third:** the workbench UI and the MCP server both exist, but they're currently calling DjangoSandboxRunner.execute_request() directly. v0.5 introduces the proper **execution proxy** (dqs/adapters/drf/execution/proxy.py) that both surfaces consume going forward.
 
 ### A. Execution Proxy (`dqs/adapters/drf/execution/proxy.py`) — *new module*
 - [ ] `ExecutionProxy.execute_request(request: ProxyRequest) -> ProfileResult` — single entry point for both UI and MCP.
@@ -212,46 +212,6 @@ The v0.3 deliverables above were **deleted or repurposed** as part of the v0.35 
 - [ ] Validates the `target_id` resolves to a known `Route`, the method is in the target's allowed methods, and the path params match the converters (no auto-seeding — reports `400` with a clear reason if a path param can't be resolved).
 - [ ] Thread-safe under concurrent UI/MCP calls (the proxy is stateless; each call opens its own transaction + interceptor).
 - [ ] HTTP endpoint: `POST /profiler/execute` is already in place; v0.5 wires the view layer to the new proxy instead of calling the runner directly.
-
-### B. Auth Impersonation (`dqs/adapters/drf/auth/impersonation.py`) — *new module*
-- [ ] `build_request_with_user(request, user_context, auth_mode)` — given a constructed WSGI request, attach the right auth:
-  - `auth_mode="session"` + `user_context=Impersonate(user_id)` → `request.user = User.objects.get(pk=user_id)` and `force_authenticate(request, user=user)`.
-  - `auth_mode="bearer"` + `user_context=Impersonate(user_id)` → generate a DRF token for the user, attach `Authorization: Token <token>` header.
-  - `auth_mode="anonymous"` → leave `request.user = AnonymousUser()`, no `force_authenticate`.
-  - `user_context=Anonymous` → same as `anonymous` regardless of `auth_mode`.
-- [ ] **User picker UI data** — new endpoint `GET /profiler/manage/users` returning a paginated, filterable list of `User` rows (`is_active=True`, optional `group`, `is_superuser` filters). Used by both the UI's impersonation dropdown and the MCP agent's user discovery.
-- [ ] No network roundtrip for token generation — `force_authenticate` short-circuits the auth backend entirely, so impersonation is instant.
-
-### C. AuthZ Audit Matrix (`dqs/adapters/drf/auth/audit.py`) — *new module*
-- [ ] `audit_authz(target_id, user_ids[]) -> AccessMatrix`:
-  - Iterates the target's allowed methods.
-  - For each `(method, user_id)` pair, runs `proxy.execute_request()` with that user context.
-  - Each pair runs in its **own** atomic transaction (so user A's state can't leak into user B's profile).
-  - Returns a matrix:
-    ```
-    | Method | Role / User       | Status | Result              |
-    |--------|-------------------|--------|---------------------|
-    | POST   | Anonymous         | 401    | Passthrough         |
-    | POST   | Standard User     | 403    | Passthrough         |
-    | POST   | Store Manager     | 201    | Passthrough         |
-    | POST   | Admin             | 201    | Passthrough         |
-    | GET    | Anonymous         | 200    | ⚠️ Permission Leak   |
-    ```
-  - Flags any unexpected status as a **Permission Leak** or **Over-Restriction**.
-- [ ] HTTP endpoint: `POST /profiler/audit` taking `{ "target_id": ..., "user_ids": [...] }`.
-- [ ] MCP `audit_authz` tool (registered in v0.4) becomes fully functional.
-
-### D. Wire both surfaces to the proxy
-- [ ] Workbench request builder (split to separate repo) — replace the direct `runner.execute_request()` call with `POST /profiler/execute` through the new proxy. The Auth & Impersonation panel becomes live (Session / Bearer / Anonymous + user picker).
-- [ ] MCP `execute_request` tool — the proxy's request shape already matches what the MCP tool returns; the MCP tool just calls the proxy directly instead of the runner.
-
-### E. Tests
-- [ ] `tests/adapters/drf/test_proxy.py` — request-shape contract, sandbox toggle behavior, method validation, path-param validation, concurrent-call safety.
-- [ ] `tests/adapters/drf/auth/test_impersonation.py` — each auth mode, anonymous handling, missing-user error.
-- [ ] `tests/adapters/drf/auth/test_audit.py` — matrix generation, leak detection, transaction isolation between roles.
-- [ ] End-to-end: UI fires a request through the proxy, MCP fires the same request, results match byte-for-byte.
-
----
 
 ## v0.6.0 — Introspector Dual-Mode: Package Routes & Manual URL Execution
 
